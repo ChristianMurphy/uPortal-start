@@ -1,0 +1,53 @@
+# G-index allowlist (MOD-D12): reviewed findings that do not fail the gate.
+#
+#   <check> <subject> [vendor=<postgres|mariadb>] -- <reason>
+#
+# <subject> is a glob over what the audit reports: <table>.<constraint or index> for fk-no-index,
+# duplicate-index and redundant-index, and <table>@<statement> for seq-scan (the 8 hex digits
+# identify one SQL statement; the summary shows its text). Every entry needs a reason. Entries
+# marked "6.0:" are 5.17 gaps that the 6.0 index set fixes (docs/developer/modernization/notes/
+# g-index.md in uPortal-start, "Recommended 6.0 index changes", R1 to R9); drop the entry when the
+# change lands. An entry that no longer matches anything is listed under the audit summary.
+
+# --- Sequential scans ---------------------------------------------------------------------
+
+# Login and person lookups join UP_PERSON_ATTR on USER_DIR_ID, which has no index (R1)
+seq-scan up_person_attr@047ee72e -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); login loads the local account with its attributes
+seq-scan up_person_attr@bee7a8c0 -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); local account lookup by user name
+seq-scan up_person_attr@556cedc1 -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); lazy load of a local account's attributes
+# People search (search portlet, /api/v5-0/portal/search?type=people) matches lower(value) LIKE '%term%'
+seq-scan up_person_attr_values@ca83943e -- 6.0: R6, a leading-wildcard LIKE cannot use a btree; PostgreSQL gets a pg_trgm GIN index on lower(ATTR_VALUE), the other vendors keep the scan (search over local accounts only)
+# The admin attribute list: select distinct ATTR_NAME from UP_PERSON_ATTR (whole table by design)
+seq-scan up_person_attr@a8aaea90 -- 6.0: R1's index has USER_DIR_ID first; a second index on (ATTR_NAME) turns this into an index-only scan (R6); rare (person directory administration)
+
+# --- Foreign keys without an index --------------------------------------------------------
+
+# 6.0 adds these: the parent rows are deleted in normal operation, or the column is a join key
+fk-no-index up_person_attr.* -- 6.0: R1, UP_PERSON_ATTR (USER_DIR_ID) is the join key of every local-account lookup
+fk-no-index up_portlet_ent.* -- 6.0: R2, deleting a portlet definition or a portlet entity's preferences checks UP_PORTLET_ENT (user-scale) on PORTLET_DEF_ID and PORTLET_PREFS_ID
+fk-no-index up_portlet_cookies.* -- 6.0: R3, the hourly expired-cookie purge deletes portal cookies, and each delete checks UP_PORTLET_COOKIES on the portal cookie id
+fk-no-index up_login_event_aggr.fk_a0ytd5or6pogsgpiw2dwrekar -- 6.0: R4, closing an interval deletes its UP_UNIQUE_STR row, which checks UNIQUE_STRINGS_ID here
+fk-no-index up_concurrent_user_aggr.fk_fevflomiojm7s6aka5ar6md9b -- 6.0: R4, as for UP_LOGIN_EVENT_AGGR.UNIQUE_STRINGS_ID
+fk-no-index up_unique_str_segment.* -- 6.0: R4, deleting a UP_UNIQUE_STR row checks its segments
+fk-no-index up_portlet_def_param.* -- 6.0: R5, a portlet definition's parameters are loaded by PORTLET_DEF_ID (one row set per definition; small, but a join key)
+fk-no-index up_portlet_lifecycle.* -- 6.0: R5, the lifecycle of a definition is loaded by PORTLET_DEF_ID
+# Parents that are never deleted while the portal runs: the FK check never runs, and every query
+# that filters these tables leads with another indexed column
+fk-no-index up_*_aggr.* -- time dimensions, portlet and tab mappings are created, never deleted; aggregation queries go through the (date, time, interval, group, ...) keys
+fk-no-index up_event_session_groups.* -- aggregated group mappings are never deleted; the primary key leads with the session id
+fk-no-index up_event_aggr_conf_* -- aggregation configuration: a handful of rows, changed only by data import
+fk-no-index up_pags_* -- PAGS definitions: tens of rows, changed only by an administrator or data import
+fk-no-index up_permission_activity.* -- permission owners and activities: tens of rows, changed only by data import
+fk-no-index up_portlet_def.* -- portlet types and definition preferences: one row per portlet definition (hundreds), changed by an administrator
+fk-no-index up_portlet_ent__states.* -- stylesheet descriptors (five) are never deleted while the portal runs
+fk-no-index up_ss_desc_* -- stylesheet descriptors: a handful of rows, changed only by data import
+fk-no-index up_ss_user_pref.* -- stylesheet descriptors are never deleted while the portal runs; lookups go through the (user, profile, descriptor) key
+
+# --- Redundant indexes --------------------------------------------------------------------
+
+# Each aggregation table has an index on AGGR_GROUP_ID that its unique key (AGGR_GROUP_ID, ...)
+# already covers, and portlet/tab "dti" indexes covered by the "dtic" ones (R8)
+redundant-index up_*_aggr.idx_up_*_grp -- 6.0: R8 drops it; the unique key leads with AGGR_GROUP_ID
+redundant-index up_portlet_exec_aggr.idx_up_plt_exec_aggr_dti -- 6.0: R8 drops it; idx_up_plt_exec_aggr_dtic has the same leading columns
+redundant-index up_tab_render_aggr.idx_up_tab_rend_aggr_dti -- 6.0: R8 drops it; idx_up_tab_rend_aggr_dtic has the same leading columns
+redundant-index up_message.idx_message__code -- 6.0: R8 drops it; the (CODE, LOCALE) unique key covers it
