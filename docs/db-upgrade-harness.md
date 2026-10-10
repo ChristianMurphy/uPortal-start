@@ -63,7 +63,7 @@ its own ports there. Options:
 | `--keep` | Leave the container running afterwards |
 | `--skip-init` | Do not run `dataInit`; snapshot the database as it is |
 | `--no-deploy` | Reuse the Tomcat and uPortal already deployed for this vendor |
-| `--portal` | Also deploy CAS, start Tomcat against the database and run `tests/api` (needs `npm ci`) |
+| `--portal` | Also start Tomcat against the database and run `tests/api` (needs `npm ci`) |
 | `--full-suite` | Like `--portal`, but deploy every overlay, create the portlets' tables after the snapshot, and run the whole Playwright suite (also needs `npx playwright install chromium`) |
 
 Each container is named `uportal-dbh-<vendor>` and maps the vendor's `host.port` (15xxx).
@@ -98,11 +98,9 @@ tables in the same database.
 
 `-PdbVendor=<name>` selects `tests/db/vendors/<name>.properties`. With it set, the vendor's JDBC
 driver is added to the overlays' `jdbc` configuration, and `tomcatConfig` (run by `tomcatInstall`)
-appends the vendor's connection settings to `.gradle/tomcat/portal/global.properties`. The CAS
-overlay, which checks passwords against `UP_PERSON_DIR` itself (`deployerConfigContext.xml`), is
-built against the same database. Without `-PdbVendor` it still uses the bundled HSQLDB. A portal
-that is moved off HSQLDB without the harness needs the CAS data source changed by hand (see "How
-To Start the Embedded Database" in `README.md`).
+appends the vendor's connection settings to `.gradle/tomcat/portal/global.properties`. Users sign
+in with uPortal's local login, which checks passwords in that same database
+([authentication.md](authentication.md)).
 `-PdbHost`, `-PdbPort`, `-PdbUrl`, `-PdbUser` and `-PdbPassword` override the defaults, also as
 `ORG_GRADLE_PROJECT_dbPassword` and so on. The same switch runs a whole portal against a database:
 
