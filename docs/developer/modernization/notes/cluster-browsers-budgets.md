@@ -1,6 +1,6 @@
 # Handoff: cluster, browsers, accessibility, query and load budgets
 
-Workstream branch: `ccr-43ba0785-hzlrj5-cluster` (uPortal-start only; uPortal unchanged).
+Workstream branch: `ccr-43ba0785-hzlrj5-cluster` (uPortal-start only. uPortal is unchanged).
 Scope: MOD-D29 item 9 (two-node cluster) and the "strength and non-functional" list (other
 browsers, accessibility, visual snapshots, query-count budgets, load baseline).
 
@@ -15,9 +15,9 @@ browsers, accessibility, visual snapshots, query-count budgets, load baseline).
 
 ### 1. Two-node cluster
 
-Two Tomcats from one checkout (node B is a copy of node A's `.gradle/tomcat` on ports
+The test runs two Tomcats from one checkout (node B is a copy of node A's `.gradle/tomcat` on ports
 8180/8105, without CAS) on one PostgreSQL 18 container, with uPortal's default cluster
-configuration: Ehcache 2 replication over JGroups (TCP, `JDBC_PING` in the shared database), and
+configuration. That is Ehcache 2 replication over JGroups (TCP, `JDBC_PING` in the shared database), and
 `UP_MUTEX` cluster locks. Test-only settings shorten the clustered jobs' periods to ~7 s; the
 lock-abandonment age stays at its 60 s default. Checks (details and bounds in
 `docs/cluster-tests.md`):
@@ -33,10 +33,10 @@ lock-abandonment age stays at its 60 s default. Checks (details and bounds in
   + 60 s.
 * `failover-jobs-once`: events from before and after the kill are aggregated once.
 * `no-overlap`: from both nodes' `ClusterLockServiceImpl` TRACE logs, no job held its lock on
-  both nodes at the same time.
+  both nodes at once.
 
 Seeded faults (`--fault`, nightly matrix): `replication-off` (uPortal's own
-`ehcache-no-jgroups.xml`) must fail `invalidation-portlet` and `invalidation-layout`;
+`ehcache-no-jgroups.xml`) must fail `invalidation-portlet` and `invalidation-layout`.
 `lock-ignored` (`abandonedLockAge=PT0S`) must fail `failover-takeover` and `no-overlap`.
 
 ### 2. Browsers, accessibility, visual snapshots
@@ -57,14 +57,14 @@ suite stays at 124 tests.
 p6spy 3.9.1 (pinned by SHA-256) wraps uPortal's JDBC driver in the deployed test portal only,
 through `${portal.home}/uPortal.properties` (which the portlets do not read), and logs each
 statement with its thread. Statements of the request thread and the portlet threads it starts
-are counted; background jobs and JGroups are not. 14 key requests, each three times
+are counted. Background jobs and JGroups are not. 14 key requests, each three times
 (`first`, `warm`); tolerance +10 % (at least +2 statements); counts 20 % under budget are
 reported for lowering.
 
 ### 4. Load baseline
 
-k6 (Grafana's signed apt repository, CI only): 5 guest, 3 login/logout and 2 portlet-render
-virtual users for 3 minutes after a warm-up, on PostgreSQL 18. p50, p95 and error rate per
+k6 (Grafana's signed apt repository, CI only) runs 10 virtual users on PostgreSQL 18 for 3
+minutes after a warm-up. Half browse as guests, the rest log in and out or render a portlet. p50, p95 and error rate per
 scenario are thresholds from `tests/load/baseline.json` (1.5 × + 50/100 ms, < 1 % errors).
 `docs/load-tests.md` describes scaling to MOD-Q7's large campus on real hardware.
 

@@ -31,8 +31,9 @@ warm-up request, so `first` is repeatable too.
 
 ## Budgets and tolerance
 
-A count may exceed its budget by 10 %, and at least by 2 statements; more fails. A count below
-80 % of its budget, less 2, is reported as a note so the budget can be lowered (a ratchet).
+A count may exceed its budget by 10 %, and at least by 2 statements. More than that fails. When
+a count drops below 80 % of its budget minus 2, the run prints a note to lower the budget (a
+ratchet).
 
 | Request | Path |
 | --- | --- |
