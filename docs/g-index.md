@@ -30,6 +30,8 @@ tests/db/gindex/gindex.sh --reuse --ddl change.sql postgres-18   # try an index 
 tests/db/gindex/gindex.sh --reuse --fault drop-index:idx_upp_prefs_id postgres-18   # must fail
 ```
 
+`--reuse` starts the webapps already deployed in the checkout, and each is built with one vendor's
+JDBC driver: after a run on another vendor, run `./gradlew -PdbVendor=<vendor> tomcatDeploy` first.
 `gindex.sh --help` lists the options. It needs what `tests/db/harness.sh --full-suite` needs:
 Docker, Java 11 plus a JDK 21 for Gradle, `npm ci`, Chromium for Playwright, and Python 3 (standard
 library only). Everything a run writes is in `build/g-index/<vendor>/`: `load.md` (rows and seconds
