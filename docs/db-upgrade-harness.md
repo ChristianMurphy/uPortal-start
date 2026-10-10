@@ -3,7 +3,7 @@
 The harness answers one question for every supported database: does this uPortal build create
 exactly the same schema, and back its generated IDs with exactly the same database objects, as
 uPortal 5.17 did? A "yes" on every vendor is what lets an existing production database upgrade in
-place without manual SQL. It is the `G-db` gate of the uPortal 6.0 modernization plan.
+place without manual SQL. It is the `G-db` required check of the uPortal 6.0 modernization plan.
 
 For each vendor, the harness:
 
@@ -29,8 +29,8 @@ below) reads them and writes a current server. Each column below names files in
 | Oracle | Free 23.26 (`oracle-23`) | XE 21 (`oracle-xe-21`), the closest freely available stand-in for 19c |
 | HSQLDB | 2.7.4, development only (`hsqldb`) | 2.5.1, 2.7.4 (`hsqldb-2.5.1`, `hsqldb`) |
 
-* The harness (this gate, `G-db`) runs on the six runtime databases.
-* The copy-migration gate (`G-migrate`, see "Copy migration in CI") copies used 5.17 databases on
+* The harness (this check, `G-db`) runs on the six runtime databases.
+* The copy-migration check (`G-migrate`, see "Copy migration in CI") copies used 5.17 databases on
   the migration sources into the runtime databases.
 * uPortal's own `db-integration.yml` runs its JPA/DAO tests on the five runtime servers on every
   push, and nightly on the next releases (PostgreSQL 19 beta, MySQL 26 Innovation, MariaDB 13) as
