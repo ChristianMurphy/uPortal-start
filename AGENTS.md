@@ -127,7 +127,7 @@ Conventions when writing tests:
 
 ## Git
 
-Branch `GH-{issue}` off `master`. [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `revert`. Subject imperative, lowercase, no period, ≤72 chars. Reference the issue in the footer (`Closes GH-42` / `Refs GH-42`).
+Branch `GH-{issue}` off `master`. [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `revert`. Subject imperative, lowercase, no period, ≤72 chars. Reference the issue in the footer (`Closes GH-42` / `Refs GH-42`). `.github/scripts/check-commit-messages.sh origin/master..HEAD` checks subjects; CI runs it.
 
 ## Gotchas
 
