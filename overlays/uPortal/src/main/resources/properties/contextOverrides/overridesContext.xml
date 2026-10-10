@@ -24,4 +24,13 @@
        xsi:schemaLocation="
            http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
+    <!--
+     | Gives portlets that request the casProxyTicket user attribute (cas-proxy-test-portlet,
+     | esup-filemanager) a CAS proxy ticket, when the user signed in through CAS
+     | (-PauthMode=cas, docs/authentication.md).  With local login there is no CAS session and
+     | the attribute stays empty.  uPortal ships this bean commented out in
+     | portletContainerContext.xml;  each render of such a portlet costs a request to CAS.
+     +-->
+    <bean id="casTicketUserInfoService" class="org.apereo.portal.portlet.container.services.CasTicketUserInfoService" />
+
 </beans>

@@ -63,6 +63,12 @@ waroverlayPluginVersion=0.9.3
 #tomcatShutdownPort=8005
 #hsqlPort=8887
 
+# How users sign in (docs/authentication.md):  local (uPortal's login form, the default) or cas.
+# casServerUrl defaults to the development CAS server (./gradlew casStart) on casHttpPort.
+#authMode=local
+#casServerUrl=https://cas.example.edu/cas
+#casHttpPort=8090
+
 org.gradle.parallel=true
 
 # These properties control image & version settings of Docker images built by the CLI.

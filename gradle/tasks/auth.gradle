@@ -1,0 +1,77 @@
+/*
+ * How users sign in (docs/authentication.md, MOD-Q3).
+ *
+ *   -PauthMode=local  (default) uPortal's own login form checks the passwords in the portal
+ *                     database.  No CAS server is needed.
+ *   -PauthMode=cas    uPortal sends users to the CAS server at casServerUrl.  By default that is
+ *                     the development CAS 8 server in docker/cas (casStart / casStop);  point
+ *                     casServerUrl at your own CAS to use it instead.
+ *
+ * Set authMode (and casServerUrl, casHttpPort) in gradle.properties or with -P on every command.
+ * tomcatConfig (part of tomcatInstall and portalInit) writes the matching settings into
+ * portal.home, so rerun it after changing them.
+ */
+ext {
+    authMode = findProperty('authMode') ?: 'local'
+    if (!(authMode in ['local', 'cas'])) {
+        throw new GradleException("Unknown authMode '${authMode}':  use 'local' or 'cas'")
+    }
+    // Port of the development CAS server in docker/cas
+    casHttpPort = findProperty('casHttpPort') ?: '8090'
+    casServerUrl = (findProperty('casServerUrl') ?: "http://localhost:${casHttpPort}/cas").toString()
+}
+
+/*
+ * With authMode=cas, append etc/cas/<file>.properties to the same file in portal.home.  Later lines
+ * of a properties file win, so the appended block overrides the local-login defaults copied from
+ * etc/portal.  The CAS server URL is split into the cas.protocol, cas.server and cas.context
+ * settings that uPortal and the portlets (esup-filemanager) read from global.properties.
+ */
+tomcatConfig.doLast {
+    if (authMode != 'cas') {
+        return
+    }
+    URI cas = new URI(casServerUrl)
+    if (!cas.scheme || !cas.authority) {
+        throw new GradleException("casServerUrl must be an absolute URL such as https://cas.example.edu/cas;  got '${casServerUrl}'")
+    }
+    Map<String, String> casTokens = [
+        casProtocol: cas.scheme,
+        casServer: cas.authority,
+        casContext: (cas.rawPath ?: '').replaceAll('/+$', ''),
+    ]
+    String portalHome = "${rootProject.ext['buildProperties'].getProperty('server.home')}/portal"
+    ['global', 'uPortal'].each { String name ->
+        File source = file("etc/cas/${name}.properties")
+        File target = file("${portalHome}/${name}.properties")
+        String block = source.getText('ISO-8859-1')
+        (portTokens + casTokens).each { String token, String value ->
+            block = block.replace("@${token}@", value.replace('\\', '\\\\'))
+        }
+        target.append("\n${block}", 'ISO-8859-1')
+    }
+    logger.lifecycle("authMode=cas:  pointed ${portalHome} at the CAS server ${casServerUrl}")
+}
+
+/*
+ * The development CAS server (docker/cas/compose.yaml).  It needs Docker with Compose v2, and on
+ * Linux it shares the host's network, so it reaches the portal's proxy callback on localhost.
+ * The Compose project is named after the port, so portals with their own casHttpPort each get one.
+ */
+task casStart(type: Exec) {
+    group = 'CAS'
+    description = 'Starts the development CAS 8 server (docker/cas) and waits until it is ready'
+    environment 'CAS_HTTP_PORT', casHttpPort
+    commandLine 'docker', 'compose', '--file', 'docker/cas/compose.yaml', '--project-name', "uportal-cas-${casHttpPort}",
+        'up', '--detach', '--wait'
+    doLast {
+        logger.lifecycle("CAS is ready at http://localhost:${casHttpPort}/cas")
+    }
+}
+
+task casStop(type: Exec) {
+    group = 'CAS'
+    description = 'Stops the development CAS server'
+    environment 'CAS_HTTP_PORT', casHttpPort
+    commandLine 'docker', 'compose', '--file', 'docker/cas/compose.yaml', '--project-name', "uportal-cas-${casHttpPort}", 'down'
+}
