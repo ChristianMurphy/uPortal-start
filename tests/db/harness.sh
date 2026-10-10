@@ -217,6 +217,11 @@ run_portal() {
     PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts \
         "${specs[@]+"${specs[@]}"}" --reporter=list --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
+    if [ "$status" -ne 0 ] && [ "${GITHUB_ACTIONS:-}" = true ]; then
+        # Temporary diagnostic: the exceptions the portal logged (the artifacts are out of reach)
+        grep -h -E "^(WARN|ERROR) |^Caused by:|^[A-Za-z_.$]+(Exception|Error)\b" \
+            .gradle/tomcat/logs/portal/portal.log | grep -v "^WARN .*Ehcache" | tail -n 120 || true
+    fi
     stop_own_tomcat "$vendor"
     if [ "${vendor#postgres}" != "$vendor" ]; then
         # The portal has now written events (EVENT_DATA is a @Lob String); look at the LOBs again
