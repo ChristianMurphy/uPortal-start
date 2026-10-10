@@ -24,8 +24,9 @@ name: Integration
 # digest) in tests/db/vendors/<vendor>.properties, or as uPortal-start's own HSQLDB server.
 #
 # Prototype only (MOD-D30): a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs a light profile
-# to spare the account's runners: the uPortal build, Playwright on HSQLDB, the harness and
-# Playwright on PostgreSQL 18, and one cross-vendor G-migrate pair. The integration branch runs
+# to spare the account's runners: the uPortal build, Playwright on HSQLDB (local login, and the
+# auth specs with CAS), the harness and Playwright on PostgreSQL 18, and one cross-vendor G-migrate
+# pair. The integration branch runs
 # everything above on every push, and the schedule the nightly sets.
 #
 on:
@@ -264,7 +265,9 @@ jobs:
         run: ./gradlew -i -S tomcatStop
 
   # The opt-in CAS mode (-PauthMode=cas, docs/authentication.md, MOD-Q3) on the uPortal build: the
-  # auth and proxy ticket specs against the development CAS 8 container.
+  # auth and proxy ticket specs against the development CAS 8 container, then once more with CAS
+  # stopped, which must fail. Prototype only (MOD-D30): this is the one workflow that runs the CAS
+  # job, on workstream branches and the integration branch alike.
   playwright-cas:
     name: "Playwright: hsqldb, CAS"
     needs: uportal
@@ -338,6 +341,14 @@ jobs:
       - name: CAS log
         if: always()
         run: docker compose --file docker/cas/compose.yaml --project-name uportal-cas-8090 logs --no-color | tail -n 200 || true
+      - name: "Seeded fault: the auth spec fails with CAS stopped"
+        run: |
+          ./gradlew -q casStop
+          if npx playwright test --config=tests/uportal-pw.config.ts --retries=0 --reporter=line tests/ux/auth; then
+            echo "::error::The auth spec passed with the CAS server stopped"
+            exit 1
+          fi
+          echo "The auth spec failed with CAS stopped, as it should" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
