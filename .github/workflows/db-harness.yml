@@ -1,0 +1,181 @@
+name: DB upgrade harness
+#
+# Runs uPortal's dataInit against every supported database vendor, snapshots the schema it
+# creates and fails on any drift from the recorded baseline (tests/db/snapshots/<baseline>).
+# See docs/db-upgrade-harness.md. The service-container settings below repeat
+# tests/db/vendors/*.properties (image, container port, host.port, environment); keep them in sync.
+#
+permissions:
+  contents: read
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: 'Snapshot directory under tests/db/snapshots to compare with'
+        required: false
+        default: '5.17'
+
+jobs:
+  hsqldb:
+    name: "DB harness: hsqldb"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Bootstrap gradle.properties
+        run: cp gradle.properties.example gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Install npm dependencies
+        run: npm ci
+      - name: dataInit, snapshot, compare, then run the API specs against the portal
+        env:
+          BASELINE: ${{ inputs.baseline || '5.17' }}
+        run: tests/db/harness.sh --portal --baseline "$BASELINE" hsqldb
+      - name: Upload snapshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-harness-hsqldb
+          path: |
+            build/db-harness/
+            .gradle/tomcat/logs/
+
+  service-container:
+    name: "DB harness: ${{ matrix.vendor }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - vendor: postgres-16
+            image: postgres:16-alpine
+            port: 5432
+            host-port: 15432
+          - vendor: sqlserver-2022
+            image: mcr.microsoft.com/mssql/server:2022-latest
+            port: 1433
+            host-port: 15433
+          - vendor: oracle-23
+            image: gvenzl/oracle-free:23-slim
+            port: 1521
+            host-port: 15521
+    services:
+      db:
+        image: ${{ matrix.image }}
+        ports:
+          - ${{ matrix.host-port }}:${{ matrix.port }}
+        # One environment for every image; each image reads only its own variables.
+        # Throwaway CI credentials, the same as tests/db/vendors/*.properties.
+        env:
+          POSTGRES_DB: uportal
+          POSTGRES_USER: uportal
+          POSTGRES_PASSWORD: uportal
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: uPortal-Harness-1
+          ORACLE_PASSWORD: uportal-sys
+          APP_USER: uportal
+          APP_USER_PASSWORD: uportal
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Bootstrap gradle.properties
+        run: cp gradle.properties.example gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Install npm dependencies
+        run: npm ci
+      # The service container is already running; dbWait polls JDBC until it accepts connections
+      # (Oracle Free and SQL Server need a minute or two after the port opens).
+      - name: dataInit, snapshot, compare, then run the API specs against the portal
+        env:
+          BASELINE: ${{ inputs.baseline || '5.17' }}
+          HARNESS_DB_CONTAINER: ${{ job.services.db.id }}
+        run: >-
+          tests/db/harness.sh --external --portal
+          --baseline "$BASELINE"
+          ${{ matrix.vendor }}
+          -- -PdbWaitSeconds=600
+      - name: Upload snapshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-harness-${{ matrix.vendor }}
+          path: |
+            build/db-harness/
+            .gradle/tomcat/logs/
+
+  # MySQL and MariaDB need a server option (lower_case_table_names=1, which MySQL only accepts
+  # when the data directory is created). Service containers cannot pass server arguments, so the
+  # harness starts these containers itself with `docker run` (see container.args).
+  docker-run:
+    name: "DB harness: ${{ matrix.vendor }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        vendor:
+          - mysql-8.4
+          - mariadb-10.6
+          - mariadb-11.4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Bootstrap gradle.properties
+        run: cp gradle.properties.example gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Start the database, dataInit, snapshot, compare, then run the API specs
+        env:
+          BASELINE: ${{ inputs.baseline || '5.17' }}
+        run: >-
+          tests/db/harness.sh --portal
+          --baseline "$BASELINE"
+          ${{ matrix.vendor }}
+      - name: Upload snapshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-harness-${{ matrix.vendor }}
+          path: |
+            build/db-harness/
+            .gradle/tomcat/logs/

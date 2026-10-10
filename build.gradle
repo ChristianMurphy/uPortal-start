@@ -61,6 +61,7 @@ apply from: rootProject.file('gradle/tasks/portlet.gradle')
 apply from: rootProject.file('gradle/tasks/docker.gradle')
 apply from: rootProject.file('gradle/tasks/perf.gradle')
 apply from: rootProject.file('gradle/tasks/playwright.gradle')
+apply from: rootProject.file('gradle/tasks/db.gradle')
 
 /*
  * If gradle/tasks/custom.gradle exists, tasks from that
