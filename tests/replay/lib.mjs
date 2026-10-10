@@ -16,14 +16,6 @@ export const ROLES = ['guest', 'student', 'staff', 'faculty', 'admin'];
 // "(MD5)" hash. Each must still log in with its password and be refused with a wrong one.
 export const LOCAL_ACCOUNTS = ['admin', 'student', 'staff', 'faculty', 'developer'];
 
-const DISPLAY_NAMES = {
-    admin: 'Amy Administrator',
-    student: 'Steven Student',
-    staff: 'Samuel Staff',
-    faculty: 'Felicia Faculty',
-    developer: 'Danielle Developer',
-};
-
 // ---------------------------------------------------------------------------------------------
 // HTTP session
 // ---------------------------------------------------------------------------------------------
@@ -105,9 +97,17 @@ export class Session {
 export async function login(session, username, password = username) {
     const query = new URLSearchParams({ userName: username, password });
     const { response } = await session.follow(`/uPortal/Login?${query}`);
-    const text = response.body.toString('utf8');
-    const name = DISPLAY_NAMES[username];
-    return { status: response.status, ok: response.status === 200 && (!name || text.includes(name)) };
+    return { status: response.status, ok: (await currentUser(session)) === username };
+}
+
+/** The user name the portal has for this session (guest when nobody is logged in). */
+export async function currentUser(session) {
+    const response = await session.send('GET', '/uPortal/api/session.json');
+    try {
+        return JSON.parse(response.body.toString('utf8')).person?.userName ?? null;
+    } catch {
+        return null;
+    }
 }
 
 /** A fresh session for a role: guest stays anonymous, the others log in. */
@@ -203,9 +203,10 @@ const COMPARED_HEADERS = [
 export const SECURITY_HEADERS = COMPARED_HEADERS.slice(COMPARED_HEADERS.indexOf('x-frame-options'));
 
 function normaliseHeaderValue(name, value) {
-    // ETags of static files are built from the size and modification time; the time is the
-    // deployment's, so only the shape (weak or strong, digits) is compared.
-    if (name === 'etag') return shape(value);
+    // ETags are hashes: of the body for /api (ShallowEtagHeaderFilter), so they follow every masked
+    // value in it, or of the size and modification time of a deployed file. Only whether the tag
+    // is weak and how long its hash is are compared; the body is compared on its own.
+    if (name === 'etag') return value.replace(/"[^"]*"/, (tag) => `"{hash:${tag.length - 2}}"`);
     return maskString(value);
 }
 
@@ -229,7 +230,7 @@ export function normaliseCookie(header) {
 const sortCookies = (cookies) => cookies.sort((a, b) => `${a.name}|${a.path}`.localeCompare(`${b.name}|${b.path}`));
 
 /** Turns a raw response into the comparable, fixture form. */
-export function normaliseResponse(response, origin) {
+export function normaliseResponse(response, origin, path = '') {
     if (response.status === 0) return { status: 0, error: response.error.replaceAll(/\d+/g, '9') };
     const normalised = { status: response.status };
     const location = response.headers.get('location');
@@ -241,7 +242,7 @@ export function normaliseResponse(response, origin) {
     }
     normalised.headers = headers;
     if (response.setCookies.length > 0) normalised.cookies = sortCookies(response.setCookies.map((c) => normaliseCookie(c)));
-    normalised.body = normaliseBody(response.body, headers['content-type'] ?? '', origin);
+    normalised.body = normaliseBody(response.body, headers['content-type'] ?? '', origin, path);
     return normalised;
 }
 
@@ -252,13 +253,14 @@ export function normaliseResponse(response, origin) {
 const MAX_JSON = 100_000;
 const hash = (buffer) => createHash('sha256').update(buffer).digest('hex').slice(0, 16);
 
-export function normaliseBody(buffer, contentType, origin) {
+export function normaliseBody(buffer, contentType, origin, path = '') {
     if (buffer.length === 0) return { kind: 'empty' };
     const type = contentType.toLowerCase();
     const text = () => buffer.toString('utf8');
+    if (type.includes('application/jwt')) return normaliseJwt(text(), origin);
     if (type.includes('json') || (/^\s*[[{]/.test(text().slice(0, 64)) && !type.includes('html'))) {
         try {
-            const value = maskJson(JSON.parse(text()), origin);
+            const value = unorder(maskJson(JSON.parse(text()), origin), path);
             const serialised = JSON.stringify(value);
             if (serialised.length > MAX_JSON) return { kind: 'json-shape', shape: jsonShape(value), sha: hash(serialised) };
             return { kind: 'json', value };
@@ -267,11 +269,74 @@ export function normaliseBody(buffer, contentType, origin) {
         }
     }
     if (type.includes('html')) return { kind: 'html', outline: htmlOutline(text(), origin) };
-    if (type.startsWith('text/') || type.includes('xml') || type.includes('javascript')) {
+    // Entity exports are XML without a Content-Type; they are text as far as masks go.
+    const xml = /^\s*<\?xml/.test(text().slice(0, 64));
+    if (xml || type.startsWith('text/') || type.includes('xml') || type.includes('javascript')) {
         const masked = maskString(text()).replaceAll(origin ?? '\0', '{origin}');
         return { kind: 'text', length: lengthBucket(masked.length), sha: hash(masked) };
     }
     return { kind: 'binary', length: lengthBucket(buffer.length), sha: hash(buffer) };
+}
+
+// A signed token (/api/v5-1/userinfo) differs on every request: it is issued now, expires later,
+// and is signed. Its header and claims are compared, with the times and the signature masked.
+const JWT_TIMES = new Set(['iat', 'exp', 'nbf', 'auth_time']);
+
+function normaliseJwt(token, origin) {
+    const [header, claims] = token.trim().split('.').slice(0, 2).map((part) => {
+        try {
+            return JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
+        } catch {
+            return null;
+        }
+    });
+    if (!header || !claims) return { kind: 'text', length: lengthBucket(token.length), sha: hash(token) };
+    const masked = Object.fromEntries(Object.entries(claims).map(([k, v]) => [k, JWT_TIMES.has(k) && typeof v === 'number' ? '{epoch-s:number}' : k === 'jti' ? '{id}' : v]));
+    return { kind: 'json', value: { jwtHeader: maskJson(header, origin), jwtClaims: maskJson(masked, origin) } };
+}
+
+// Arrays that 5.17 itself returns in a different order from run to run, because they are built
+// from hash sets: they are sorted before they are compared. Found by replaying 5.17 against
+// itself. A '*' step walks every element of an array; inner arrays are sorted first.
+const UNORDERED = [
+    // the current user's groups (GroupRESTController, a Set of entity groups)
+    [/^\/uPortal\/api\/groups/, ['groups']],
+    // permission assignments (PermissionsListController, from a Set)
+    [/^\/uPortal\/api\/permissionAssignments/, ['permissionsList']],
+    // a group's members (EntitiesRESTController, a Set of children)
+    [/^\/uPortal\/api\/entities\//, ['jsonEntityBean', 'children']],
+    // marketplace entries and their categories (MarketplaceRESTController, Sets)
+    [/^\/uPortal\/api\/marketplace\/entries/, ['portlets', '*', 'categories']],
+    [/^\/uPortal\/api\/marketplace\/entries/, ['portlets']],
+];
+
+// Values that 5.17 itself returns differently from run to run for the same data.
+const UNSTABLE = [
+    // PermissionsListController names a target by its key alone, so a group (local.25) and a
+    // portlet (PORTLET_ID.25) with the same number can get each other's name. See
+    // docs/developer/modernization/notes/http-replay.md.
+    [/^\/uPortal\/api\/permissionAssignments/, ['permissionsList', '*', 'targetName']],
+];
+
+function visit(node, keys, action) {
+    if (node === null || typeof node !== 'object') return;
+    const [key, ...rest] = keys;
+    const children = key === '*' ? (Array.isArray(node) ? node.keys() : []) : [key];
+    for (const child of children) {
+        if (rest.length === 0) {
+            if (child in node) node[child] = action(node[child]);
+        } else {
+            visit(node[child], rest, action);
+        }
+    }
+}
+
+const sortArray = (array) => (Array.isArray(array) ? array.toSorted((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : array);
+
+function unorder(value, path) {
+    for (const [pattern, keys] of UNSTABLE) if (pattern.test(path)) visit(value, keys, () => '{unstable}');
+    for (const [pattern, keys] of UNORDERED) if (pattern.test(path)) visit(value, keys, sortArray);
+    return value;
 }
 
 // Lengths are compared in buckets of 64 bytes: a changed byte count from a different build date
@@ -283,11 +348,18 @@ const lengthBucket = (length) => Math.ceil(length / 64) * 64;
 const EPOCH_MS_MIN = 946_684_800_000;
 const EPOCH_MS_MAX = 4_102_444_800_000;
 
+// Keys whose values are measurements or random per session, not data: the health checks'
+// response times and memory figures, and the session key in /api/session.json.
+const MEASUREMENT = /Response Time|Memory|^sessionKey$/;
+
 export function maskJson(value, origin) {
     if (Array.isArray(value)) return value.map((v) => maskJson(v, origin));
     if (value && typeof value === 'object') {
         const sorted = {};
-        for (const key of Object.keys(value).sort()) sorted[key] = maskJson(value[key], origin);
+        for (const key of Object.keys(value).sort()) {
+            const v = value[key];
+            sorted[key] = MEASUREMENT.test(key) && (typeof v === 'number' || typeof v === 'string') ? `{measured:${typeof v}}` : maskJson(v, origin);
+        }
         return sorted;
     }
     if (typeof value === 'number' && Number.isInteger(value) && value >= EPOCH_MS_MIN && value <= EPOCH_MS_MAX) {

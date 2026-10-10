@@ -19,6 +19,7 @@ import {
     SECURITY_HEADERS,
     Session,
     compare,
+    currentUser,
     exchangeKey,
     login,
     normaliseCookie,
@@ -58,7 +59,11 @@ function plan(routes, suite) {
     return items;
 }
 
-const itemKey = (item) => `${exchangeKey(item)}${item.headers && Object.keys(item.headers).length > 0 ? ` ${JSON.stringify(item.headers)}` : ''}`;
+const itemKey = (item) => {
+    const headers = item.headers ?? item.route?.headers;
+    const token = item.csrfToken ?? item.route?.csrfToken ? ' with _csrf' : '';
+    return `${exchangeKey(item)}${token}${headers && Object.keys(headers).length > 0 ? ` ${JSON.stringify(headers)}` : ''}`;
+};
 
 async function execute(items) {
     const exchanges = [];
@@ -73,11 +78,20 @@ async function execute(items) {
         const { route } = item;
         const headers = { ...route.headers };
         if (route.contentType) headers['content-type'] = route.contentType;
-        const response = await session.send(item.method, item.path, { body: route.body, headers });
+        let url = item.path;
+        if (route.csrfToken) {
+            // The token the portal puts into its own action URLs for this session
+            const page = await session.send('GET', '/uPortal/f/welcome/normal/render.uP');
+            const token = page.body.toString('utf8').match(/[?&;]_csrf=([0-9a-f-]{36})/)?.[1] ?? 'none';
+            url += `${url.includes('?') ? '&' : '?'}_csrf=${token}`;
+        }
+        const response = await session.send(item.method, url, { body: route.body, headers });
         const exchange = { set: item.set, role: item.role, method: item.method, path: item.path };
-        if (item.headers && Object.keys(item.headers).length > 0) exchange.headers = item.headers;
+        const requestHeaders = item.headers ?? route.headers;
+        if (requestHeaders && Object.keys(requestHeaders).length > 0) exchange.headers = requestHeaders;
         if (item.probe) exchange.probe = item.probe;
-        exchange.response = normaliseResponse(response, origin);
+        if (route.csrfToken) exchange.csrfToken = true;
+        exchange.response = normaliseResponse(response, origin, item.path);
         exchanges.push(exchange);
         if (++done % 250 === 0) console.error(`  ${done}/${items.length} requests`);
     }
@@ -105,8 +119,7 @@ async function casLogin(username, password) {
     if (!(posted.status === 302 && location.includes('ticket='))) return { formStatus: form.status, status: posted.status, ok: false };
     const ticketUrl = new URL(location);
     const { response } = await session.follow(`${ticketUrl.pathname}${ticketUrl.search}`);
-    const session2 = await session.send('GET', '/uPortal/api/session.json');
-    const user = JSON.parse(session2.body.toString('utf8') || '{}').person?.userName;
+    const user = await currentUser(session);
     return { formStatus: form.status, status: posted.status, ok: response.status === 200 && user === username };
 }
 
@@ -160,7 +173,15 @@ async function securityChecks(exchanges) {
     }
     const csrf = exchanges
         .filter((e) => e.probe === 'csrf')
-        .map((e) => ({ role: e.role, method: e.method, path: e.path, status: e.response.status, outcome: outcome(e.response) }));
+        .map((e) => ({
+            role: e.role,
+            method: e.method,
+            path: e.path,
+            ...(e.csrfToken ? { token: 'valid' } : {}),
+            ...(e.headers ? { headers: e.headers } : {}),
+            status: e.response.status,
+            outcome: outcome(e.response),
+        }));
     return { logins, loginCookies, headers, csrf };
 }
 
