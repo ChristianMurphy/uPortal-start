@@ -250,12 +250,17 @@ task dbVerify {
 
 task dbRecord {
     group 'Database harness'
-    description 'Records build/db-harness/<vendor> as the baseline tests/db/snapshots/<dbBaseline>/<vendor>'
+    description 'Records build/db-harness/<vendor> as the baseline tests/db/snapshots/<dbBaseline>/<vendor> (a new one; -PdbRecordReplace to overwrite)'
     mustRunAfter dbSnapshot
 
     doLast {
         File from = harnessOutputDir()
         File to = harnessBaselineDir()
+        // A recorded baseline is a contract: replacing one needs a logged reason (e.g. MOD-I83)
+        if (new File(to, SnapshotComparison.SCHEMA).file && !project.hasProperty('dbRecordReplace')) {
+            throw new GradleException("${to} is already recorded; record a new baseline directory instead, " +
+                    'or pass -PdbRecordReplace when the replacement has a logged reason (docs/db-upgrade-harness.md)')
+        }
         to.mkdirs()
         (SnapshotComparison.FILES + ['lob-report.txt']).each { String name ->
             File f = new File(from, name)

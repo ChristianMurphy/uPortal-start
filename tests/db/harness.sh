@@ -27,6 +27,10 @@
 #   HARNESS_DB_CONTAINER  with --external: the container to `docker exec` into for vacuumlo
 #   HARNESS_BASELINE      the default for --baseline (empty: chosen from uPortalVersion)
 #
+# On GitHub Actions a failed vendor's drift report and failed specs become annotations on the run,
+# and so does the snapshot itself (compressed) when it was recorded or had no baseline to compare
+# with; tests/db/fetch-ci-snapshot.sh turns those back into baseline files.
+#
 # Exit status: 0 when every vendor ran and showed zero drift (or was recorded), 1 otherwise.
 #
 set -uo pipefail
@@ -79,65 +83,46 @@ for arg in "${GRADLE_EXTRA[@]+"${GRADLE_EXTRA[@]}"}"; do
     case "$arg" in -PtomcatHttpPort=*) HTTP_PORT="${arg#-PtomcatHttpPort=}" ;; esac
 done
 
-prop() {  # prop <vendor> <key>: one value from tests/db/vendors/<vendor>.properties
-    sed -n "s/^$2=//p" "tests/db/vendors/$1.properties" | tail -1
-}
-
-gradle() {
-    echo "+ ./gradlew $*"
-    ./gradlew --no-daemon -S "$@" "${GRADLE_EXTRA[@]+"${GRADLE_EXTRA[@]}"}"
-}
+# shellcheck source=tests/db/lib.sh
+. tests/db/lib.sh
 
 vacuumlo_dry_run() {  # vacuumlo -n prints one "Removing lo N" per object; keep the summary
     docker exec "$1" vacuumlo -n -v -U uportal uportal 2>&1 | tr '\r' '\n' | sed 's/Removing lo *[0-9]* */\n/g' | grep -v '^ *$' || true
 }
 
-stop_own_tomcat() {
-    # tomcatStop can leave the JVM running (MOD-I53); only ever touch this checkout's Tomcat.
-    gradle -PdbVendor="$1" tomcatStop || true
-    local base="$ROOT/.gradle/tomcat"
-    for _ in 1 2 3 4 5 6 7 8 9 10; do
-        pgrep -f -- "-Dcatalina.base=$base " > /dev/null || return 0
-        sleep 3
+annotate_snapshot() {  # annotate_snapshot <vendor>: the snapshot files, as tar.gz in base64
+    [ "${GITHUB_ACTIONS:-}" = true ] || return 0
+    local dir="build/db-harness/$1" files=() f data parts i
+    for f in schema.txt schema-normalized.txt generators.txt lob-report.txt; do
+        [ -f "$dir/$f" ] && files+=("$f")
     done
-    echo "Tomcat in $base did not exit after tomcatStop; sending SIGTERM"
-    pkill -f -- "-Dcatalina.base=$base " || true
+    [ ${#files[@]} -gt 0 ] || return 0
+    data=$(tar -czf - -C "$dir" "${files[@]}" | base64 -w0)
+    # An annotation holds at most 64 KB
+    parts=$(( (${#data} + 59999) / 60000 ))
+    for ((i = 0; i < parts; i++)); do
+        echo "::notice title=snapshot of $1 (part $((i + 1)) of $parts)::${data:$((i * 60000)):60000}"
+    done
 }
 
 run_vendor() {
     local vendor="$1"
     local out="build/db-harness/$vendor"
-    local image port env args container
+    local container
     if [ ! -f "tests/db/vendors/$vendor.properties" ]; then
         echo "Unknown vendor $vendor" >&2
         return 1
     fi
-    image=$(prop "$vendor" container.image)
-    port=$(prop "$vendor" container.port)
-    env=$(prop "$vendor" container.env)
-    args=$(prop "$vendor" container.args)
-    container="uportal-dbh-$vendor"
+    container=$(container_name "$vendor")
     mkdir -p "$out"
 
     echo "==== $vendor: $(prop "$vendor" vendor.name)"
     local started=false
     if [ "$EXTERNAL" = false ]; then
-        if [ -z "$image" ]; then
-            # Bundled HSQLDB: start from an empty database directory so object names repeat
-            rm -rf .gradle/hsqldb
-            gradle hsqlStart || return 1
-        else
-            local hostport
-            hostport=$(prop "$vendor" host.port)
-            docker rm -f "$container" > /dev/null 2>&1 || true
-            local envargs=()
-            for kv in $env; do envargs+=(-e "$kv"); done
-            # shellcheck disable=SC2086
-            docker run -d --name "$container" -p "$hostport:$port" "${envargs[@]}" "$image" $args > /dev/null || return 1
-            echo "Started $image as $container on port $hostport"
-        fi
+        start_database "$vendor" || return 1
         started=true
     fi
+    use_vendor "$vendor"
 
     local tasks=()
     if [ "$DEPLOY" = true ] && [ "$FULL_SUITE" = true ]; then
@@ -160,6 +145,9 @@ run_vendor() {
     if [ -n "$BASELINE" ]; then baseline=(-PdbBaseline="$BASELINE"); fi
     gradle -PdbVendor="$vendor" "${baseline[@]+"${baseline[@]}"}" "${tasks[@]}" 2>&1 | tee "$out/harness.log"
     status=${PIPESTATUS[0]}
+    if [ "$RECORD" = true ] || grep -qs 'no baseline: ' "$out/drift-report.txt"; then
+        annotate_snapshot "$vendor"
+    fi
     # What Hibernate itself reported during dataInit (HHH000400), next to the snapshot's own answer
     grep -ho "HHH000400: Using dialect: .*" "$out/harness.log" | sort -u > "$out/dialect.txt" || true
 
@@ -181,12 +169,7 @@ run_vendor() {
     fi
 
     if [ "$started" = true ] && [ "$KEEP" = false ]; then
-        if [ -z "$image" ]; then
-            gradle hsqlStop || true
-        else
-            docker rm -f "$container" > /dev/null 2>&1 || true
-            echo "Removed $container"
-        fi
+        stop_database "$vendor"
     fi
     return $status
 }
@@ -201,23 +184,14 @@ run_portal() {
         gradle -PdbVendor="$vendor" dataInit -x :overlays:uPortal:dataInit 2>&1 | tee "$out/portlet-data-init.log"
         [ "${PIPESTATUS[0]}" -eq 0 ] || return 1
     fi
-    gradle -PdbVendor="$vendor" tomcatStart || return 1
-    for _ in $(seq 1 60); do
-        if curl -s -o /dev/null -w "%{http_code}" "$url" | grep -qE "200|302"; then break; fi
-        sleep 5
-    done
-    if ! curl -s -o /dev/null -w "%{http_code}" "$url" | grep -qE "200|302"; then
-        echo "uPortal did not answer at $url" >&2
-        stop_own_tomcat "$vendor"
-        return 1
-    fi
-    echo "uPortal is up at $url against $vendor"
+    start_portal "$vendor" || return 1
     local specs=(tests/api) log="$out/playwright-api.log"
     if [ "$FULL_SUITE" = true ]; then specs=(); log="$out/playwright.log"; fi
     PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts \
         "${specs[@]+"${specs[@]}"}" --reporter=list --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
     stop_own_tomcat "$vendor"
+    use_vendor "$vendor"
     if [ "${vendor#postgres}" != "$vendor" ]; then
         # The portal has now written events (EVENT_DATA is a @Lob String); look at the LOBs again
         gradle -PdbVendor="$vendor" -PdbLobReportName=lob-report-after-portal.txt dbLobReport || status=1
@@ -230,18 +204,16 @@ run_portal() {
 }
 
 annotate() {  # on GitHub Actions, show a failed vendor's drift report and failed specs on the run
-    [ "${GITHUB_ACTIONS:-}" = true ] || return 0
     local f text
     for f in "build/db-harness/$1/drift-report.txt" "build/db-harness/$1/playwright-api.log" \
             "build/db-harness/$1/playwright.log"; do
         [ -f "$f" ] || continue
         case "$f" in
             *drift-report.txt) grep -q '^RESULT: DRIFT' "$f" || continue; text=$(head -n 40 "$f") ;;
-            *) text=$(sed -n '/^  [0-9]* failed/,$p' "$f" | head -n 40) ;;
+            *) text=$(failed_specs "$f") ;;
         esac
         [ -n "$text" ] || continue
-        text=${text//'%'/'%25'}; text=${text//$'\r'/'%0D'}; text=${text//$'\n'/'%0A'}
-        echo "::error title=$1 ($(basename "$f"))::$text"
+        github_annotation error "$1 ($(basename "$f"))" "$text"
     done
 }
 
