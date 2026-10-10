@@ -14,29 +14,19 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
+  # cancels the older run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
 jobs:
   test:
     name: "${{ matrix.platform }} with Java ${{ matrix.java-distribution }} version ${{ matrix.java-version }}"
     strategy:
       fail-fast: false
-      matrix:
-        platform:
-          - ubuntu-latest
-        java-distribution:
-          - temurin
-          - zulu
-          - corretto
-        java-version:
-          - 11
-        include:
-          - platform: windows-latest
-            java-distribution: temurin
-            java-version: 11
-          - platform: macos-latest
-            java-distribution: temurin
-            java-version: 11
+      # Prototype only (MOD-D30): a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs one Linux
+      # leg to spare the account's runners; master, pull requests and the integration branch run
+      # the full matrix: ubuntu x temurin/zulu/corretto, plus windows and macos on temurin.
+      matrix: ${{ fromJSON(startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && '{"include":[{"platform":"ubuntu-latest","java-distribution":"temurin","java-version":11}]}' || '{"platform":["ubuntu-latest"],"java-distribution":["temurin","zulu","corretto"],"java-version":[11],"include":[{"platform":"windows-latest","java-distribution":"temurin","java-version":11},{"platform":"macos-latest","java-distribution":"temurin","java-version":11}]}') }}
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 15
     steps:
@@ -88,6 +78,9 @@ jobs:
 
   playwright:
     name: "Playwright E2E tests"
+    # Prototype only (MOD-D30): on a workstream branch the Integration workflow runs Playwright
+    # against uPortal built from source, so this released-uPortal run is skipped there.
+    if: ${{ !startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
