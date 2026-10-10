@@ -118,8 +118,13 @@ case "${1:-}" in
     since=()
     [ -n "$added" ] && since=(--since="$(git log -1 --format=%cI "$added")")
     dir=$(mktemp -d)
+    skip=$(grep -oE '^[0-9a-f]{40}' "$home/commit-exceptions.txt" 2>/dev/null || true)
     while read -r sha; do
       [ -n "$sha" ] || continue
+      if grep -qx "$sha" <<< "$skip"; then
+        echo "Skipping ${sha:0:9}: listed in .github/vale/commit-exceptions.txt"
+        continue
+      fi
       git log -1 --format=%B "$sha" | grep -vE '^(Co-Authored-By|Claude-Session|Signed-off-by):' > "$dir/${sha:0:9}.md"
     done < <(git log --no-merges "${since[@]}" --format=%H "$@")
     count=$(find "$dir" -name '*.md' | wc -l)
