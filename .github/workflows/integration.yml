@@ -16,6 +16,11 @@ name: Integration
 # tests/db/vendors/*.properties (image, container port, host.port, environment); keep them in sync.
 #
 on:
+  push:
+    branches:
+      # Prototype only (MOD-I74): run the integration tests on the modernization
+      # integration branches. Drop this trigger before upstreaming.
+      - 'ccr-*'
   workflow_dispatch:
     inputs:
       uportal-repository:
