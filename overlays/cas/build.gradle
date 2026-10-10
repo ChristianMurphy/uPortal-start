@@ -3,25 +3,24 @@ import org.apache.tools.ant.filters.ReplaceTokens
 apply plugin: 'java'
 
 dependencies {
-    runtime("commons-dbcp:commons-dbcp:${casCommonsDbcpVersion}") {
+    runtimeOnly("commons-dbcp:commons-dbcp:${casCommonsDbcpVersion}") {
         exclude group: 'xml-apis', module: 'xml-apis'
         exclude group: 'xerces', module: 'xercesImpl'
     }
-    runtime "net.sf.ehcache:ehcache-core:${casEhcacheVersion}"
-    runtime "org.aspectj:aspectjrt:1.9.7"
-    runtime "org.aspectj:aspectjweaver:1.9.7"
-    runtime "org.jasig.cas:cas-server-webapp:${casServerVersion}@war"
-    runtime("org.jasig.cas:cas-server-extension-clearpass:${casServerVersion}") {
+    runtimeOnly "net.sf.ehcache:ehcache-core:${casEhcacheVersion}"
+    runtimeOnly "org.aspectj:aspectjrt:1.9.7"
+    runtimeOnly "org.aspectj:aspectjweaver:1.9.7"
+    runtimeOnly "org.jasig.cas:cas-server-webapp:${casServerVersion}@war"
+    runtimeOnly("org.jasig.cas:cas-server-extension-clearpass:${casServerVersion}") {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'javax.xml', module: 'xmldsig'
     }
-    runtime "xerces:xercesImpl:${casXercesImplVersion}"
+    runtimeOnly "xerces:xercesImpl:${casXercesImplVersion}"
 
-    compile "commons-codec:commons-codec:${casCommonsCodecVersion}"
-    compile "commons-collections:commons-collections:${casCommonsCollectionsVersion}"
-    compile "org.jasypt:jasypt:${jasyptVersion}"
-    compile "org.slf4j:slf4j-api:${casSlf4jVersion}"
-    compile configurations.jdbc
+    implementation "commons-codec:commons-codec:${casCommonsCodecVersion}"
+    implementation "commons-collections:commons-collections:${casCommonsCollectionsVersion}"
+    implementation "org.jasypt:jasypt:${jasyptVersion}"
+    implementation "org.slf4j:slf4j-api:${casSlf4jVersion}"
 
     compileOnly("org.jasig.cas:cas-server-core:${casServerVersion}") {
         exclude group: 'commons-logging', module: 'commons-logging'
@@ -32,17 +31,22 @@ dependencies {
     }
     compileOnly servletApiDependency
 
-    testCompile group: 'junit', name: 'junit', version: '4.13.2'
-    testCompile group: 'org.easymock', name: 'easymock', version: '5.3.0'
-    testCompile("org.jasig.cas:cas-server-core:${casServerVersion}") {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.easymock:easymock:5.3.0'
+    testImplementation("org.jasig.cas:cas-server-core:${casServerVersion}") {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'javax.xml', module: 'xmldsig'
     }
-    testCompile group: 'org.springframework', name: 'spring-jdbc', version: "${casSpringVersion}"
+    testImplementation "org.springframework:spring-jdbc:${casSpringVersion}"
+}
+
+configurations {
+    // Package the JDBC drivers declared in overlays/build.gradle into WEB-INF/lib
+    implementation.extendsFrom jdbc
 }
 
 war {
-    archiveName 'cas.war'
+    archiveFileName = 'cas.war'
     exclude 'WEB-INF/lib/cas-client-core-3.2.1.jar'
     exclude 'WEB-INF/lib/commons-collections*jar'
     exclude 'WEB-INF/lib/xml-apis-1.0.b2.jar'
@@ -50,13 +54,13 @@ war {
     exclude 'WEB-INF/lib/aspectjweaver-1.6.10.jar'
 
     // Point CAS at this build's Tomcat and HSQLDB ports (see portTokens in the root build.gradle)
-    inputs.properties(portTokens)
+    inputs.properties(rootProject.ext.portTokens)
     filesMatching([
         'WEB-INF/cas.properties',
         'WEB-INF/deployerConfigContext.xml',
         'WEB-INF/spring-configuration/clearpass-configuration.xml',
     ]) {
-        filter(ReplaceTokens, tokens: portTokens)
+        filter(ReplaceTokens, tokens: rootProject.ext.portTokens)
     }
     filteringCharset = 'ISO-8859-1'  // Leaves every byte other than the tokens as-is
 }

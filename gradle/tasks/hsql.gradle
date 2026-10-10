@@ -31,12 +31,12 @@ private boolean verifyHsqlState(Project project, boolean verifyRunning) {
 }
 
 task hsqlStart {
-    group 'HSQL'
-    description 'Start the embedded hsql server'
+    group = 'HSQL'
+    description = 'Start the embedded hsql server'
     dependsOn project.tasks.portalProperties
 
     doLast {
-        verifyHsqlState(project, false)
+        verifyHsqlState(rootProject, false)
 
         logger.lifecycle('Starting embedded HSQLDB uPortal database')
 
@@ -49,7 +49,7 @@ task hsqlStart {
             classpath += it.getAbsolutePath()
         }
 
-        ant.exec(executable: 'java', spawn: true) {
+        ant.exec(executable: portalJava, spawn: true) {
             arg(value: '-cp')
             arg(value: classpath)
             arg(value: 'org.hsqldb.server.Server')
@@ -70,12 +70,12 @@ task hsqlStart {
 }
 
 task hsqlStop {
-    group 'HSQL'
-    description 'Stop the embedded hsql server'
+    group = 'HSQL'
+    description = 'Stop the embedded hsql server'
     dependsOn project.tasks.portalProperties
 
     doLast {
-        verifyHsqlState(project, true)
+        verifyHsqlState(rootProject, true)
 
         logger.lifecycle('Stopping embedded HSQLDB uPortal database')
 
@@ -89,14 +89,14 @@ task hsqlStop {
         }
 
         // SqlTool needs a copy of the rc file that points at this build's hsqlPort
-        File rcDir = file("${buildDir}/tmp/hsql")
+        File rcDir = layout.buildDirectory.dir('tmp/hsql').get().asFile
         copy {
             from 'etc/hsql/hsqldb.sqltool.rc'
             into rcDir
             filter(ReplaceTokens, tokens: portTokens)
         }
 
-        ant.exec(executable: 'java', spawn: true) {
+        ant.exec(executable: portalJava, spawn: true) {
             arg(value: '-cp')
             arg(value: classpath)
             arg(value: 'org.hsqldb.cmdline.SqlTool')
@@ -116,8 +116,8 @@ task hsqlStop {
 }
 
 task hsqlOpen {
-    group 'HSQL'
-    description 'Launch the HSQL Database Manager connected to the default HSQL database'
+    group = 'HSQL'
+    description = 'Launch the HSQL Database Manager connected to the default HSQL database'
     dependsOn project.tasks.portalProperties
     dependsOn hsqlStart
 
@@ -133,7 +133,7 @@ task hsqlOpen {
             classpath += it.getAbsolutePath()
         }
 
-        ant.exec(executable: 'java', spawn: true) {
+        ant.exec(executable: portalJava, spawn: true) {
             arg(value: '-cp')
             arg(value: classpath)
             arg(value: 'org.hsqldb.util.DatabaseManagerSwing')

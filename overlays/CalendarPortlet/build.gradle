@@ -5,12 +5,16 @@ apply plugin: GradleImportExportPlugin
 apply plugin: GradlePlutoPlugin
 
 dependencies {
-    runtime "org.jasig.portlet:CalendarPortlet:${calendarPortletVersion}@war"
-    compile configurations.jdbc
+    runtimeOnly "org.jasig.portlet:CalendarPortlet:${calendarPortletVersion}@war"
+}
+
+configurations {
+    // Package the JDBC drivers declared in overlays/build.gradle into WEB-INF/lib
+    implementation.extendsFrom jdbc
 }
 
 war {
-    archiveName 'CalendarPortlet.war'
+    archiveFileName = 'CalendarPortlet.war'
     /*
      * For uPortal 5 (and beyond), the Community Best Practice for WAR files published to Maven
      * Central is that they should *not* contain JDBC driver jars;  all such WAR files are
@@ -35,12 +39,18 @@ war {
 
 import org.apereo.portal.start.shell.PortalShellInvoker
 
+// The deployed webapp's name;  task actions use this (Task.project is off limits at execution time)
+String webappName = project.name
+
 dependencies {
-    impexp configurations.jdbc
     impexp "${portletApiDependency}"
     impexp "${servletApiDependency}"
 
     jdbc "org.jasig.portal:uPortal-hibernate3-dialects:${uPortalVersion}"
+}
+
+configurations {
+    impexp.extendsFrom jdbc
 }
 
 dataInit {
@@ -49,7 +59,7 @@ dataInit {
      */
     doLast {
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
 
         /*
          * The following specifies failonerror=false because it will produce an exception like...
@@ -64,15 +74,15 @@ dataInit {
          * both subclasses, but differently, in CalendarConfiguration.hbm.xml.
          */
         ant.setLifecycleLogLevel('INFO')
-        ant.java(fork: true, failonerror: false, dir: rootProject.projectDir, classname: 'org.jasig.portlet.calendar.util.SchemaCreator') {
+        ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: false, dir: rootProject.projectDir, classname: 'org.jasig.portlet.calendar.util.SchemaCreator') {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
         }
     }
@@ -82,19 +92,19 @@ dataInit {
      */
     doLast {
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
         String implementationEntitiesLocation = PortalShellInvoker.createGroovySafePath(rootProject.ext['buildProperties'].getProperty('implementation.entities.location'))
 
         ant.setLifecycleLogLevel('INFO')
-        ant.java(fork: true, failonerror: true, dir: rootProject.projectDir, classname: 'org.danann.cernunnos.runtime.Main') {
+        ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.danann.cernunnos.runtime.Main') {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
             arg(value: 'classpath://org/jasig/portlet/calendar/io/import.crn.xml')
             arg(value: "${implementationEntitiesLocation}")

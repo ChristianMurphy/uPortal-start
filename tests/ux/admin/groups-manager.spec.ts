@@ -28,7 +28,7 @@ async function parentHasMember(
   page: Page,
   groupName: string
 ): Promise<boolean> {
-  const parent = await page.request.get(
+  const parent = await page.request.get<unknown>(
     `${config.url}api/entity/group-membership/${PARENT_GROUP}`
   );
   const xml = await parent.text();

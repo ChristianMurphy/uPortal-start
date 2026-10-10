@@ -1,6 +1,7 @@
 package org.apereo.portal.start.shell
 
 import org.gradle.api.Project
+import org.gradle.api.plugins.BasePluginExtension
 
 /**
  * This class knows how to invoke org.apereo.portal.shell.PortalShell within the overlays:uPortal
@@ -12,14 +13,14 @@ class PortalShellInvoker {
         File serverBase = project.rootProject.file(project.rootProject.ext['buildProperties'].getProperty('server.base'))
         File deployDir = new File (serverBase, "webapps/${project.name}")
 
-        File libsDir = project.rootProject.file(project.rootProject.getProperty('libsDir'))
+        File libsDir = project.rootProject.extensions.getByType(BasePluginExtension).libsDirectory.get().asFile
         libsDir.mkdirs()
         project.configurations.shell.files.each {
             project.ant.copy(todir: libsDir, file: it.absolutePath)
         }
 
         project.ant.setLifecycleLogLevel('INFO')
-        project.ant.java(fork: true, failonerror: true, dir: project.rootProject.projectDir, classname: 'org.apereo.portal.shell.PortalShell') {
+        project.ant.java(fork: true, failonerror: true, jvm: project.rootProject.ext['portalJava'], dir: project.rootProject.projectDir, classname: 'org.apereo.portal.shell.PortalShell') {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")

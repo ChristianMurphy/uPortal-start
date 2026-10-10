@@ -7,7 +7,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.task('dataInit') {
-            group 'Data'
+            group = 'Data'
             dependsOn project.rootProject.tasks.portalProperties, project.tasks.tomcatDeploy
             doFirst {
                 if (project.tasks.dataInit.actions.size() == 1) {
@@ -16,7 +16,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
             }
         }
         project.task('dataImport') {
-            group 'Data'
+            group = 'Data'
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {
@@ -26,7 +26,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
             }
         }
         project.task('dataExport') {
-            group 'Data'
+            group = 'Data'
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {
@@ -36,7 +36,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
             }
         }
         project.task('dataDelete') {
-            group 'Data'
+            group = 'Data'
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {
@@ -46,7 +46,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
             }
         }
         project.task('dataList') {
-            group 'Data'
+            group = 'Data'
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {

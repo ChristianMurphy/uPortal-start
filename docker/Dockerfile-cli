@@ -2,18 +2,27 @@
 # within a container.  The portal must be fully assembled (based on tomcatInstall + tomcatDeploy)
 # before building the Docker image.
 
+# Gradle 9 runs on Java 17 or later, so the image carries a JDK 21 for the Gradle daemon (see
+# gradle/gradle-daemon-jvm.properties);  the portal's own tools run on the Java 11 in JAVA_HOME
+FROM eclipse-temurin:21-jdk AS jdk21
+
 # This image requires Gradle;  it is not as slim as the web server-only image
-FROM gradle:6.9.1-jdk8-hotspot
+FROM eclipse-temurin:11-jdk
+
+# Gradle finds the JDKs in /usr/lib/jvm by itself
+COPY --from=jdk21 /opt/java/openjdk /usr/lib/jvm/jdk-21
 
 # Some of the uPortal tech requires elevated privileges
 USER root
+WORKDIR /home/gradle
 
 # We need the fully-assembled Tomcat container
 COPY .gradle/tomcat .gradle/tomcat
 
-# We need the complete build system
+# We need the complete build system, including the Gradle Wrapper
+COPY gradlew gradlew
+COPY gradle gradle
 COPY buildSrc buildSrc
-COPY gradle/tasks gradle/tasks
 COPY overlays overlays
 COPY build.gradle build.gradle
 COPY gradle.properties gradle.properties
@@ -22,8 +31,11 @@ COPY settings.gradle settings.gradle
 # We need the data sets
 COPY data data
 
+# Download the Gradle distribution now, rather than each time a container starts
+RUN ./gradlew --version
+
 # Containers based on this image are expected to invoke the Gradle-based CLI
-ENTRYPOINT ["gradle"]
+ENTRYPOINT ["./gradlew"]
 
 # Let the default CMD be 'tasks' -- overriding is easy
 CMD ["tasks"]

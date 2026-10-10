@@ -1,3 +1,5 @@
 # Enable auto-env through the sdkman_auto_env config
 # Add key=value pairs of SDKs to use below
+# This is the JDK that runs the portal (JAVA_HOME).  Gradle runs on a JDK 21, which it finds by
+# itself among the JDKs SDKMAN! has installed (`sdk install java` a 21.x identifier).
 java=11.0.30-amzn

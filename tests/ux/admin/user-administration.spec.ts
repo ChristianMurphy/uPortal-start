@@ -30,7 +30,7 @@ const CACHE_FNAME = "cache-manager";
 const USER_INFO_CACHE = "org.apereo.services.persondir.USER_INFO.merged";
 
 async function exportedAccount(page: Page, username: string): Promise<string> {
-  const response = await page.request.get(
+  const response = await page.request.get<unknown>(
     `${config.url}api/entity/user/${username}`
   );
   return response.text();
