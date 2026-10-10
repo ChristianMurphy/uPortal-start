@@ -31,7 +31,7 @@ export async function loginViaApi(
   user: Record<string, string>
 ): Promise<void> {
   const url = `${config.url}Login?userName=${user.username}&password=${user.password}`;
-  const response = await request.get(url);
+  const response = await request.get<unknown>(url);
   expect(response.status()).toEqual(200);
   const responseText = await response.text();
   expect(responseText).toContain(user.displayName);
@@ -42,12 +42,12 @@ export async function loginViaApi(
  */
 export async function logoutViaApi(request: APIRequestContext): Promise<void> {
   const url = `${config.url}Logout`;
-  const response = await request.get(url);
+  const response = await request.get<unknown>(url);
   expect(response.status()).toEqual(200);
   const responseText = await response.text();
   expect(responseText).toContain("Logout successful");
   // confirm known endpoint is unavailable for guest user
-  await request.get(`${config.url}api/portlet-list/`);
+  await request.get<unknown>(`${config.url}api/portlet-list/`);
   expect(response.status()).toEqual(200);
 }
 /*

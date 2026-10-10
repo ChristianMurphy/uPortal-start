@@ -16,7 +16,7 @@ import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
 const REGEX_TEST_ARRAY = [`TEST spaces`, `TEST!`, `TEST"`, `TEST'`, `TEST&`];
 
 test("GET ALL - not logged in", async ({ request }) => {
-  const response = await request.get(`${config.url}api/portlet-list/`);
+  const response = await request.get<unknown>(`${config.url}api/portlet-list/`);
   expect(response.status()).toEqual(401); // Unauthorized
   expect(await response.json()).toEqual({
     message: "Not authorized",
@@ -24,7 +24,7 @@ test("GET ALL - not logged in", async ({ request }) => {
 });
 
 test("GET specific - not logged in", async ({ request }) => {
-  const response = await request.get(
+  const response = await request.get<unknown>(
     `${config.url}api/portlet-list/aaa-bbb-ccc`
   );
   expect(response.status()).toEqual(401); // Unauthorized
@@ -37,7 +37,7 @@ test("GET Confirm retrieval of a specific bogus list nicely fails", async ({
   request,
 }) => {
   await loginViaApi(request, config.users.staff);
-  const response = await request.get(
+  const response = await request.get<unknown>(
     `${config.url}api/portlet-list/aaa-bbb-ccc`
   );
   expect(response.status()).toEqual(404);
@@ -171,14 +171,14 @@ test("POST confirm disallow duplicate name", async ({ request }) => {
     },
   };
   // Create a portlet-list
-  const responseCreation = await request.post(
+  const responseCreation = await request.post<unknown>(
     `${config.url}api/portlet-list/`,
     payload
   );
   expect(responseCreation.status()).toEqual(201);
 
   // Try to create another one with the same name
-  const responseCreation2 = await request.post(
+  const responseCreation2 = await request.post<unknown>(
     `${config.url}api/portlet-list/`,
     payload
   );
@@ -199,7 +199,7 @@ test("POST confirm disallow extra fields", async ({ request }) => {
     },
   };
   // Create a portlet-list
-  const responseCreation = await request.post(
+  const responseCreation = await request.post<unknown>(
     `${config.url}api/portlet-list/`,
     payload
   );
@@ -253,7 +253,7 @@ test("POST disallow non-admin to specify ownerUsername", async ({
 }) => {
   await loginViaApi(request, config.users.staff);
 
-  const response = await request.post(`${config.url}api/portlet-list/`, {
+  const response = await request.post<unknown>(`${config.url}api/portlet-list/`, {
     data: {
       name: `TESTING_-_portlet-list_disallow_non-admin_to_specify_ownerUsername_-_${Date.now()}`,
       ownerUsername: config.users.admin.username,
@@ -270,7 +270,7 @@ test("POST disallow non-admin to specify name as favorites", async ({
 }) => {
   await loginViaApi(request, config.users.staff);
 
-  const response = await request.post(`${config.url}api/portlet-list/`, {
+  const response = await request.post<unknown>(`${config.url}api/portlet-list/`, {
     data: {
       name: `favorites`,
     },
@@ -284,7 +284,7 @@ test("POST disallow non-admin to specify name as favorites", async ({
 test("POST disallow duplicate entity ids", async ({ request }) => {
   await loginViaApi(request, config.users.staff);
 
-  const response = await request.post(`${config.url}api/portlet-list/`, {
+  const response = await request.post<unknown>(`${config.url}api/portlet-list/`, {
     data: {
       name: `POST_disallow_duplicate_entity_ids_${Date.now()}`,
       items: [
@@ -376,7 +376,7 @@ test("PUT disallow non-admin to specify ownerUsername", async ({ request }) => {
   );
   const baselineState = await getPortletList(request, listId);
 
-  const responseFailed = await request.put(
+  const responseFailed = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -404,7 +404,7 @@ test("PUT disallow non-admin to specify name as favorites", async ({
   );
   const baselineState = await getPortletList(request, listId);
 
-  const responseFailed = await request.put(
+  const responseFailed = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -430,7 +430,7 @@ test("PUT confirm disallow extra fields", async ({ request }) => {
   );
   const baselineState = await getPortletList(request, listId);
 
-  const responseFailed = await request.put(
+  const responseFailed = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -460,7 +460,7 @@ test("PUT Confirm guest user cannot update a real portlet list", async ({
   const baselineState = await getPortletList(request, listId);
   await logoutViaApi(request);
 
-  const responseFailed = await request.put(
+  const responseFailed = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -488,7 +488,7 @@ test("PUT Confirm non-admin cannot update someone elses list", async ({
   await logoutViaApi(request);
 
   await loginViaApi(request, config.users.student);
-  const responseFailed = await request.put(
+  const responseFailed = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -514,7 +514,7 @@ test("PUT Confirm non-admin is blocked from changing the list ownership", async 
   );
   const baselineState = await getPortletList(request, listId);
 
-  const responseFailed = await request.put(
+  const responseFailed = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -540,7 +540,7 @@ test("PUT Confirm admin can change ownership of someone elses list", async ({
   await logoutViaApi(request);
 
   await loginViaApi(request, config.users.admin);
-  const updateResponse = await request.put(
+  const updateResponse = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -565,7 +565,7 @@ test("PUT Confirm duplicate items are disallowed", async ({ request }) => {
   );
   const baselineState = await getPortletList(request, listId);
 
-  const updateResponse = await request.put(
+  const updateResponse = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -597,7 +597,7 @@ test("PUT confirm disallow duplicate name", async ({ request }) => {
   ]);
   const baselineState = await getPortletList(request, listId);
 
-  const responseFailed = await request.put(
+  const responseFailed = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -627,7 +627,7 @@ test("PUT confirm noop resave", async ({ request }) => {
   ]);
   const baselineState = await getPortletList(request, listId);
 
-  const response = await request.put(
+  const response = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     { data: {} }
   );
@@ -660,7 +660,7 @@ test("POST / PUT allow admin to specify name as favorites", async ({
 
   // Change to a unique name that is not 'favorites'
   const updatesStarted = Date.now();
-  const responseUpdate1 = await request.put(
+  const responseUpdate1 = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -672,7 +672,7 @@ test("POST / PUT allow admin to specify name as favorites", async ({
   const updatedState = await getPortletList(request, listId);
 
   // Change the name back to 'favorites'
-  const responseUpdate2 = await request.put(
+  const responseUpdate2 = await request.put<unknown>(
     `${config.url}api/portlet-list/${listId}`,
     {
       data: {
@@ -708,7 +708,7 @@ test("DELETE Confirm guest user cannot delete a real portlet list", async ({
   await logoutViaApi(request);
 
   // Try to delete, and confirm failure
-  const response = await request.delete(
+  const response = await request.delete<unknown>(
     `${config.url}api/portlet-list/${portletListUuid}`
   );
   expect(response.status()).toEqual(401);
@@ -764,7 +764,7 @@ test("DELETE Confirm non-admin cannot delete someone elses list", async ({
   await loginViaApi(request, config.users.student);
 
   // Try to delete, and confirm failure
-  const response = await request.delete(
+  const response = await request.delete<unknown>(
     `${config.url}api/portlet-list/${portletListUuid}`
   );
   expect(response.status()).toEqual(400);

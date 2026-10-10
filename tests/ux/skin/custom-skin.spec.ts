@@ -17,7 +17,7 @@ import { config } from "../../general-config";
  * navigation happens.
  */
 test("scaffolded custom skin compiles and is served", async ({ request }) => {
-  const response = await request.get(
+  const response = await request.get<unknown>(
     `${config.url}media/skins/respondr/playwrightSkin.css`
   );
   expect(response.status(), "playwrightSkin.css must be served").toEqual(200);

@@ -35,13 +35,13 @@ interface PermissionAssignment {
 }
 
 async function assignments(page: Page): Promise<PermissionAssignment[]> {
-  const response = await page.request.get(
+  const response = await page.request.get<{
+    permissionsList: PermissionAssignment[];
+  }>(
     `${config.url}api/permissionAssignments?owner=${OWNER.fname}&activity=${ACTIVITY.fname}`
   );
   expect(response.status()).toEqual(200);
-  const body = (await response.json()) as {
-    permissionsList: PermissionAssignment[];
-  };
+  const body = await response.json();
   return body.permissionsList;
 }
 
@@ -90,7 +90,7 @@ test.describe("Permissions Administration", () => {
         assignment.target === TARGET.key
     );
     for (const assignment of leftovers) {
-      await page.request.post(`${config.url}api/deletePermission`, {
+      await page.request.post<unknown>(`${config.url}api/deletePermission`, {
         form: {
           principal: assignment.principalKey,
           owner: OWNER.fname,
