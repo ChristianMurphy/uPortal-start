@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Licensed to Apereo under one or more contributor license
+    agreements. See the NOTICE file distributed with this work
+    for additional information regarding copyright ownership.
+    Apereo licenses this file to you under the Apache License,
+    Version 2.0 (the "License"); you may not use this file
+    except in compliance with the License.  You may obtain a
+    copy of the License at the following location:
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+-->
+<!--
+ | Exports every predefined news feed as a <predefined-news> file (<fname>.pnd.xml) in the
+ | export directory, in the format import-PredefinedNewsDefinition_v1-0.crn.xml reads.
+ |
+ | uPortal-start supplies this script: NewsReaderPortlet's importExportContext.xml names it as
+ | its export task, but the WAR (up to at least 5.1.5) does not contain it, so `dataExport`
+ | failed (MOD-I78). Run by export.crn.xml, which sets PORTAL_CONTEXT and exportDir.
+ |
+ | Plain JDBC reads the ids and roles (NEWS_ROLE is a lazy collection, and the store hands out
+ | detached objects); the store reads each definition with its parameters. Parameters and roles
+ | are written in name order, so an export of the same data is the same file every time.
+ +-->
+<groovy>
+    <script><![CDATA[
+        def store = PORTAL_CONTEXT.getBean('newsStore')
+        def dataSource = PORTAL_CONTEXT.getBean('dataSource')
+        def dir = new File(exportDir)
+        dir.mkdirs()
+        def ids = []
+        def roles = [:]
+        def connection = dataSource.getConnection()
+        try {
+            def statement = connection.prepareStatement(
+                "select NEWS_ID from NEWS_DEFINITION where NEWS_LISTING_TYPE = 'PD'")
+            def rows = statement.executeQuery()
+            while (rows.next()) {
+                ids.add(new Long(rows.getLong(1)))
+            }
+            rows.close()
+            statement.close()
+            statement = connection.prepareStatement(
+                "select ROLE_NAME from NEWS_ROLE where NEWS_ID = ?")
+            for (id in ids) {
+                statement.setLong(1, id.longValue())
+                rows = statement.executeQuery()
+                def names = new TreeSet()
+                while (rows.next()) {
+                    names.add(rows.getString(1))
+                }
+                rows.close()
+                roles.put(id, names)
+            }
+            statement.close()
+        } finally {
+            connection.close()
+        }
+        for (id in ids) {
+            def definition = store.getPredefinedNewsDefinition(id)
+            def document = org.dom4j.DocumentHelper.createDocument()
+            def root = document.addElement('predefined-news')
+            root.addAttribute('script',
+                'classpath:/org/jasig/portlet/newsreader/io/import-PredefinedNewsDefinition_v1-0.crn.xml')
+            root.addElement('fname').setText(definition.getFname() == null ? '' : definition.getFname())
+            root.addElement('className').setText(definition.getClassName())
+            root.addElement('name').setText(definition.getName())
+            def parameters = root.addElement('parameters')
+            def parameterMap = new TreeMap(definition.getParameters())
+            for (entry in parameterMap.entrySet()) {
+                def parameter = parameters.addElement('parameter')
+                parameter.addAttribute('name', entry.getKey())
+                parameter.setText(entry.getValue())
+            }
+            def predefinedRoles = root.addElement('predefinedRoles')
+            for (role in roles.get(id)) {
+                predefinedRoles.addElement('role').setText(role)
+            }
+            // The Groovy in the WAR is 1.5: keep to its syntax
+            def fileName = definition.getFname()
+            if (fileName == null || fileName.length() == 0) {
+                fileName = 'news-' + id
+            }
+            def file = new File(dir, fileName.replaceAll('[^A-Za-z0-9._-]', '_') + '.pnd.xml')
+            def format = org.dom4j.io.OutputFormat.createPrettyPrint()
+            format.setEncoding('UTF-8')
+            def out = new FileOutputStream(file)
+            try {
+                def writer = new org.dom4j.io.XMLWriter(out, format)
+                writer.write(document)
+                writer.flush()
+            } finally {
+                out.close()
+            }
+            println(EXPORT_LOG_PREFIX + 'Exported ' + file)
+        }
+    ]]></script>
+</groovy>
