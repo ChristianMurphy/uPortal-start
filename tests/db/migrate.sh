@@ -160,6 +160,8 @@ if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
             *) text=$(grep -v '^\s*at ' "$FAILED_LOG" | grep -iE 'error|exception|fail|mismatch|caused by' | tail -n 30) ;;
         esac
         github_annotation error "G-migrate $PAIR: $FAILED_STEP" "${text:-$(tail -n 30 "$FAILED_LOG")}"
+        text=$(tomcat_errors)
+        if [ -n "$text" ]; then github_annotation warning "G-migrate $PAIR: Tomcat log errors" "$text"; fi
     fi
     exit 1
 fi

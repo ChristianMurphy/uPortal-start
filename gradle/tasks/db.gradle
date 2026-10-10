@@ -78,6 +78,10 @@ Closure<Map> loadDbVendor = { String vendor, String prefix ->
                 .sort { it.substring('setup.sql.'.length()) as int }.collect { fill(v.getProperty(it)) },
         sequenceValues: SnapshotComparison.SequenceValues.valueOf(
                 v.getProperty('verify.sequenceValues', 'exact').trim().toUpperCase(Locale.ROOT)),
+        // portlet.<file>.<key>=<value>: <key>=<value> for ${portal.home}/<file>.properties
+        portletSettings: v.stringPropertyNames().findAll { it ==~ /portlet\.[^.]+\..+/ }.sort()
+                .groupBy { it.split('\\.')[1] }
+                .collectEntries { name, keys -> [(name): keys.collectEntries { [(it.substring("portlet.${name}.".length())): fill(v.getProperty(it))] }] },
     ]
 }
 
@@ -108,6 +112,22 @@ hibernate.connection.validationQuery=${esc(dbHarness.validationQuery)}
 hibernate.dialect=${esc(dbHarness.dialect)}
 """, 'ISO-8859-1')
         logger.lifecycle("Pointed ${global} at the ${dbVendor} database ${dbHarness.url}")
+
+        /*
+         * A portlet that reads ${portal.home}/<file>.properties after global.properties gets the
+         * vendor's portlet.<file>.* settings there, e.g. a dialect its own Hibernate knows.
+         */
+        dbHarness.portletSettings.each { String name, Map<String, String> settings ->
+            File portletFile = file("${serverHome}/portal/${name}.properties")
+            portletFile.append("""
+
+##
+## Database upgrade harness (-PdbVendor=${dbVendor}); overrides global.properties for this portlet.
+##
+${settings.collect { k, val -> "${k}=${esc(val)}" }.join('\n')}
+""", 'ISO-8859-1')
+            logger.lifecycle("Wrote the ${dbVendor} settings ${settings.keySet()} to ${portletFile}")
+        }
     }
 }
 
