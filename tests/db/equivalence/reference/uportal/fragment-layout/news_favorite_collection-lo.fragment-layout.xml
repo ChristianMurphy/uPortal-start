@@ -1,0 +1,25 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="news_favorite_collection-lo">
+  <folder ID="s1" hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder ID="s4" dlm:deleteAllowed="true" dlm:editAllowed="true" hidden="false" immutable="false" name="News" type="favorite_collection" unremovable="false">
+      <structure-attribute>
+        <name>externalId</name>
+        <value>news-fav-collection</value>
+      </structure-attribute>
+      <folder ID="s5" dlm:deleteAllowed="false" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>60%</value>
+        </structure-attribute>
+        <channel ID="n7" fname="announcements" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n8" fname="campus-news" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+      <folder ID="s6" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>40%</value>
+        </structure-attribute>
+        <channel ID="n9" fname="chronicle-wired" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+    </folder>
+  </folder>
+</layout>

@@ -1,0 +1,43 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Welcome to uPortal</title>
+  <name>Welcome to uPortal</name>
+  <fname>what-is-uportal</fname>
+  <desc>Description of uPortal.</desc>
+  <type>CMS</type>
+  <timeout>10000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Demonstration</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>configurable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/mimetypes/text-html.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/feedback.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>\n            \n                &lt;h2&gt;What is uPortal?&lt;/h2&gt;\n                \n                &lt;p&gt;\n                    &lt;a href="http://www.apereo.org/uportal" target="_blank"&gt;uPortal&lt;/a&gt;\n                    is a free and open source Java-implemented web portal \n                    platform developed and maintained by participants drawn \n                    from across higher education under the coordination of \n                    &lt;a href="http://www.apereo.org/" target="_blank"&gt;Apereo&lt;/a&gt;.\n                    uPortal can aggregate content, present self-service \n                    applications, personalize presentation and content on the \n                    basis of groups and user attributes, drive mobile device applications, and allow advanced\n                    end-user-participatory customization of the portal experience. \n                    uPortal supports the JSR-286 and JSR-168 Java portlet specification for\n                    including your custom applications within the portal.\n                &lt;/p&gt;\n                \n                &lt;p&gt;Welcome to uPortal.&lt;/p&gt; \n            \n        </value>
+  </portlet-preference>
+</portlet-definition>

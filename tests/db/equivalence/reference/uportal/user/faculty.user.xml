@@ -1,0 +1,27 @@
+<user username="faculty" version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+  <password>(MD5)FoDMOEu9EMjbJ3bikDnqdFT0Tpd7xg6S</password>
+  <attribute>
+    <name>department</name>
+    <value>Computer Science and Engineering</value>
+  </attribute>
+  <attribute>
+    <name>givenName</name>
+    <value>Felicia</value>
+  </attribute>
+  <attribute>
+    <name>mail</name>
+    <value>felicia.faculty@example.org</value>
+  </attribute>
+  <attribute>
+    <name>sn</name>
+    <value>Faculty</value>
+  </attribute>
+  <attribute>
+    <name>telephoneNumber</name>
+    <value>(555) 555-5555</value>
+  </attribute>
+  <attribute>
+    <name>title</name>
+    <value>Assistant Professor</value>
+  </attribute>
+</user>

@@ -1,0 +1,66 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Feedback Admin</title>
+  <name>Feedback Admin</name>
+  <fname>feedback-admin</fname>
+  <desc>Review portal feedback submitted by users</desc>
+  <type>Portlet</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/FeedbackPortlet</up:webAppName>
+    <up:portletName>AdminFeedbackPortlet</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="admin">2017-08-24T21:42:51.015Z</entry>
+  </lifecycle>
+  <category>Administration</category>
+  <group>Portal Administrators</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Portal Administrators</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>chromeStyle</name>
+    <value>default</value>
+  </parameter>
+  <parameter>
+    <name>configurable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>disablePortletEvents</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/apps/internet-group-chat.png</value>
+  </parameter>
+  <parameter>
+    <name>printable</name>
+    <value>false</value>
+  </parameter>
+</portlet-definition>

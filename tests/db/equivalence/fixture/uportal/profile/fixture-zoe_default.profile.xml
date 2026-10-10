@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: the profile uPortal 5.17.9 created for fixture-zoe at first login.
+ +-->
+<profile script="classpath://org/jasig/portal/io/import-profile_v3-2.crn" username="fixture-zoe">
+  <name>HTML browser profile</name>
+  <fname>default</fname>
+  <description>A sample profile for common web browsers</description>
+  <structure name="DLMTabsColumns"/>
+  <theme name="Respondr"/>
+</profile>
