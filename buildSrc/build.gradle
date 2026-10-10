@@ -21,6 +21,8 @@ repositories {
 
 dependencies {
     implementation "org.apache.portals.pluto:pluto-util:${plutoVersion}"
+    // Reads class files for the removed-API scan (RemovedApiScanPlugin)
+    implementation "org.ow2.asm:asm:${asmVersion}"
 
     compileOnly "org.jasig.portal:uPortal-tools:${uPortalVersion}"
 }
