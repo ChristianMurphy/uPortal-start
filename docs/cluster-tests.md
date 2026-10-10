@@ -2,7 +2,7 @@
 
 `tests/cluster/cluster.sh` runs two uPortal nodes from one checkout against one PostgreSQL 18
 database and checks the things a cluster depends on: cache invalidation between the nodes,
-clustered jobs that run on one node at a time, and lock failover when a node dies. It is the
+clustered jobs that run on one node at a time, and lock failover when a node is killed. It is the
 cluster gate of the uPortal 6.0 modernization (MOD-D29 item 9): the move from Ehcache 2 and
 JGroups to JCache (Infinispan, or Valkey through Redisson) and from Hibernate 4.3 to 7 must keep
 these checks green.
@@ -22,7 +22,7 @@ The nodes use uPortal's default cluster configuration, unchanged:
   lock was used less than 0.95 × its period ago, and on another node for 4 × its period.
 
 Node A is the checkout's own Tomcat (`.gradle/tomcat`, port 8080, with CAS). Node B is a copy of
-it in `.gradle/tomcat-b` on port 8180 (shutdown port 8105), without CAS; the tests log in with
+it in `.gradle/tomcat-b` on port 8180 (shutdown port 8105), without CAS. The tests log in with
 `/Login?userName=...`. Each node has its own `portal.home` with
 `org.apereo.portal.PortalInfoProvider.serverName` set to `node-a` or `node-b`, which shows in
 `UP_MUTEX.SERVER_ID` and `UP_RAW_EVENTS.SERVER_ID`. `tests/cluster/cluster.properties`, appended
@@ -40,13 +40,13 @@ stays at the default 60 s. The harness also logs `ClusterLockServiceImpl` at `TR
 | `jobs-once` | Every test user logs in and renders their layout three times on each node; once all raw events are aggregated, each interval's login and portlet-render aggregates (group Everyone) must have grown by exactly the number of raw events | |
 | `failover-takeover` | A table lock on `UP_EVENT_AGGR_STATUS` makes the next aggregation run wait inside its cluster lock; the node holding the lock is killed (`kill -9`), the table lock released. The other node must take the lock over no sooner than 60 s after the dead node's last update (it is not abandoned before), and no later than 60 s + the 28 s server bias + 60 s | 148 s |
 | `failover-jobs-once` | Like `jobs-once`, over events made before the kill (on both nodes) and after it: the survivor aggregates them all, once | |
-| `no-overlap` | From both nodes' `TRACE` logs (`tests/cluster/lock-overlap.mjs`): no clustered job held its lock on both nodes at the same time, over the whole run | |
+| `no-overlap` | From both nodes' `TRACE` logs (`tests/cluster/lock-overlap.mjs`): no clustered job held its lock on both nodes at once, over the whole run | |
 
 Permissions are the exception to replication: uPortal caches permission checks on each node and
 does not replicate those caches (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` for 180 s and
 `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT` for 300 s). A permission revoked on one
-node is therefore still granted on the others until those entries expire; the check holds 5.17
-to that bound.
+node is still granted on the others until those entries expire. The check holds 5.17 to that
+bound.
 
 ## Seeded faults
 
@@ -70,7 +70,7 @@ tests/cluster/cluster.sh --keep                   # leave the nodes and the data
 tests/cluster/cluster.sh --no-deploy              # reuse them (after --keep)
 ```
 
-Arguments after `--` go to every Gradle call. Results are in `build/cluster/results.txt`, with
+Arguments after `--` are passed to every Gradle call, and results are in `build/cluster/results.txt`, with
 both nodes' logs in `build/cluster/logs-a` and `logs-b`; on GitHub Actions failed checks also
 become annotations and the results a job summary.
 
