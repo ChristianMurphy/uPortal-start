@@ -2,12 +2,17 @@ package org.apereo.portal.start.gradle.plugins
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 
 class GradleImportExportPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
+        // One data task at a time against the portal database, across all overlays (MOD-I100)
+        Provider<PortalDatabaseService> portalDatabase = project.gradle.sharedServices.registerIfAbsent(
+                'portalDatabase', PortalDatabaseService) { spec -> spec.maxParallelUsages.set(1) }
         project.task('dataInit') {
             group = 'Data'
+            usesService(portalDatabase)
             dependsOn project.rootProject.tasks.portalProperties, project.tasks.tomcatDeploy
             doFirst {
                 if (project.tasks.dataInit.actions.size() == 1) {
@@ -17,6 +22,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
         }
         project.task('dataImport') {
             group = 'Data'
+            usesService(portalDatabase)
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {
@@ -27,6 +33,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
         }
         project.task('dataExport') {
             group = 'Data'
+            usesService(portalDatabase)
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {
@@ -37,6 +44,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
         }
         project.task('dataDelete') {
             group = 'Data'
+            usesService(portalDatabase)
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {
@@ -47,6 +55,7 @@ class GradleImportExportPlugin implements Plugin<Project> {
         }
         project.task('dataList') {
             group = 'Data'
+            usesService(portalDatabase)
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.tasks.tomcatDeploy
             doFirst {
