@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: the innermost nested group, with a CJK name.
+ +-->
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>研究グループ</name>
+  <entity-type>org.apereo.portal.security.IPerson</entity-type>
+  <creator>system</creator>
+  <description>レベル3のグループ</description>
+  <children>
+    <literal>fixture-zoe</literal>
+  </children>
+</group>

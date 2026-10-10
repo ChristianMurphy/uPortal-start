@@ -1,0 +1,42 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="fixture-lo">
+  <folder ID="s1" hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder ID="s2" hidden="true" immutable="true" name="Page Top folder" type="page-top" unremovable="true">
+      <channel ID="n3" fname="dynamic-respondr-skin" hidden="false" immutable="false" unremovable="false"/>
+      <channel ID="n4" fname="fragment-admin-exit" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s5" hidden="true" immutable="true" name="Customize folder" type="customize" unremovable="true">
+      <channel ID="n6" fname="personalization-gallery" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s7" dlm:addChildAllowed="true" dlm:deleteAllowed="false" dlm:editAllowed="true" dlm:moveAllowed="true" hidden="false" immutable="false" name="Ünïcødé ✨ Tab" type="regular" unremovable="false">
+      <structure-attribute>
+        <name>externalId</name>
+        <value>fixture-unicode</value>
+      </structure-attribute>
+      <folder ID="s8" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>70%</value>
+        </structure-attribute>
+        <channel ID="n9" dlm:deleteAllowed="false" fname="fixture-rich-content" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n10" fname="xkcd" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+      <folder ID="s11" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>30%</value>
+        </structure-attribute>
+        <channel ID="n12" fname="phd-comics" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n13" dlm:moveAllowed="false" fname="word-of-the-day" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+    </folder>
+    <folder ID="s14" dlm:deleteAllowed="false" dlm:editAllowed="false" dlm:moveAllowed="false" hidden="false" immutable="false" name="Zweiter Reiter Ω" type="regular" unremovable="false">
+      <structure-attribute>
+        <name>externalId</name>
+        <value>fixture-second</value>
+      </structure-attribute>
+      <folder ID="s15" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <channel ID="n16" fname="daily-business-cartoon" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+    </folder>
+  </folder>
+</layout>

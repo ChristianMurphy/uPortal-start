@@ -1,0 +1,5 @@
+<portlet-type version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-type https://source.jasig.org/schemas/uportal/io/portlet-type/portlet-type-4.0.xsd">
+  <name>App Launcher</name>
+  <description>Display a small portlet in the portal that describes and launches an external application</description>
+  <uri>/org/apereo/portal/portlets/applauncher/AppLauncherPortlet.cpd.xml</uri>
+</portlet-type>

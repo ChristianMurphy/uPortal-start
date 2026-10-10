@@ -1,0 +1,25 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Portal Greeting</title>
+  <name>Portal Greeting</name>
+  <fname>portal-greeting</fname>
+  <desc>Greeting that appears at the top of the page for authenticated users</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>JspInvoker</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Authenticated Users</group>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <portlet-preference>
+    <name>JspInvokerPortletController.viewLocation</name>
+    <readOnly>false</readOnly>
+    <value>/jsp/Invoker/greeting</value>
+  </portlet-preference>
+</portlet-definition>

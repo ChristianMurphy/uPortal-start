@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture (tests/db/equivalence): a local account whose attribute values
+ | exercise Unicode (Latin-1, Latin Extended, CJK, Cyrillic, an emoji outside the BMP), XML special
+ | characters, a tab, leading and trailing spaces, an empty value, a multi-valued attribute and a
+ | value at the column limit: 254 characters, because uPortal stores each value with a one-character
+ | prefix in a 255-character column (NullSafeStringColumnMapper). The password is "student" (the
+ | same hash as student's). This user logs in on 5.17 to customise its layout (see layout/).
+ +-->
+<user xmlns="https://source.jasig.org/schemas/uportal/io/user" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="4.0" username="fixture-zoe" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+    <default-user>defaultTemplateUser</default-user>
+    <password>(MD5)mhmjKvf2F3gPizS9DrA+CsFmqj74oTSb</password>
+    <lastPasswordChange>2024-02-29T23:59:58.123Z</lastPasswordChange>
+    <attribute>
+        <name>givenName</name>
+        <value>Zoë</value>
+    </attribute>
+    <attribute>
+        <name>sn</name>
+        <value>Ünïcødé-Łøwęr</value>
+    </attribute>
+    <attribute>
+        <name>displayName</name>
+        <value>Zoë Ünïcødé-Łøwęr 🎓</value>
+    </attribute>
+    <attribute>
+        <name>mail</name>
+        <value>zoe.unicode@example.org</value>
+    </attribute>
+    <attribute>
+        <name>title</name>
+        <value>研究员 · Researcher · Исследователь</value>
+    </attribute>
+    <attribute>
+        <name>eduPersonAffiliation</name>
+        <value>student</value>
+        <value>member</value>
+        <value>affilié</value>
+    </attribute>
+    <attribute>
+        <name>notes</name>
+        <value>&lt;b&gt;Fish &amp; Chips&lt;/b&gt; "double" 'single' tab:&#9;end</value>
+    </attribute>
+    <attribute>
+        <name>nickname</name>
+        <value>  padded value  </value>
+    </attribute>
+    <attribute>
+        <name>telephoneNumber</name>
+        <value></value>
+    </attribute>
+    <attribute>
+        <name>description</name>
+        <value>Ünïcødé fixture description: àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕ ñ Ü end at 254 chars..</value>
+    </attribute>
+</user>

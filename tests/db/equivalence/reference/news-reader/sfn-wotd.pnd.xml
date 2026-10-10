@@ -1,0 +1,11 @@
+<predefined-news script="classpath:/org/jasig/portlet/newsreader/io/import-PredefinedNewsDefinition_v1-0.crn.xml">
+  <fname>sfn-wotd</fname>
+  <className>org.jasig.portlet.newsreader.adapter.RomeAdapter</className>
+  <name>Word of the Day</name>
+  <parameters>
+    <parameter name="url">http://www.dictionary.com/wordoftheday/wotd.rss</parameter>
+  </parameters>
+  <predefinedRoles>
+    <role>Everyone</role>
+  </predefinedRoles>
+</predefined-news>

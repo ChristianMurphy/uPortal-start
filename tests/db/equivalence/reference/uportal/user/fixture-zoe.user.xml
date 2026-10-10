@@ -1,0 +1,46 @@
+<user username="fixture-zoe" version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+  <password>(MD5)mhmjKvf2F3gPizS9DrA+CsFmqj74oTSb</password>
+  <lastPasswordChange>2024-02-29T23:59:58.123Z</lastPasswordChange>
+  <attribute>
+    <name>description</name>
+    <value>Ünïcødé fixture description: àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕ ñ Ü end at 254 chars..</value>
+  </attribute>
+  <attribute>
+    <name>displayName</name>
+    <value>Zoë Ünïcødé-Łøwęr 🎓</value>
+  </attribute>
+  <attribute>
+    <name>eduPersonAffiliation</name>
+    <value>student</value>
+    <value>member</value>
+    <value>affilié</value>
+  </attribute>
+  <attribute>
+    <name>givenName</name>
+    <value>Zoë</value>
+  </attribute>
+  <attribute>
+    <name>mail</name>
+    <value>zoe.unicode@example.org</value>
+  </attribute>
+  <attribute>
+    <name>nickname</name>
+    <value>  padded value  </value>
+  </attribute>
+  <attribute>
+    <name>notes</name>
+    <value>&lt;b&gt;Fish &amp; Chips&lt;/b&gt; "double" 'single' tab:\tend</value>
+  </attribute>
+  <attribute>
+    <name>sn</name>
+    <value>Ünïcødé-Łøwęr</value>
+  </attribute>
+  <attribute>
+    <name>telephoneNumber</name>
+    <value/>
+  </attribute>
+  <attribute>
+    <name>title</name>
+    <value>研究员 · Researcher · Исследователь</value>
+  </attribute>
+</user>

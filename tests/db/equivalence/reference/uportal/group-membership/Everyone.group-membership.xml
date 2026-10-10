@@ -1,0 +1,17 @@
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Everyone</name>
+  <entity-type>org.apereo.portal.security.IPerson</entity-type>
+  <creator>system</creator>
+  <description>All Users</description>
+  <children>
+    <group>Authenticated Users</group>
+    <group>Faculty</group>
+    <group>Guests</group>
+    <group>PAGS Root</group>
+    <group>Portal System</group>
+    <group>Staff</group>
+    <group>Students</group>
+    <group>Tenant Administrators</group>
+    <group>Tenants</group>
+  </children>
+</group>

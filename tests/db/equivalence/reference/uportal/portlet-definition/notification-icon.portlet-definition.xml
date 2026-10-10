@@ -1,0 +1,65 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Notification Icon</title>
+  <name>Notification Icon</name>
+  <fname>notification-icon</fname>
+  <desc>Icon-based launcher for the Apereo Notification portlet designed for the eyebrow region of the page</desc>
+  <type>Advanced CMS</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Authenticated Users</group>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/status/dialog-warning.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/bullhorn.png</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>true</value>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>\n            \n                &lt;script src="/resource-server/webjars/vue/dist/vue.min.js" type="text/javascript"&gt;&lt;/script&gt;\n                &lt;script src="/resource-server/webjars/uportal__notification-icon/dist/notification-icon.min.js" type="text/javascript" defer&gt;&lt;/script&gt;\n                &lt;notification-icon\n                    see-all-notifications-url="/uPortal/p/notification-list"\n                    navigation-strategy="list"\n                    style="position: relative; top: -0.5rem;"&gt;&lt;/notification-icon&gt;\n            \n        </value>
+  </portlet-preference>
+</portlet-definition>

@@ -1,0 +1,32 @@
+<user username="admin" version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+  <password>(MD5)OP2Z89LDMIY6gHAwfoFPRSQWDl5Z16Vt</password>
+  <attribute>
+    <name>alternateEmailAddress</name>
+    <value>amy.webmaster@university.edu</value>
+    <value>amy.geologist@university.edu</value>
+  </attribute>
+  <attribute>
+    <name>department</name>
+    <value>IT Services</value>
+  </attribute>
+  <attribute>
+    <name>givenName</name>
+    <value>Amy</value>
+  </attribute>
+  <attribute>
+    <name>mail</name>
+    <value>amy.administrator@university.edu</value>
+  </attribute>
+  <attribute>
+    <name>sn</name>
+    <value>Administrator</value>
+  </attribute>
+  <attribute>
+    <name>telephoneNumber</name>
+    <value>(555) 555-5555</value>
+  </attribute>
+  <attribute>
+    <name>title</name>
+    <value>Portal Administrator</value>
+  </attribute>
+</user>

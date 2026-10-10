@@ -1,0 +1,17 @@
+<permission-owner version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/permission-owner https://source.jasig.org/schemas/uportal/io/permission-owner/permission-owner-4.0.xsd">
+  <name>uPortal Permissions</name>
+  <fname>UP_PERMISSIONS</fname>
+  <desc>Permissions over the viewing and editing of permission owners, activities, and permission assignments</desc>
+  <activity>
+    <name>Edit Permissions</name>
+    <fname>EDIT_PERMISSIONS</fname>
+    <desc>Edit any portal permission owner, activity, or assignment.</desc>
+    <targetProvider>portalSystemTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>View Permissions</name>
+    <fname>VIEW_PERMISSIONS</fname>
+    <desc>View any portal permission owner, activity, or assignment.</desc>
+    <targetProvider>portalSystemTargetProvider</targetProvider>
+  </activity>
+</permission-owner>

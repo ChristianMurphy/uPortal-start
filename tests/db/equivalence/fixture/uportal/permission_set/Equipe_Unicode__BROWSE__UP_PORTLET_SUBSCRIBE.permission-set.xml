@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: a group with a Unicode name as principal, with two targets, one
+ | granted and one denied.
+ +-->
+<permission-set script="classpath://org/jasig/portal/io/import-permission_set_v3-1.crn">
+  <owner>UP_PORTLET_SUBSCRIBE</owner>
+  <principal-type>org.apereo.portal.groups.IEntityGroup</principal-type>
+  <principal>
+    <group>Équipe Ünïcödé</group>
+  </principal>
+  <activity>BROWSE</activity>
+  <target permission-type="GRANT">
+    <group>Fixture Category ✨</group>
+  </target>
+  <target permission-type="DENY">
+    <group>Testing</group>
+  </target>
+</permission-set>

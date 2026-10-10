@@ -1,0 +1,27 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Permissions Administration</title>
+  <name>Permissions Administration</name>
+  <fname>permissionsmanager</fname>
+  <desc>Portlet for Permissions Administration</desc>
+  <type>Portlet</type>
+  <timeout>50000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>PermissionsAdministration</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Administration</category>
+  <category>uPortal</category>
+  <group>Portal Administrators</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Portal Administrators</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/emblems/emblem-readonly.png</value>
+  </parameter>
+</portlet-definition>

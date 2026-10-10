@@ -1,0 +1,55 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Demo Welcome</title>
+  <name>Demo Welcome</name>
+  <fname>demo-feature</fname>
+  <desc>Demo-targeted welcome screen</desc>
+  <type>Image</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>Image</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Demonstration</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/mimetypes/text-html.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>img-border</name>
+    <readOnly>false</readOnly>
+    <value>0</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>img-height</name>
+    <readOnly>false</readOnly>
+    <value>200</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>img-link</name>
+    <readOnly>false</readOnly>
+    <value>demo_feature.png</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>img-uri</name>
+    <readOnly>false</readOnly>
+    <value>${request.contextPath}/media/org/jasig/portal/channels/CImage/demo_feature.png</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>img-width</name>
+    <readOnly>false</readOnly>
+    <value>468</value>
+  </portlet-preference>
+</portlet-definition>

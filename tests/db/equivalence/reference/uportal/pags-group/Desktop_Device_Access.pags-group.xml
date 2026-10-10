@@ -1,0 +1,13 @@
+<pags-group script="classpath://org/jasig/portal/io/import-pags-group_v4-1.crn">
+  <name>Desktop Device Access</name>
+  <description>User Access by a non-mobile device (desktop)</description>
+  <selection-test>
+    <test-group>
+      <test>
+        <attribute-name>agentDevice</attribute-name>
+        <tester-class>org.apereo.portal.groups.pags.testers.PropertyInvertedRegexTester</tester-class>
+        <test-value>org.apereo.portal.http.header.userAgent.mobile.regex.pattern</test-value>
+      </test>
+    </test-group>
+  </selection-test>
+</pags-group>

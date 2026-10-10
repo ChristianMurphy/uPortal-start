@@ -1,0 +1,50 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="academics-lo">
+  <folder ID="s1" hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder ID="s2" hidden="true" immutable="true" name="Page Top folder" type="page-top" unremovable="true">
+      <channel ID="n3" fname="dynamic-respondr-skin" hidden="false" immutable="false" unremovable="false"/>
+      <channel ID="n4" fname="fragment-admin-exit" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s5" hidden="true" immutable="true" name="Customize folder" type="customize" unremovable="true">
+      <channel ID="n6" fname="personalization-gallery" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s7" hidden="false" immutable="false" name="Academics" type="regular" unremovable="false">
+      <structure-attribute>
+        <name>externalId</name>
+        <value>academics</value>
+      </structure-attribute>
+      <folder ID="s8" hidden="false" immutable="false" name="Column 1" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>50%</value>
+        </structure-attribute>
+        <channel ID="n9" fname="announcements" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n10" fname="courses" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+      <folder ID="s11" hidden="false" immutable="false" name="Column 2" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>50%</value>
+        </structure-attribute>
+      </folder>
+    </folder>
+    <folder ID="s14" hidden="false" immutable="false" name="LMS" type="regular" unremovable="false">
+      <structure-attribute>
+        <name>externalId</name>
+        <value>lms</value>
+      </structure-attribute>
+      <folder ID="s15" hidden="false" immutable="false" name="Column 1" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>50%</value>
+        </structure-attribute>
+      </folder>
+      <folder ID="s17" hidden="false" immutable="false" name="Column 2" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>50%</value>
+        </structure-attribute>
+        <channel ID="n18" fname="basiclti-portlet" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+    </folder>
+  </folder>
+</layout>

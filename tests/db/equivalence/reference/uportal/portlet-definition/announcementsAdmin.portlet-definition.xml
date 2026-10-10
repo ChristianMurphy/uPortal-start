@@ -1,0 +1,70 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Announcements Admin</title>
+  <name>Announcements Admin</name>
+  <fname>announcementsAdmin</fname>
+  <desc>Administer Announcements</desc>
+  <type>Portlet</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/Announcements</up:webAppName>
+    <up:portletName>AnnouncementsAdmin</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Administration</category>
+  <group>Portal Administrators</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Portal Administrators</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/status/audio-volume-high.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/announcements_admin.png</value>
+  </parameter>
+  <parameter>
+    <name>printable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>true</value>
+  </parameter>
+</portlet-definition>

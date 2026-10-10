@@ -1,0 +1,27 @@
+<user username="staff" version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+  <password>(MD5)YGvCb8TdruiHaXdY9OvhRJ0MhwZYVTHa</password>
+  <attribute>
+    <name>department</name>
+    <value>IT Services</value>
+  </attribute>
+  <attribute>
+    <name>givenName</name>
+    <value>Samuel</value>
+  </attribute>
+  <attribute>
+    <name>mail</name>
+    <value>samuel.staff@example.org</value>
+  </attribute>
+  <attribute>
+    <name>sn</name>
+    <value>Staff</value>
+  </attribute>
+  <attribute>
+    <name>telephoneNumber</name>
+    <value>(555) 555-5555</value>
+  </attribute>
+  <attribute>
+    <name>title</name>
+    <value>Database Administrator</value>
+  </attribute>
+</user>

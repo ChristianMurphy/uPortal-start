@@ -1,0 +1,49 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Example Domain (test proxy)</title>
+  <name>Example Domain (test proxy)</name>
+  <fname>web-proxy-example</fname>
+  <desc>Proxies https://example.com/ — used by Playwright tests.</desc>
+  <type>Portlet</type>
+  <timeout>10000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/WebProxyPortlet</up:webAppName>
+    <up:portletName>WebProxyPortlet</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Testing</category>
+  <group>Authenticated Users</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Authenticated Users</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>configurable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/apps/internet-web-browser.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>contentService</name>
+    <readOnly>false</readOnly>
+    <value>httpContentService</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>filters</name>
+    <readOnly>false</readOnly>
+    <value>urlRewritingFilter</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>location</name>
+    <readOnly>false</readOnly>
+    <value>http://example.com/</value>
+  </portlet-preference>
+</portlet-definition>

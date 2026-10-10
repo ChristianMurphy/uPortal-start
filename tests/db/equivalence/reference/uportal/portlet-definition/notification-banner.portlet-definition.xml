@@ -1,0 +1,69 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Notification Banner</title>
+  <name>Notification Banner</name>
+  <fname>notification-banner</fname>
+  <desc>View important notifications as banners</desc>
+  <type>Advanced CMS</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Authenticated Users</group>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>chromeStyle</name>
+    <value>no-chrome</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/status/dialog-warning.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/bullhorn.png</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>true</value>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>\n            \n                &lt;script src="/resource-server/webjars/vue/dist/vue.min.js"&gt;&lt;/script&gt;\n                &lt;script src="/resource-server/webjars/uportal__notification-banner/dist/notification-banner.min.js" defer&gt;&lt;/script&gt;\n                &lt;notification-banner notification-api-url="/NotificationPortlet/api/v2/notifications?maxPriority=2"&gt;\n                &lt;/notification-banner&gt;\n            \n        </value>
+  </portlet-preference>
+</portlet-definition>

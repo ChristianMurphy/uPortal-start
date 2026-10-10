@@ -1,0 +1,5 @@
+<portlet-type version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-type https://source.jasig.org/schemas/uportal/io/portlet-type/portlet-type-4.0.xsd">
+  <name>RSS</name>
+  <description>News Feed</description>
+  <uri>/org/apereo/portal/portlets/NewsReaderPortlet/NewsReader.cpd.xml</uri>
+</portlet-type>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: a News Reader predefined feed (the portlet's own table, exported
+ | by its own export script) with a Unicode name, two parameters and two roles.
+ +-->
+<predefined-news script="classpath:/org/jasig/portlet/newsreader/io/import-PredefinedNewsDefinition_v1-0.crn.xml">
+  <fname>fixture-unicode-news</fname>
+  <className>org.jasig.portlet.newsreader.adapter.RomeAdapter</className>
+  <name>Nachrichten — ニュース 📰</name>
+  <parameters>
+    <parameter name="url">https://example.org/feeds/ünïcødé.rss?a=1&amp;b=2</parameter>
+    <parameter name="encoding">UTF-8</parameter>
+  </parameters>
+  <predefinedRoles>
+    <role>Everyone</role>
+    <role>Fixture Root ✨</role>
+  </predefinedRoles>
+</predefined-news>

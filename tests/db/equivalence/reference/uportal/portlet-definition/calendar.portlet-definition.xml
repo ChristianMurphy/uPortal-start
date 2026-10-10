@@ -1,0 +1,66 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Calendar</title>
+  <name>Calendar</name>
+  <fname>calendar</fname>
+  <desc>Calendar of campus, academic, and personal events.</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/CalendarPortlet</up:webAppName>
+    <up:portletName>calendar</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Information</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/mimetypes/x-office-calendar.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/calendar_alt.png</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>true</value>
+  </parameter>
+</portlet-definition>

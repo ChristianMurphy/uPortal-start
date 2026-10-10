@@ -1,0 +1,17 @@
+<fragment-definition script="classpath://org/jasig/portal/io/import-fragment-definition_v3-1.crn">
+  <{http://org.jasig.portal.layout.dlm.config}fragment name="Welcome" ownerID="welcome-lo" precedence="80.0">
+    <{http://org.jasig.portal.layout.dlm.config}audience evaluatorFactory="org.apereo.portal.layout.dlm.providers.GroupMembershipEvaluatorFactory">
+      <paren mode="AND">
+        <paren mode="NOT">
+          <attribute mode="deepMemberOf" name="Guests"/>
+        </paren>
+        <paren mode="NOT">
+          <attribute mode="deepMemberOf" name="Portal Administrators"/>
+        </paren>
+        <paren mode="NOT">
+          <attribute mode="deepMemberOf" name="Tenant Administrators"/>
+        </paren>
+      </paren>
+    </{http://org.jasig.portal.layout.dlm.config}audience>
+  </{http://org.jasig.portal.layout.dlm.config}fragment>
+</fragment-definition>

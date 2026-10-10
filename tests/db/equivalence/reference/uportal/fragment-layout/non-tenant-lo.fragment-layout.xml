@@ -1,0 +1,17 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="non-tenant-lo">
+  <folder ID="s1" hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder ID="s20" hidden="true" immutable="true" name="Page Top folder" type="page-top" unremovable="true">
+      <channel ID="n22" fname="dynamic-respondr-skin" hidden="false" immutable="false" unremovable="false"/>
+      <channel ID="n24" fname="fragment-admin-exit" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s40" hidden="true" immutable="true" name="Customize folder" type="customize" unremovable="true">
+      <channel ID="n42" fname="personalization-gallery" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s100" hidden="false" immutable="true" name="Page Top folder" type="page-top" unremovable="true">
+      <channel ID="n110" fname="dynamic-respondr-skin" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s200" hidden="false" immutable="true" name="Header Left folder" type="header-left" unremovable="true">
+      <channel ID="n210" fname="portal-logo" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+  </folder>
+</layout>

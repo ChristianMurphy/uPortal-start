@@ -1,0 +1,11 @@
+<permission-set script="classpath://org/apereo/portal/io/import-permission_set_v5-0.crn">
+  <owner>UP_PORTLET_SUBSCRIBE</owner>
+  <principal-type>org.apereo.portal.groups.IEntityGroup</principal-type>
+  <principal>
+    <group>Authenticated Users</group>
+  </principal>
+  <activity>BROWSE</activity>
+  <target permission-type="GRANT">
+    <group>Demonstration</group>
+  </target>
+</permission-set>

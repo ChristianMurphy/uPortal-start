@@ -1,0 +1,13 @@
+<pags-group script="classpath://org/jasig/portal/io/import-pags-group_v4-1.crn">
+  <name>PAGS Fixture Child 🌱</name>
+  <description>Nested PAGS group</description>
+  <selection-test>
+    <test-group>
+      <test>
+        <attribute-name>eduPersonAffiliation</attribute-name>
+        <tester-class>org.apereo.portal.groups.pags.testers.NbValuesGETester</tester-class>
+        <test-value>3</test-value>
+      </test>
+    </test-group>
+  </selection-test>
+</pags-group>

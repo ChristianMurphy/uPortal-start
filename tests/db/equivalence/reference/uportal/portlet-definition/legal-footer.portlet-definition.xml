@@ -1,0 +1,29 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Legal Footer</title>
+  <name>Legal Footer</name>
+  <fname>legal-footer</fname>
+  <desc>Legal links for uPortal</desc>
+  <type>Portlet</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Everyone</group>
+  <parameter>
+    <name>configurable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>\n            &lt;div class="container-fluid legal-footer"&gt;\n                &lt;div&gt;\n                    &lt;a href="http://www.apereo.org/uportal" target="_blank"&gt;Powered by uPortal&lt;/a&gt;, an open-source project by &lt;a href="http://www.apereo.org" title="Apereo.org - Serving the Academic Mission"&gt;Apereo&lt;/a&gt;\n                &lt;/div&gt;\n                &lt;div&gt;\n                    &lt;a href="http://www.apereo.org/" target="_blank"&gt;Apereo.org&lt;/a&gt; |\n                    &lt;a href="http://www.apereo.org/uportal" target="_blank"&gt;uPortal&lt;/a&gt; |\n                    &lt;a href="http://www.apereo.org/uportal/download" target="_blank"&gt;Download&lt;/a&gt; |\n                    &lt;a href="http://www.apereo.org/uportal/community" target="_blank"&gt;Community&lt;/a&gt; |\n                    &lt;a href="http://www.opentracker.net/article/how-write-website-privacy-policy" target="_blank"&gt;Privacy Policy&lt;/a&gt; |\n                    &lt;a href="http://wiki.jasig.org/display/UPM40/Accessibility" target="_blank"&gt;Accessibility&lt;/a&gt;\n                &lt;/div&gt;\n                &lt;div&gt;\n                    &lt;a href="http://www.apereo.org/uportal/about/license" title="uPortal" target="_blank"&gt;uPortal&lt;/a&gt;\n                    is licensed under the\n                    &lt;a href="http://www.apache.org/licenses/LICENSE-2.0" title="Apache License, Version 2.0" target="_blank"&gt;Apache License, Version 2.0&lt;/a&gt;\n                    as approved by the Open Source Initiative (OSI), an\n                    &lt;a href="http://www.opensource.org/docs/osd" title="OSI-certified" target="_blank"&gt;OSI-certified&lt;/a&gt;\n                    ("open") and\n                    &lt;a href="http://www.gnu.org/licenses/license-list.html" title="Gnu/FSF-recognized" target="_blank"&gt;Gnu/FSF-recognized&lt;/a&gt;\n                    ("free") license.\n                &lt;/div&gt;\n            &lt;/div&gt;\n        </value>
+  </portlet-preference>
+</portlet-definition>

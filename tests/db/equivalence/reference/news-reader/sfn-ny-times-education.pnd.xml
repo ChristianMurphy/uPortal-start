@@ -1,0 +1,11 @@
+<predefined-news script="classpath:/org/jasig/portlet/newsreader/io/import-PredefinedNewsDefinition_v1-0.crn.xml">
+  <fname>sfn-ny-times-education</fname>
+  <className>org.jasig.portlet.newsreader.adapter.RomeAdapter</className>
+  <name>NY Times Education</name>
+  <parameters>
+    <parameter name="url">http://www.nytimes.com/services/xml/rss/nyt/Education.xml</parameter>
+  </parameters>
+  <predefinedRoles>
+    <role>Everyone</role>
+  </predefinedRoles>
+</predefined-news>

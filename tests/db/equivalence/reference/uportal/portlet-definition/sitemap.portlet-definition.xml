@@ -1,0 +1,21 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Sitemap</title>
+  <name>Sitemap</name>
+  <fname>sitemap</fname>
+  <desc>Sitemap that appears near the bottom of the page for all users</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>JspInvoker</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Everyone</group>
+  <portlet-preference>
+    <name>JspInvokerPortletController.viewLocation</name>
+    <readOnly>false</readOnly>
+    <value>/jsp/Invoker/sitemap</value>
+  </portlet-preference>
+</portlet-definition>

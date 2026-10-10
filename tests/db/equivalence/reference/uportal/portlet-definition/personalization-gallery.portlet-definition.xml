@@ -1,0 +1,25 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Personalization Gallery</title>
+  <name>Personalization Gallery</name>
+  <fname>personalization-gallery</fname>
+  <desc>Gallery approach to personalization, as seen in uPortal 3.x and 4.0</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>JspInvoker</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Authenticated Users</group>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <portlet-preference>
+    <name>JspInvokerPortletController.viewLocation</name>
+    <readOnly>false</readOnly>
+    <value>/jsp/Invoker/gallery</value>
+  </portlet-preference>
+</portlet-definition>

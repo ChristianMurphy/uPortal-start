@@ -1,0 +1,46 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="fixture-zoe">
+  <folder hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder dlm:origin="fixture-lo:/layout/folder/folder[3]" hidden="false" immutable="false" name="Umbenannt 名前 🎉" type="regular" unremovable="false">
+      <dlm:editSet hidden="false" immutable="false" name="" type="dlm:editSet" unremovable="false">
+        <dlm:edit hidden="false" immutable="false" name="name" type="dlm:edit" unremovable="false"/>
+      </dlm:editSet>
+    </folder>
+    <dlm:positionSet hidden="false" immutable="false" name="" type="dlm:positionSet" unremovable="false">
+      <dlm:position hidden="false" immutable="false" name="welcome-lo:/layout/folder/folder[3]" type="dlm:position" unremovable="false"/>
+      <dlm:position hidden="false" immutable="false" name="fixture-lo:/layout/folder/folder[3]" type="dlm:position" unremovable="false"/>
+      <dlm:position hidden="false" immutable="false" name="fixture-lo:/layout/folder/folder[4]" type="dlm:position" unremovable="false"/>
+      <dlm:position hidden="false" immutable="false" name="fixture-zoe:/layout/folder/folder[2]" type="dlm:position" unremovable="false"/>
+    </dlm:positionSet>
+    <folder hidden="false" immutable="false" name="Mine ✓ « » &amp;" type="regular" unremovable="false">
+      <folder hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>25%</value>
+        </structure-attribute>
+        <channel fname="snappy" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+      <folder hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>75%</value>
+        </structure-attribute>
+        <channel fname="fixture-rich-content" hidden="false" immutable="false" unremovable="false"/>
+        <dlm:positionSet hidden="false" immutable="false" name="" type="dlm:positionSet" unremovable="false">
+          <dlm:position fname="fixture-rich-content" hidden="false" immutable="false" name="fixture-zoe:/layout/folder/folder[2]/folder[2]/channel" type="dlm:position" unremovable="false"/>
+          <dlm:position fname="xkcd" hidden="false" immutable="false" name="fixture-lo:/layout/folder/folder[3]/folder/channel[2]" type="dlm:position" unremovable="false"/>
+        </dlm:positionSet>
+      </folder>
+    </folder>
+    <folder dlm:origin="favorite-lo:/layout/folder/folder" hidden="false" immutable="false" name="_favorite" type="favorites" unremovable="false">
+      <folder dlm:origin="favorite-lo:/layout/folder/folder/folder" hidden="false" immutable="false" name="Column" type="favorite_column" unremovable="false">
+        <channel fname="phd-comics" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+      <dlm:positionSet hidden="false" immutable="false" name="" type="dlm:positionSet" unremovable="false">
+        <dlm:position hidden="false" immutable="false" name="favorite-lo:/layout/folder/folder/folder[2]" type="dlm:position" unremovable="false"/>
+      </dlm:positionSet>
+    </folder>
+  </folder>
+  <dlm:deleteSet hidden="false" immutable="false" name="" type="dlm:deleteSet" unremovable="false">
+    <dlm:delete fname="calendar" hidden="false" immutable="false" name="welcome-lo:/layout/folder/folder[3]/folder[2]/channel" type="dlm:delete" unremovable="false"/>
+  </dlm:deleteSet>
+</layout>

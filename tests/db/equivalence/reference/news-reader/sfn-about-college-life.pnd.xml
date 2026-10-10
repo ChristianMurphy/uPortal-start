@@ -1,0 +1,11 @@
+<predefined-news script="classpath:/org/jasig/portlet/newsreader/io/import-PredefinedNewsDefinition_v1-0.crn.xml">
+  <fname>sfn-about-college-life</fname>
+  <className>org.jasig.portlet.newsreader.adapter.RomeAdapter</className>
+  <name>About College Life</name>
+  <parameters>
+    <parameter name="url">http://z.about.com/6/g/collegelife/b/rss2.xml</parameter>
+  </parameters>
+  <predefinedRoles>
+    <role>Everyone</role>
+  </predefinedRoles>
+</predefined-news>

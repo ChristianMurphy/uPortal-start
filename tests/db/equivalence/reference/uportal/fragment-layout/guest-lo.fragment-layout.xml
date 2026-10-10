@@ -1,0 +1,37 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="guest-lo">
+  <folder ID="s1" hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder ID="s20" hidden="true" immutable="true" name="Page Top folder" type="page-top" unremovable="true">
+      <channel ID="n22" fname="dynamic-respondr-skin" hidden="false" immutable="false" unremovable="false"/>
+      <channel ID="n24" fname="fragment-admin-exit" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s40" hidden="true" immutable="true" name="Customize folder" type="customize" unremovable="true">
+      <channel ID="n42" fname="personalization-gallery" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s100" hidden="false" immutable="true" name="Eyebrow folder" type="eyebrow" unremovable="true">
+      <channel ID="n8" fname="login-launcher" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s1000" hidden="false" immutable="false" name="Welcome" type="regular" unremovable="false">
+      <structure-attribute>
+        <name>externalId</name>
+        <value>welcome</value>
+      </structure-attribute>
+      <folder ID="s1100" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>60%</value>
+        </structure-attribute>
+        <channel ID="n1110" fname="what-is-uportal" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n1120" fname="logging-in" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+      <folder ID="s1200" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>40%</value>
+        </structure-attribute>
+        <channel ID="n1210" fname="uportal-links" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n1220" fname="portal-activity" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n1230" fname="please-register" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+    </folder>
+  </folder>
+</layout>

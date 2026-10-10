@@ -1,0 +1,78 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>My Drives</title>
+  <name>My Drives</name>
+  <fname>esup-filemanager-demo</fname>
+  <desc>Access to remote storage spaces</desc>
+  <type>Portlet</type>
+  <timeout>900000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/esup-filemanager</up:webAppName>
+    <up:portletName>esup-filemanager</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Services</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromDesktop</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>${request.contextPath}/media/skins/icons/filesharing.png</value>
+  </parameter>
+  <parameter>
+    <name>locale</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>${request.contextPath}/media/skins/icons/filesharing.png</value>
+  </parameter>
+  <parameter>
+    <name>secure</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>true</value>
+  </parameter>
+</portlet-definition>

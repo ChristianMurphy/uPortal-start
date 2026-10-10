@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: a portlet category with a Unicode name; the fixture portlet
+ | definitions put themselves in it (<category>).
+ +-->
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Fixture Category ✨</name>
+  <entity-type>org.apereo.portal.portlet.om.IPortletDefinition</entity-type>
+  <creator>system</creator>
+  <description>Catégorie de portlets</description>
+  <children>
+  </children>
+</group>

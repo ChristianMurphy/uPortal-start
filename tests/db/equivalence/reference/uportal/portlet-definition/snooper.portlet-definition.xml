@@ -1,0 +1,26 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Snooper</title>
+  <name>Snooper</name>
+  <fname>snooper</fname>
+  <desc>Tool for viewing request attributes and headers</desc>
+  <type>Portlet</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>Snooper</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Development</category>
+  <group>Portal Developers</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Portal Developers</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/categories/applications-system.png</value>
+  </parameter>
+</portlet-definition>

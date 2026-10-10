@@ -1,0 +1,23 @@
+<permission-set script="classpath://org/apereo/portal/io/import-permission_set_v5-0.crn">
+  <owner>UP_USERS</owner>
+  <principal-type>org.apereo.portal.groups.IEntityGroup</principal-type>
+  <principal>
+    <group>Authenticated Users</group>
+  </principal>
+  <activity>VIEW_USER</activity>
+  <target permission-type="DENY">
+    <group>Fragment Owners</group>
+  </target>
+  <target permission-type="DENY">
+    <group>Tenant Fragment Owners</group>
+  </target>
+  <target permission-type="DENY">
+    <literal>defaultTemplateUser</literal>
+  </target>
+  <target permission-type="DENY">
+    <literal>system</literal>
+  </target>
+  <target permission-type="GRANT">
+    <group>Everyone</group>
+  </target>
+</permission-set>

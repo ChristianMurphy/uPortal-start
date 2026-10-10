@@ -1,0 +1,11 @@
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Fixture Root ✨</name>
+  <entity-type>org.apereo.portal.security.IPerson</entity-type>
+  <creator>system</creator>
+  <description>Top of the fixture's nested groups: «quoted» &amp; &lt;escaped&gt; — ünïcödé ✨</description>
+  <children>
+    <group>PAGS Fixture Ünïcødé</group>
+    <group>Équipe Ünïcödé</group>
+    <literal>fixture-lo</literal>
+  </children>
+</group>

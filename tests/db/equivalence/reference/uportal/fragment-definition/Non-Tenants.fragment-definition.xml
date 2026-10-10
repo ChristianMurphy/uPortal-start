@@ -1,0 +1,9 @@
+<fragment-definition script="classpath://org/jasig/portal/io/import-fragment-definition_v3-1.crn">
+  <{http://org.jasig.portal.layout.dlm.config}fragment name="Non-Tenants" ownerID="non-tenant-lo" precedence="80.0">
+    <{http://org.jasig.portal.layout.dlm.config}audience evaluatorFactory="org.apereo.portal.layout.dlm.providers.GroupMembershipEvaluatorFactory">
+      <paren mode="NOT">
+        <attribute mode="deepMemberOf" name="Tenants"/>
+      </paren>
+    </{http://org.jasig.portal.layout.dlm.config}audience>
+  </{http://org.jasig.portal.layout.dlm.config}fragment>
+</fragment-definition>

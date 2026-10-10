@@ -1,0 +1,5 @@
+<stylesheet-descriptor version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/stylesheet-descriptor https://source.jasig.org/schemas/uportal/io/stylesheet-descriptor/stylesheet-descriptor-4.0.xsd">
+  <name>JsonLayout</name>
+  <description>Renders the user layout as JSON</description>
+  <uri>classpath:/layout/theme/json/json.xsl</uri>
+</stylesheet-descriptor>

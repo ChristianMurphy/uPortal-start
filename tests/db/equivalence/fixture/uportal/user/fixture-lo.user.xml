@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: owner of the fixture fragment (fragment-layout/fixture-lo).
+ +-->
+<user xmlns="https://source.jasig.org/schemas/uportal/io/user" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="4.0" username="fixture-lo" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+    <default-user>defaultTemplateUser</default-user>
+    <attribute>
+        <name>givenName</name>
+        <value>Fixture</value>
+    </attribute>
+    <attribute>
+        <name>sn</name>
+        <value>Layout Owner</value>
+    </attribute>
+</user>

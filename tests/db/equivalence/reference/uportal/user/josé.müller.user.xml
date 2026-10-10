@@ -1,0 +1,14 @@
+<user username="josé.müller" version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+  <attribute>
+    <name>displayName</name>
+    <value>José Müller-Øresund ☕</value>
+  </attribute>
+  <attribute>
+    <name>givenName</name>
+    <value>José</value>
+  </attribute>
+  <attribute>
+    <name>sn</name>
+    <value>Müller-Øresund</value>
+  </attribute>
+</user>
