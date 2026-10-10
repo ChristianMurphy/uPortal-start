@@ -59,5 +59,5 @@ tests/query-budget/run.sh --record   # write the observed counts to budgets.json
 Results are in `build/query-budget/results.txt`, with the statement log next to them. A change
 that is meant to add statements updates `budgets.json` in the same commit, with the reason in
 the commit message. `.github/workflows/integration.yml` runs the check (job `query-budgets`) on
-every push against uPortal built from source; a failure prints the observed counts as JSON, in
+every push to the integration branch and nightly, against uPortal built from source; a failure prints the observed counts as JSON, in
 the format of `budgets.json`.
