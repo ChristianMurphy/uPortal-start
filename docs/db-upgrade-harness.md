@@ -15,7 +15,8 @@ For each vendor, the harness:
 
 ## Running it
 
-You need Docker, Java 11 and a `gradle.properties` (copy `gradle.properties.example`).
+You need Docker, Java 11 for the portal plus a JDK 21 for Gradle (see "Prerequisites" in `README.md`),
+and a `gradle.properties` (copy `gradle.properties.example`).
 
 ```bash
 tests/db/harness.sh postgres-16                       # one vendor

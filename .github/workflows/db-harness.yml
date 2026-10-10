@@ -40,7 +40,10 @@ jobs:
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
-          java-version: 11
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -49,6 +52,10 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
       - name: Install npm dependencies
         run: npm ci
       - name: dataInit, snapshot, compare, then run the API specs against the portal
@@ -112,7 +119,10 @@ jobs:
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
-          java-version: 11
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -121,6 +131,10 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
       - name: Install npm dependencies
         run: npm ci
       # The service container is already running; dbWait polls JDBC until it accepts connections
@@ -169,7 +183,10 @@ jobs:
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
-          java-version: 11
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -178,6 +195,10 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
       - name: Install npm dependencies
         run: npm ci
       - name: Start the database, dataInit, snapshot, compare, then run the API specs
