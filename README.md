@@ -182,16 +182,6 @@ and writes a fresh database on a current server, of the same or another vendor, 
 table (`./gradlew dbMigrate`, see "Copy migration" in
 [docs/db-upgrade-harness.md](docs/db-upgrade-harness.md)). The old database is left untouched.
 
-:warning:  CAS checks passwords in the portal database itself. When you move the portal off the
-bundled HSQLDB (the `hibernate.connection.*` settings in `global.properties`), point CAS at the
-same database: the `dataSource` bean in `overlays/cas/src/main/webapp/WEB-INF/deployerConfigContext.xml`
-has its own driver, URL, username and password. Its `@casDb*@` tokens are filled by
-`overlays/cas/build.gradle` with the bundled HSQLDB's values; replace them with yours. Add your
-JDBC driver to the `jdbc` configuration in `overlays/build.gradle`, which both webapps use. If
-CAS still points at HSQLDB, every login through the CAS form fails. The database upgrade harness
-(`-PdbVendor`, see [docs/db-upgrade-harness.md](docs/db-upgrade-harness.md)) fills the tokens from
-its vendor file, so CAS and the portal share one database there.
-
 :warning:  On Microsoft SQL Server, also put `hibernate.dialect=org.hibernate.dialect.SQLServerDialect`
 in `${portal.home}/feedback.properties`. The Feedback portlet bundles Hibernate 3.2, which has no
 `SQLServer2005Dialect` (or later) as named in `global.properties` for the other portlets; without
@@ -282,7 +272,9 @@ You can stop the Tomcat server using with this command:
 
 Assuming all the defaults were left untouched:
 * The URL to access uPortal is:  <http://localhost:8080/uPortal/>
-* Using the example credentials, you can bypass CAS when testing locally.  Available default logins / URLs:
+* Users sign in with uPortal's own login form (the **Sign In** button).  To sign in through CAS
+  instead, see [How To Choose How Users Sign In](#how-to-choose-how-users-sign-in).
+* The example credentials (user name = password) also work in a URL.  Available default logins / URLs:
   * admin: <http://localhost:8080/uPortal/Login?userName=admin&password=admin>
   * faculty: <http://localhost:8080/uPortal/Login?userName=faculty&password=faculty>
   * staff <http://localhost:8080/uPortal/Login?userName=staff&password=staff>
@@ -299,9 +291,10 @@ properties:
 
 | Property             | Default | Used for                                         |
 | -------------------- | ------- | ------------------------------------------------ |
-| `tomcatHttpPort`     | `8080`  | Tomcat HTTP connector, portal and CAS URLs       |
+| `tomcatHttpPort`     | `8080`  | Tomcat HTTP connector and portal URLs            |
 | `tomcatShutdownPort` | `8005`  | Tomcat shutdown port                             |
 | `hsqlPort`           | `8887`  | Embedded HSQLDB and the JDBC URLs that use it    |
+| `casHttpPort`        | `8090`  | The development CAS server (`-PauthMode=cas`)    |
 
 Set them in that checkout's `gradle.properties`, or pass them with `-P`:
 
@@ -309,12 +302,27 @@ Set them in that checkout's `gradle.properties`, or pass them with `-P`:
     $ ./gradlew -PtomcatHttpPort=8180 -PtomcatShutdownPort=8105 -PhsqlPort=8987 portalInit tomcatStart
 ```
 
-The values are written into Tomcat's `server.xml`, `global.properties` in `portal.home`, and the CAS
-web application when they are deployed, so run `tomcatInstall` and `tomcatDeploy` (or
+The values are written into Tomcat's `server.xml` and `global.properties` in `portal.home` when
+they are deployed, so run `tomcatInstall` and `tomcatDeploy` (or
 `portalInit`) again after changing them.  Use the same values for every Gradle command in that
 checkout (keeping them in `gradle.properties` is easiest):  a command run without them uses the
 default ports, so `hsqlStop`, for example, would stop the HSQLDB on port 8887.  `playwrightRun`
 tests `http://localhost:{tomcatHttpPort}/uPortal/`;  set `PORTAL_BASE_URL` to test another URL.
+
+### How To Choose How Users Sign In
+
+By default users sign in with uPortal's own login form, against the accounts in the portal
+database; no CAS server is needed.  To sign in through CAS instead, set the `authMode` Gradle
+property to `cas`, either against the development CAS 8 server that uPortal-start runs in Docker:
+
+```console
+    $ echo "authMode=cas" >> gradle.properties
+    $ ./gradlew casStart portalInit tomcatStart
+```
+
+or against your institution's CAS server, with `casServerUrl=https://cas.example.edu/cas` in
+`gradle.properties` as well.  See [docs/authentication.md](docs/authentication.md) for what each
+mode configures, how to register the portal with your CAS, and the tests for both modes.
 
 ### How To Create a Custom Skin
 
