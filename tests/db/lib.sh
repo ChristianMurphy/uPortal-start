@@ -101,9 +101,18 @@ start_portal() {  # start_portal <vendor>: start Tomcat on the vendor's database
 
 github_annotation() {  # github_annotation <level> <title> <text>: on GitHub Actions only
     [ "${GITHUB_ACTIONS:-}" = true ] || return 0
-    local text="$3"
+    local title="$2" text="$3"
+    # A property value also ends at ',' and ':'
+    title=${title//'%'/'%25'}; title=${title//$'\r'/'%0D'}; title=${title//$'\n'/'%0A'}
+    title=${title//':'/'%3A'}; title=${title//','/'%2C'}
     text=${text//'%'/'%25'}; text=${text//$'\r'/'%0D'}; text=${text//$'\n'/'%0A'}
-    echo "::$1 title=$2::$text"
+    echo "::$1 title=$title::$text"
+}
+
+tomcat_errors() {  # the distinct database and schema errors in this checkout's Tomcat logs
+    grep -rhE 'ERROR|SEVERE|Exception' "$ROOT/.gradle/tomcat/logs" 2>/dev/null |
+        grep -iE 'dialect|schema|deadlock|table|hibernate|sql' | sed -E 's/^[0-9: ,.-]+//' |
+        cut -c1-300 | sort | uniq -c | sort -rn | head -n 15
 }
 
 failed_specs() {  # the failure summary at the end of a Playwright list-reporter log
