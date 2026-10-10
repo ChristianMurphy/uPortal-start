@@ -3,7 +3,7 @@
 `tests/cluster/cluster.sh` runs two uPortal nodes from one checkout against one PostgreSQL 18
 database and checks the things a cluster depends on: cache invalidation between the nodes,
 clustered jobs that run on one node at a time, and lock failover when a node is killed. It is the
-cluster gate of the uPortal 6.0 modernization (MOD-D29 item 9): the move from Ehcache 2 and
+required cluster check of the uPortal 6.0 modernization (MOD-D29 item 9): the move from Ehcache 2 and
 JGroups to JCache (Infinispan, or Valkey through Redisson) and from Hibernate 4.3 to 7 must keep
 these checks green.
 

@@ -68,7 +68,7 @@ minutes after a warm-up. Half browse as guests, the rest log in and out or rende
 scenario are thresholds from `tests/load/baseline.json` (1.5 × + 50/100 ms, < 1 % errors).
 `docs/load-tests.md` describes scaling to MOD-Q7's large campus on real hardware.
 
-## Gate results
+## CI results
 
 RESULTS
 
