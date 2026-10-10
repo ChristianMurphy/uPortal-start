@@ -39,41 +39,50 @@ configurations {
     dbHarnessDriver
 }
 
-if (dbVendor) {
-    File vendorFile = file("tests/db/vendors/${dbVendor}.properties")
+/*
+ * Reads tests/db/vendors/<vendor>.properties into a map of connection settings. Gradle properties
+ * named <prefix>Host, <prefix>Port, <prefix>Url, <prefix>User and <prefix>Password override the
+ * vendor defaults (prefix 'db' for -PdbVendor; 'sourceDb' / 'targetDb' for dbMigrate).
+ */
+Closure<Map> loadDbVendor = { String vendor, String prefix ->
+    File vendorFile = file("tests/db/vendors/${vendor}.properties")
     if (!vendorFile.file) {
         String known = file('tests/db/vendors').list()?.findAll { it.endsWith('.properties') }?.collect { it - '.properties' }?.sort()?.join(', ')
-        throw new GradleException("Unknown dbVendor '${dbVendor}'; expected one of: ${known}")
+        throw new GradleException("Unknown ${prefix}Vendor '${vendor}'; expected one of: ${known}")
     }
     Properties v = new Properties()
     vendorFile.withInputStream { v.load(it) }
     Map<String, String> tokens = [
-        dbHost: findProperty('dbHost') ?: 'localhost',
-        dbPort: findProperty('dbPort') ?: v.getProperty('host.port', ''),
+        dbHost: findProperty("${prefix}Host") ?: 'localhost',
+        dbPort: findProperty("${prefix}Port") ?: v.getProperty('host.port', ''),
         hsqlPort: hsqlPort,
         hsqldbVersion: hsqldbVersion,
     ]
     Closure<String> fill = { String s ->
         s == null ? null : tokens.inject(s) { String acc, String k, String val -> acc.replace("@${k}@", val) }
     }
-    project.ext.dbHarness = [
-        vendor: dbVendor,
+    return [
+        vendor: vendor,
         driver: fill(v.getProperty('jdbc.driver')),
         driverClass: v.getProperty('hibernate.connection.driver_class'),
-        url: findProperty('dbUrl') ?: fill(v.getProperty('hibernate.connection.url')),
-        username: findProperty('dbUser') ?: v.getProperty('hibernate.connection.username'),
-        password: findProperty('dbPassword') ?: v.getProperty('hibernate.connection.password', ''),
+        url: findProperty("${prefix}Url") ?: fill(v.getProperty('hibernate.connection.url')),
+        username: findProperty("${prefix}User") ?: v.getProperty('hibernate.connection.username'),
+        password: findProperty("${prefix}Password") ?: v.getProperty('hibernate.connection.password', ''),
         validationQuery: v.getProperty('hibernate.connection.validationQuery'),
         // Used by the bundled portlets only; uPortal resolves its dialect from the JDBC metadata
         dialect: v.getProperty('hibernate.dialect'),
         setupUrl: fill(v.getProperty('setup.url')),
-        setupUser: findProperty('dbSetupUser') ?: v.getProperty('setup.username'),
-        setupPassword: findProperty('dbSetupPassword') ?: v.getProperty('setup.password'),
+        setupUser: findProperty("${prefix}SetupUser") ?: v.getProperty('setup.username'),
+        setupPassword: findProperty("${prefix}SetupPassword") ?: v.getProperty('setup.password'),
         setupSql: v.stringPropertyNames().findAll { it.startsWith('setup.sql.') }
                 .sort { it.substring('setup.sql.'.length()) as int }.collect { fill(v.getProperty(it)) },
         sequenceValues: SnapshotComparison.SequenceValues.valueOf(
                 v.getProperty('verify.sequenceValues', 'exact').trim().toUpperCase(Locale.ROOT)),
     ]
+}
+
+if (dbVendor) {
+    project.ext.dbHarness = loadDbVendor(dbVendor, 'db')
     dependencies {
         dbHarnessDriver dbHarness.driver
     }
@@ -290,5 +299,105 @@ subprojects {
         t.mustRunAfter rootProject.tasks.dbWait, rootProject.tasks.dbSetup
         rootProject.tasks.dbSnapshot.mustRunAfter t
         rootProject.tasks.dbLobReport.mustRunAfter t
+    }
+}
+
+/*
+ * Copy migration (MOD-D11): copies a whole uPortal database into an empty uPortal schema, on the
+ * same or another vendor, with uPortal's copy tool (org.jasig.portal:uPortal-db-migrate), then
+ * positions the ID generators and verifies every table. See "Copy migration" in
+ * docs/db-upgrade-harness.md.
+ *
+ *   ./gradlew dbMigrate -PsourceDbVendor=postgres-16 -PtargetDbVendor=mariadb-11.4 -PtargetDbPort=16608
+ *
+ * -PsourceDbVendor / -PtargetDbVendor name tests/db/vendors/<name>.properties; -P<side>DbHost,
+ * -P<side>DbPort, -P<side>DbUrl, -P<side>DbUser and -P<side>DbPassword override their settings.
+ * Options: -PskipRawEvents, -PdbMigrateClearTarget (delete the target rows first, e.g. after
+ * dataInit), -PdbMigrateDryRun, -PdbMigrateVerifyOnly, -PdbMigrateArgs='<more tool options>',
+ * -PdbMigrateVersion (default uPortalVersion). The report goes to build/db-migrate/.
+ */
+configurations {
+    // The tool's executable jar (Spring Boot, Java 21); it brings its own dependencies
+    dbMigrateTool {
+        transitive = false
+    }
+    dbMigrateDrivers
+}
+
+String sourceDbVendor = findProperty('sourceDbVendor')
+String targetDbVendor = findProperty('targetDbVendor')
+Map dbMigrateSource = sourceDbVendor ? loadDbVendor(sourceDbVendor, 'sourceDb') : null
+Map dbMigrateTarget = targetDbVendor ? loadDbVendor(targetDbVendor, 'targetDb') : null
+
+dependencies {
+    dbMigrateTool "org.jasig.portal:uPortal-db-migrate:${findProperty('dbMigrateVersion') ?: uPortalVersion}:exec@jar"
+    if (dbMigrateSource) {
+        dbMigrateDrivers dbMigrateSource.driver
+    }
+    if (dbMigrateTarget) {
+        dbMigrateDrivers dbMigrateTarget.driver
+    }
+}
+
+task dbMigrate(type: JavaExec) {
+    group 'Database harness'
+    description 'Copies the -PsourceDbVendor database into the -PtargetDbVendor one and verifies it (uPortal copy migration tool)'
+    classpath = configurations.dbMigrateTool
+    // PropertiesLauncher (the jar's Main-Class) adds the JDBC drivers from loader.path
+    mainClass = 'org.springframework.boot.loader.launch.PropertiesLauncher'
+    FileCollection drivers = configurations.dbMigrateDrivers
+    File outDir = file('build/db-migrate')
+    File rules = file('tests/db/migrate/uportal-start-portlets.rules')
+    String name = "${sourceDbVendor}-to-${targetDbVendor}"
+    boolean skipRawEvents = project.hasProperty('skipRawEvents')
+    boolean clearTarget = project.hasProperty('dbMigrateClearTarget')
+    boolean dryRun = project.hasProperty('dbMigrateDryRun')
+    boolean verifyOnly = project.hasProperty('dbMigrateVerifyOnly')
+    String extraArgs = findProperty('dbMigrateArgs') ?: ''
+    jvmArgs = ['-Xmx' + (findProperty('dbMigrateHeap') ?: '512m')]
+
+    doFirst {
+        if (!dbMigrateSource || !dbMigrateTarget) {
+            throw new GradleException('dbMigrate needs -PsourceDbVendor=<name> and -PtargetDbVendor=<name>; see tests/db/vendors')
+        }
+        outDir.mkdirs()
+        systemProperty 'loader.path', drivers.files*.absolutePath.join(',')
+        // Credentials go through files in build/, not the command line
+        Closure<File> props = { String side, Map v ->
+            File f = new File(outDir, "${side}.properties")
+            Properties p = new Properties()
+            p.setProperty('url', v.url)
+            p.setProperty('user', v.username ?: '')
+            p.setProperty('password', v.password ?: '')
+            f.withOutputStream { p.store(it, "dbMigrate ${side}: ${v.vendor}") }
+            f.setReadable(false, false)
+            f.setReadable(true, true)
+            return f
+        }
+        List<String> a = [
+            '--source-properties', props('source', dbMigrateSource).path,
+            '--target-properties', props('target', dbMigrateTarget).path,
+            '--rules', rules.path,
+            '--report', new File(outDir, "${name}.json").path,
+        ]
+        if (skipRawEvents) a << '--skip-raw-events'
+        if (clearTarget) a << '--clear-target'
+        if (dryRun) a << '--dry-run'
+        if (verifyOnly) a << '--verify-only'
+        a.addAll(extraArgs.tokenize())
+        args(a)
+        logger.lifecycle("dbMigrate: ${dbMigrateSource.vendor} ${dbMigrateSource.url} -> ${dbMigrateTarget.vendor} ${dbMigrateTarget.url}")
+    }
+    doLast {
+        new File(outDir, 'source.properties').delete()
+        new File(outDir, 'target.properties').delete()
+    }
+}
+// The tool is a Spring Boot 4 application and needs Java 21, like the Gradle daemon; the portal
+// itself keeps running on JAVA_HOME. (The java plugin, and its toolchains, come after this script.)
+plugins.withType(JavaBasePlugin).configureEach {
+    JavaToolchainService toolchains = project.extensions.getByType(JavaToolchainService)
+    tasks.named('dbMigrate', JavaExec) {
+        javaLauncher = toolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
     }
 }
