@@ -20,6 +20,7 @@ jobs:
   test:
     name: "${{ matrix.platform }} with Java ${{ matrix.java-distribution }} version ${{ matrix.java-version }}"
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - ubuntu-latest
@@ -61,8 +62,10 @@ jobs:
           cache-provider: basic
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
-          mkdir -p ~/.gradle
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_21_ARM64" >> ~/.gradle/gradle.properties
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_21_ARM64" >> "$gradle_user_home/gradle.properties"
         shell: bash
       - name: Build
         run: ./gradlew -i -S build
@@ -112,8 +115,10 @@ jobs:
           cache-provider: basic
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
-          mkdir -p ~/.gradle
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Initialize portal
         run: ./gradlew -i -S portalInit
       - name: Start Tomcat
