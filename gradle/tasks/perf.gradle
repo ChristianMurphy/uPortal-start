@@ -20,20 +20,20 @@ task perfGenTestData() {
     doLast {
         // Determine output location for user xml files
         final String testDataDirKey = "data.test.perf.directory";
-        final String testDataDirStr = project.rootProject.ext['buildProperties'].getProperty(testDataDirKey)
+        final String testDataDirStr = rootProject.ext['buildProperties'].getProperty(testDataDirKey)
         if (testDataDirStr == null || testDataDirStr.length() == 0) {
             throw new GradleException("Please specify a [${testDataDirKey}] to generate the test data")
         }
 
         // Determine number of test users
-        final String testMaxUsersStr = project.rootProject.ext['buildProperties'].getProperty("data.test.perf.max.users");
+        final String testMaxUsersStr = rootProject.ext['buildProperties'].getProperty("data.test.perf.max.users");
         int maxUsers = 1000 // Default
         if (testMaxUsersStr != null && testMaxUsersStr.length() > 0) {
             maxUsers = Integer.valueOf(testMaxUsersStr)
         }
 
         // Determine location / name of population file
-        String testPopulationStr = project.rootProject.ext['buildProperties'].getProperty("data.test.perf.population.file");
+        String testPopulationStr = rootProject.ext['buildProperties'].getProperty("data.test.perf.population.file");
         if (testPopulationStr == null || testPopulationStr.length() == 0) {
             testPopulationStr = "buildSrc/src/test/perf/baseline-population.csv" // Default
         }
@@ -61,7 +61,7 @@ task perfGenTestData() {
             String hashedPw = "(MD5)" + md5Encryptor.encryptPassword(pw)
 
             // Copy template file and customize the username and password
-            project.copy {
+            copy {
                 from('etc/perf/template_perf.user.xml')
                 into(testDataDir)
                 filter {

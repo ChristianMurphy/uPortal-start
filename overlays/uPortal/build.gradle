@@ -311,6 +311,9 @@ else {
 
 import org.apereo.portal.start.shell.PortalShellInvoker
 
+// The task actions below pass this to PortalShellInvoker (Task.project is off limits at execution time)
+Project uPortalProject = project
+
 ext {
     shellDir = layout.buildDirectory.dir('shell').get().asFile
 }
@@ -400,7 +403,7 @@ portalShellBuildHelper.dataImport('data-import',
     doLast {
         File scriptFile = rootProject.file(new File(shellDir, 'dataInit.groovy'))
         PortalShellInvoker psi = new PortalShellInvoker()
-        psi.invoke(project, scriptFile.getAbsolutePath())
+        psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
     }
 }
 
@@ -448,7 +451,7 @@ portalShellBuildHelper.dataImport("data-import",
 """         )
 
             PortalShellInvoker psi = new PortalShellInvoker()
-            psi.invoke(project, scriptFile.getAbsolutePath())
+            psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
         }
     }
 }
@@ -480,7 +483,7 @@ portalShellBuildHelper.dataExport('data-export',
 """         )
 
         PortalShellInvoker psi = new PortalShellInvoker()
-        psi.invoke(project, scriptFile.getAbsolutePath())
+        psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
     }
 }
 
@@ -515,7 +518,7 @@ portalShellBuildHelper.dataDelete('data-delete',
 """         )
 
             PortalShellInvoker psi = new PortalShellInvoker()
-            psi.invoke(project, scriptFile.getAbsolutePath())
+            psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
         }
 
     }
@@ -539,6 +542,6 @@ portalShellBuildHelper.dataList('data-list', '${type}');
 """     )
 
         PortalShellInvoker psi = new PortalShellInvoker()
-        psi.invoke(project, scriptFile.getAbsolutePath())
+        psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
     }
 }

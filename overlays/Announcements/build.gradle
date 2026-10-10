@@ -39,6 +39,9 @@ war {
 
 import org.apereo.portal.start.shell.PortalShellInvoker
 
+// The deployed webapp's name;  task actions use this (Task.project is off limits at execution time)
+String webappName = project.name
+
 dependencies {
     impexp "${portletApiDependency}"
     impexp "${servletApiDependency}"
@@ -56,18 +59,18 @@ dataInit {
      */
     doLast {
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
 
         ant.setLifecycleLogLevel('INFO')
         ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.jasig.portlet.announcements.SchemaCreator') {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'log4j.configuration', value: 'command-line.log4j.properties')
         }
     }
@@ -77,7 +80,7 @@ dataInit {
      */
     doLast {
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
         String implementationEntitiesLocation = PortalShellInvoker.createGroovySafePath(rootProject.ext['buildProperties'].getProperty('implementation.entities.location'))
 
         ant.setLifecycleLogLevel('INFO')
@@ -85,11 +88,11 @@ dataInit {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'log4j.configuration', value: 'command-line.log4j.properties')
             arg(value: "${implementationEntitiesLocation}")
         }

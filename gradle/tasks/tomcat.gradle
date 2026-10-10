@@ -133,7 +133,7 @@ task tomcatStart() {
     mustRunAfter allprojects.collect { it.tasks.matching { it.name.equals('dataInit') } }
 
     doLast {
-        verifyTomcatState(project, false)
+        verifyTomcatState(rootProject, false)
 
         String serverHome = rootProject.ext['buildProperties'].getProperty('server.home')
         String portalHome = rootProject.ext['buildProperties'].getProperty('portal.home')
@@ -145,7 +145,7 @@ task tomcatStart() {
                 arg(value: '/c')
                 arg(value: 'catalina.bat')
             }
-            if (project.hasProperty('with-jpda')) {
+            if (rootProject.hasProperty('with-jpda')) {
                 arg(value: 'jpda')
             }
             arg(value: 'start')
@@ -165,7 +165,7 @@ task tomcatStop() {
     dependsOn ':portalProperties'
 
     doLast {
-        verifyTomcatState(project, true)
+        verifyTomcatState(rootProject, true)
 
         String serverHome = rootProject.ext['buildProperties'].getProperty('server.home')
         logger.lifecycle("Stopping Tomcat servlet container in ${serverHome}")
