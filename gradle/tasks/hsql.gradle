@@ -36,7 +36,7 @@ task hsqlStart {
     dependsOn project.tasks.portalProperties
 
     doLast {
-        verifyHsqlState(project, false)
+        verifyHsqlState(rootProject, false)
 
         logger.lifecycle('Starting embedded HSQLDB uPortal database')
 
@@ -75,7 +75,7 @@ task hsqlStop {
     dependsOn project.tasks.portalProperties
 
     doLast {
-        verifyHsqlState(project, true)
+        verifyHsqlState(rootProject, true)
 
         logger.lifecycle('Stopping embedded HSQLDB uPortal database')
 

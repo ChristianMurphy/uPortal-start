@@ -40,6 +40,9 @@ war {
 
 import org.apereo.portal.start.shell.PortalShellInvoker
 
+// The deployed webapp's name;  task actions use this (Task.project is off limits at execution time)
+String webappName = project.name
+
 dependencies {
     impexp "${portletApiDependency}"
     impexp "${servletApiDependency}"
@@ -55,7 +58,7 @@ dataInit {
      */
     doLast {
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
 
         /*
          * The following specifies failonerror=false because it will produce an exception like...
@@ -74,11 +77,11 @@ dataInit {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
         }
     }
@@ -88,7 +91,7 @@ dataInit {
      */
     doLast {
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
         String implementationEntitiesLocation = PortalShellInvoker.createGroovySafePath(rootProject.ext['buildProperties'].getProperty('implementation.entities.location'))
 
         ant.setLifecycleLogLevel('INFO')
@@ -96,11 +99,11 @@ dataInit {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
             arg(value: 'classpath://org/jasig/portlet/newsreader/io/import.crn.xml')
             arg(value: "${implementationEntitiesLocation}")
@@ -115,7 +118,7 @@ dataImport {
         println "Export directory: ${dirEscaped}"
 
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
         println "classes: ${deployDir}/WEB-INF/classes"
 
         ant.setLifecycleLogLevel('INFO')
@@ -123,11 +126,11 @@ dataImport {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
             arg(value: 'classpath://org/jasig/portlet/newsreader/io/import.crn.xml')
             arg(value: "${dirEscaped}")
@@ -142,7 +145,7 @@ dataExport {
         println "Export directory: ${dirEscaped}"
 
         File serverBase = rootProject.file(rootProject.ext['buildProperties'].getProperty('server.base'))
-        File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
+        File deployDir = rootProject.file(new File(serverBase, "webapps/${webappName}"))
         println "classes: ${deployDir}/WEB-INF/classes"
 
         ant.setLifecycleLogLevel('INFO')
@@ -150,11 +153,11 @@ dataExport {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
-                project.configurations.impexp.files.each {
+                configurations.impexp.files.each {
                     pathelement(location: it.absolutePath)
                 }
             }
-            sysproperty(key: 'portal.home', value: project.rootProject.ext['buildProperties'].getProperty('portal.home'))
+            sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
             sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
             arg(value: 'classpath://org/jasig/portlet/newsreader/io/export.crn.xml')
             arg(value: "${dirEscaped}")

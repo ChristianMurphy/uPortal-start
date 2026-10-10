@@ -23,9 +23,9 @@ class WarOverlayPlugin implements Plugin<Project> {
                 war.doFirst {
                     war.classpath = war.classpath.filter { !it.name.endsWith(".war") }
 
-                    war.project.configurations.runtimeClasspath.each {
+                    project.configurations.runtimeClasspath.each {
                         if (it.name.endsWith(".war")) {
-                            def fileList = war.project.zipTree(it)
+                            def fileList = project.zipTree(it)
                             if (extension.includeWarJars) {
                                 war.from fileList
                             } else {
