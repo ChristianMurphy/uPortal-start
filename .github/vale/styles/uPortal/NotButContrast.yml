@@ -1,0 +1,11 @@
+# The "is not X, but Y" contrast that ai-tells.ContrastiveFormulas misses when X is a noun phrase
+# (MOD-D35). Plain negation ("doesn't support X", "enabled, but not by default") is fine; this is
+# the rhetorical formula that defines a thing by what it isn't.
+extends: existence
+message: "Contrast by negation: '%s'. Say what it is, without the rejected alternative."
+level: error
+ignorecase: true
+nonword: true
+tokens:
+  - '\b(?:is|are|was|were|it''s|that''s|this''s) not (?:just |only |merely |simply )?(?:a|an|the|about) [^,.;:!?]{1,40},? but (?:a|an|the|about|rather)\b'
+  - '\bnot (?:just|only|merely|simply) (?:a|an|the|about) [^,.;:!?]{1,40}[,;] (?:it|this|that|they)(?:''s| is| are| was| were)\b'
