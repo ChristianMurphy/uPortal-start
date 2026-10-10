@@ -8,8 +8,8 @@ class GradleTomcatDeployPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.task('tomcatClean', type: Delete) {
-            group 'Tomcat'
-            description 'Removes this project from the integrated Tomcat servlet container'
+            group = 'Tomcat'
+            description = 'Removes this project from the integrated Tomcat servlet container'
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.rootProject.tasks.tomcatInstall
 
@@ -21,8 +21,8 @@ class GradleTomcatDeployPlugin implements Plugin<Project> {
             }
         }
         project.task('tomcatDeploy') {
-            group 'Tomcat'
-            description 'Deploys this project to the integrated Tomcat servlet container'
+            group = 'Tomcat'
+            description = 'Deploys this project to the integrated Tomcat servlet container'
             dependsOn 'tomcatClean'
             dependsOn 'assemble'
 

@@ -1,6 +1,6 @@
 task portalInit {
-    group 'Portal'
-    description 'All-in-one task that starts the integrated HSQLDB instance, downloads & installs ' +
+    group = 'Portal'
+    description = 'All-in-one task that starts the integrated HSQLDB instance, downloads & installs ' +
             'the integrated Tomcat servlet container, deploys all uPortal technology to Tomcat, ' +
             'creates the database schema, and imports both the Base & Implementation data sets'
     dependsOn allprojects.collect { it.tasks.matching { it.name.equals('clean') } }
@@ -11,8 +11,8 @@ task portalInit {
 }
 
 task portalOpen() {
-    group 'Portal'
-    description 'Opens the Default URL in a browser'
+    group = 'Portal'
+    description = 'Opens the Default URL in a browser'
     dependsOn project.tasks.portalProperties
     dependsOn project.tasks.tomcatStart
 

@@ -36,8 +36,8 @@ private boolean verifyTomcatState(Project project, boolean verifyRunning) {
 }
 
 task tomcatInstall() {
-    group 'Tomcat'
-    description 'Downloads the Apache Tomcat servlet container and performs the necessary configuration steps'
+    group = 'Tomcat'
+    description = 'Downloads the Apache Tomcat servlet container and performs the necessary configuration steps'
     dependsOn ':portalProperties'
     finalizedBy 'tomcatConfig'
 
@@ -76,8 +76,8 @@ task tomcatInstall() {
 }
 
 task tomcatConfig() {
-    group 'Tomcat'
-    description 'Configures Tomcat servlet container, used to update an existing Tomcat install'
+    group = 'Tomcat'
+    description = 'Configures Tomcat servlet container, used to update an existing Tomcat install'
     dependsOn ':portalProperties'
 
     doLast {
@@ -117,8 +117,8 @@ task tomcatConfig() {
 }
 
 task tomcatStart() {
-    group 'Tomcat'
-    description 'Start the embedded Tomcat servlet container'
+    group = 'Tomcat'
+    description = 'Start the embedded Tomcat servlet container'
     dependsOn ':portalProperties'
 
     /*
@@ -160,8 +160,8 @@ task tomcatStart() {
 }
 
 task tomcatStop() {
-    group 'Tomcat'
-    description 'Stop the embedded Tomcat servlet container'
+    group = 'Tomcat'
+    description = 'Stop the embedded Tomcat servlet container'
     dependsOn ':portalProperties'
 
     doLast {
@@ -185,15 +185,15 @@ task tomcatStop() {
 }
 
 task tomcatRestart(dependsOn: ['tomcatStop', 'tomcatStart']) {
-    group 'Tomcat'
-    description 'Restart the embedded Tomcat servlet container'
+    group = 'Tomcat'
+    description = 'Restart the embedded Tomcat servlet container'
 
     tomcatStart.mustRunAfter(tomcatStop)
 }
 
 task tomcatClearLogs(type: Delete) {
-    group 'Tomcat'
-    description 'Delete all log files within Tomcat'
+    group = 'Tomcat'
+    description = 'Delete all log files within Tomcat'
     dependsOn ':portalProperties'
 
     doFirst {
@@ -211,8 +211,8 @@ task tomcatClearLogs(type: Delete) {
 }
 
 task tomcatZip {
-    group 'Tomcat'
-    description 'Create a zip file of Tomcat (base) with uPortal and portlets'
+    group = 'Tomcat'
+    description = 'Create a zip file of Tomcat (base) with uPortal and portlets'
     dependsOn ':portalProperties'
     mustRunAfter ':tomcatInstall'
     mustRunAfter allprojects.collect { it.tasks.matching { it.name.equals('tomcatDeploy') } }
@@ -230,8 +230,8 @@ task tomcatZip {
 }
 
 task tomcatTar {
-    group 'Tomcat'
-    description 'Create a .tar.gz file of Tomcat (base) with uPortal and portlets'
+    group = 'Tomcat'
+    description = 'Create a .tar.gz file of Tomcat (base) with uPortal and portlets'
     dependsOn ':portalProperties'
     mustRunAfter ':tomcatInstall'
     mustRunAfter allprojects.collect { it.tasks.matching { it.name.equals('tomcatDeploy') } }
