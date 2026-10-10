@@ -15,9 +15,9 @@ on:
   workflow_dispatch:
     inputs:
       baseline:
-        description: 'Snapshot directory under tests/db/snapshots to compare with'
+        description: 'Snapshot directory under tests/db/snapshots to compare with; empty picks the one for uPortalVersion, else 5.17'
         required: false
-        default: '5.17'
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -62,8 +62,8 @@ jobs:
         run: npm ci
       - name: dataInit, snapshot, compare, then run the API specs against the portal
         env:
-          BASELINE: ${{ inputs.baseline || '5.17' }}
-        run: tests/db/harness.sh --portal --baseline "$BASELINE" hsqldb
+          HARNESS_BASELINE: ${{ inputs.baseline }}
+        run: tests/db/harness.sh --portal hsqldb
       - name: Upload snapshots and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -145,12 +145,11 @@ jobs:
       # (Oracle Free and SQL Server need a minute or two after the port opens).
       - name: dataInit, snapshot, compare, then run the API specs against the portal
         env:
-          BASELINE: ${{ inputs.baseline || '5.17' }}
+          HARNESS_BASELINE: ${{ inputs.baseline }}
           HARNESS_DB_CONTAINER: ${{ job.services.db.id }}
           VENDOR: ${{ matrix.vendor }}
         run: >-
           tests/db/harness.sh --external --portal
-          --baseline "$BASELINE"
           "$VENDOR"
           -- -PdbWaitSeconds=600
       - name: Upload snapshots and logs
@@ -209,12 +208,9 @@ jobs:
         run: npm ci
       - name: Start the database, dataInit, snapshot, compare, then run the API specs
         env:
-          BASELINE: ${{ inputs.baseline || '5.17' }}
+          HARNESS_BASELINE: ${{ inputs.baseline }}
           VENDOR: ${{ matrix.vendor }}
-        run: >-
-          tests/db/harness.sh --portal
-          --baseline "$BASELINE"
-          "$VENDOR"
+        run: tests/db/harness.sh --portal "$VENDOR"
       - name: Upload snapshots and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

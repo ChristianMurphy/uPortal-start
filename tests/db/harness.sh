@@ -10,7 +10,9 @@
 #
 # Options:
 #   --record        record the snapshots as the new baseline instead of comparing with it
-#   --baseline X    compare with (or record into) tests/db/snapshots/X (default: 5.17)
+#   --baseline X    compare with (or record into) tests/db/snapshots/X (default: the directory
+#                   named after uPortalVersion's major.minor.patch if it exists, else 5.17);
+#                   --record needs it
 #   --external      the database is already running (e.g. a CI service container): no Docker
 #   --keep          leave the database container running afterwards
 #   --no-deploy     reuse the Tomcat + uPortal already deployed in this checkout for this vendor
@@ -23,6 +25,7 @@
 #
 # Environment:
 #   HARNESS_DB_CONTAINER  with --external: the container to `docker exec` into for vacuumlo
+#   HARNESS_BASELINE      the default for --baseline (empty: chosen from uPortalVersion)
 #
 # Exit status: 0 when every vendor ran and showed zero drift (or was recorded), 1 otherwise.
 #
@@ -32,7 +35,7 @@ cd "$(dirname "$0")/../.."
 ROOT=$(pwd)
 
 RECORD=false
-BASELINE=5.17
+BASELINE=${HARNESS_BASELINE:-}
 EXTERNAL=false
 KEEP=false
 DEPLOY=true
@@ -53,12 +56,17 @@ while [ $# -gt 0 ]; do
         --portal) PORTAL=true ;;
         --full-suite) PORTAL=true; FULL_SUITE=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,27p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
         *) VENDORS+=("$1") ;;
     esac
     shift
 done
+
+if [ "$RECORD" = true ] && [ -z "$BASELINE" ]; then
+    echo "--record needs --baseline <directory>, e.g. --baseline 5.17.9; never re-record 5.17" >&2
+    exit 2
+fi
 
 if [ ${#VENDORS[@]} -eq 0 ]; then
     echo "Usage: $0 [options] <vendor>... [-- <gradle args>]; vendors: $(cd tests/db/vendors && ls *.properties | sed 's/\.properties$//' | tr '\n' ' ')" >&2
@@ -148,7 +156,9 @@ run_vendor() {
     if [ "$RECORD" = true ]; then tasks+=(dbRecord); else tasks+=(dbVerify); fi
 
     local status=0
-    gradle -PdbVendor="$vendor" -PdbBaseline="$BASELINE" "${tasks[@]}" 2>&1 | tee "$out/harness.log"
+    local baseline=()
+    if [ -n "$BASELINE" ]; then baseline=(-PdbBaseline="$BASELINE"); fi
+    gradle -PdbVendor="$vendor" "${baseline[@]+"${baseline[@]}"}" "${tasks[@]}" 2>&1 | tee "$out/harness.log"
     status=${PIPESTATUS[0]}
     # What Hibernate itself reported during dataInit (HHH000400), next to the snapshot's own answer
     grep -ho "HHH000400: Using dialect: .*" "$out/harness.log" | sort -u > "$out/dialect.txt" || true
@@ -247,6 +257,6 @@ for vendor in "${VENDORS[@]}"; do
     fi
 done
 
-echo "==== Database harness summary (baseline $BASELINE, $([ "$RECORD" = true ] && echo recorded || echo compared))"
+echo "==== Database harness summary (baseline ${BASELINE:-chosen by uPortalVersion}, $([ "$RECORD" = true ] && echo recorded || echo compared))"
 printf '%s\n' "${summary[@]}"
 exit $overall

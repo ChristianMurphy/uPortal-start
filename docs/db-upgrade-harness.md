@@ -31,8 +31,8 @@ its own ports there. Options:
 
 | Option | Effect |
 | --- | --- |
-| `--record` | Write the snapshots as the baseline instead of comparing with it |
-| `--baseline X` | Use `tests/db/snapshots/X` (default `5.17`) |
+| `--record` | Write the snapshots as the baseline instead of comparing with it (needs `--baseline`) |
+| `--baseline X` | Use `tests/db/snapshots/X` (default: see "Choosing the baseline") |
 | `--external` | The database is already running (CI service container); start no container |
 | `--keep` | Leave the container running afterwards |
 | `--skip-init` | Do not run `dataInit`; snapshot the database as it is |
@@ -129,6 +129,35 @@ Every file has one complete fact per line, sorted, in `[section]` blocks. Lines 
 Zero drift means all four match the baseline. Column order is not compared: Hibernate 6.2+
 orders columns differently in new tables, and the order does not matter to an existing database.
 A rerun on unchanged code must show zero drift.
+
+## Choosing the baseline
+
+Without `--baseline` (or `-PdbBaseline` for the Gradle tasks), the harness compares with
+`tests/db/snapshots/<major.minor.patch of uPortalVersion>` when that directory exists, and with
+`5.17` otherwise. `uPortalVersion=5.17.9` therefore uses `tests/db/snapshots/5.17.9` once it is
+recorded, while `5.17.10-SNAPSHOT` (no `5.17.10` directory) still uses `5.17`. The
+`HARNESS_BASELINE` environment variable sets the default for `--baseline`; `db-harness.yml` fills
+it from its `baseline` input, which is empty unless a manual run sets it.
+
+### Recording a baseline in CI
+
+SQL Server and Oracle do not fit next to a portal in a small container, so record new baselines
+on GitHub Actions instead of locally:
+
+1. Point the run at the uPortal to record: `uPortalVersion` in `gradle.properties.example` for
+   `db-harness.yml`, or the uPortal branch for `integration.yml`.
+2. Run the workflow (a push, or "Run workflow" for `db-harness.yml`). Every vendor's job uploads
+   `build/db-harness/<vendor>/` as an artifact, and it holds the snapshot whether or not the
+   comparison passed.
+3. Download the artifacts and copy `schema.txt`, `schema-normalized.txt`, `generators.txt` and,
+   for PostgreSQL, `lob-report.txt` from each `build/db-harness/<vendor>/` into
+   `tests/db/snapshots/<version>/<vendor>/`, e.g. `tests/db/snapshots/5.17.9/postgres-16/`.
+   These are the files `dbRecord` (`--record`) would copy.
+4. Commit them, and push again: the next run picks the new directory by itself and has to show
+   zero drift on every vendor before the baseline counts as reproduced.
+
+Never re-record `5.17`; a new uPortal version or an intentional schema change gets a new
+directory.
 
 ## How later phases use it
 
