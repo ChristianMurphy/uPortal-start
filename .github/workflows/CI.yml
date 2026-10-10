@@ -149,6 +149,32 @@ jobs:
         if: always()
         run: ./gradlew -i -S tomcatStop
 
+  commits:
+    name: Commit messages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check Conventional Commit subjects
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # The commits this push or pull request adds; a new branch is checked from the
+          # commit that added the script onwards.
+          if [ -n "$PR_BASE" ]; then
+            range="$PR_BASE..HEAD"
+          elif [ -n "$EVENT_BEFORE" ] && ! [[ "$EVENT_BEFORE" =~ ^0+$ ]] && git cat-file -e "$EVENT_BEFORE^{commit}" 2>/dev/null; then
+            range="$EVENT_BEFORE..HEAD"
+          else
+            range=HEAD
+          fi
+          .github/scripts/check-commit-messages.sh "$range"
+
   dependency-submission:
     name: Submit dependency graph
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
