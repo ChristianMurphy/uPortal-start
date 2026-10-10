@@ -23,6 +23,19 @@ interface NetIssue {
   reason: string;
 }
 
+/*
+ * CKEditor 4 asks cke4.ckeditor.com whether a newer release exists once an
+ * editor instance is ready. That request is not a portal resource: it fails
+ * wherever the browser has no internet access, and the editor works either
+ * way. Only this request is left out of the checks below.
+ */
+const CKEDITOR_VERSION_CHECK =
+  "https://cke4.ckeditor.com/ckeditor4-secure-version/versions.json";
+
+function isCkeditorVersionCheck(url: string): boolean {
+  return url.startsWith(CKEDITOR_VERSION_CHECK);
+}
+
 function attachListeners(page: Page): {
   consoleErrors: string[];
   netIssues: NetIssue[];
@@ -33,12 +46,16 @@ function attachListeners(page: Page): {
   const legacyHits: string[] = [];
 
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() !== "error") return;
+    // "Failed to load resource" errors carry the URL of the failed request.
+    if (isCkeditorVersionCheck(message.location().url)) return;
+    consoleErrors.push(message.text());
   });
 
   page.on("response", (resp) => {
     const url = resp.url();
     const status = resp.status();
+    if (isCkeditorVersionCheck(url)) return;
     if (url.includes("/ResourceServingWebapp/")) {
       legacyHits.push(url);
     }
@@ -54,16 +71,30 @@ function attachListeners(page: Page): {
     // ERR_ABORTED is fired when an in-flight request is cancelled by
     // navigation/teardown — not a server issue. Ignore.
     if (reason === "net::ERR_ABORTED") return;
+    if (isCkeditorVersionCheck(request.url())) return;
     netIssues.push({ url: request.url(), reason });
   });
 
   return { consoleErrors, netIssues, legacyHits };
 }
 
+/*
+ * CKEditor 4 loads its plugins, skin and language files after ckeditor.js
+ * and marks each editor instance "ready" once they are in. Waiting for that
+ * makes a broken editor resource show up in the checks reliably.
+ */
+async function waitForCkeditorReady(page: Page): Promise<void> {
+  await expect(page.locator(".cke").first()).toBeVisible({ timeout: 15_000 });
+  await page.waitForFunction(
+    "Object.values(window.CKEDITOR.instances).every((editor) => editor.status === 'ready')"
+  );
+}
+
 async function smokePage(
   page: Page,
   url: string,
-  screenshot: string
+  screenshot: string,
+  waitForPage?: (page: Page) => Promise<void>
 ): Promise<void> {
   const listeners = attachListeners(page);
 
@@ -73,6 +104,7 @@ async function smokePage(
   await expect(page.locator("body")).toBeVisible();
   // Allow trailing portlet AJAX to start before snapshotting.
   await page.waitForLoadState("domcontentloaded");
+  if (waitForPage) await waitForPage(page);
 
   await page.screenshot({
     path: `test-results/visual-smoke/${screenshot}.png`,
@@ -168,7 +200,8 @@ test.describe("Visual resource-server smoke", () => {
     await smokePage(
       page,
       config.url + "p/uportal-links/max/render.uP?pCm=config",
-      "uportal-links-config"
+      "uportal-links-config",
+      waitForCkeditorReady
     );
   });
 });
