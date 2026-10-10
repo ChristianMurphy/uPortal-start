@@ -37,6 +37,13 @@ ext {
         tomcatShutdownPort: tomcatShutdownPort,
         hsqlPort: hsqlPort,
     ]
+    /*
+     * The java command for the JVMs the CLI tools start besides Tomcat:  HSQLDB and the data
+     * import/export tools.  Like Tomcat's catalina.sh, it comes from JAVA_HOME (or the PATH), so the
+     * whole portal runs on one JDK, which need not be the JDK that runs Gradle itself (see
+     * gradle/gradle-daemon-jvm.properties).
+     */
+    portalJava = System.getenv('JAVA_HOME') ? new File(System.getenv('JAVA_HOME'), 'bin/java').path : 'java'
 }
 
 node {

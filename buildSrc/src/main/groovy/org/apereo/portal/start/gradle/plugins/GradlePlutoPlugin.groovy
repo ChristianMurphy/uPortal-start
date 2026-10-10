@@ -9,7 +9,7 @@ import org.gradle.api.Plugin
 class GradlePlutoPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
-        File destinationDir = new File (project.buildDir, 'pluto')
+        File destinationDir = project.layout.buildDirectory.dir('pluto').get().asFile
         File archiveOutput = new File(destinationDir, "${project.name}.war")
 
         project.task('plutoAssemble') {

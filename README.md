@@ -22,10 +22,18 @@ uPortal-start help you manage:
 The following software packages are required for working with uPortal-start:
 
   - A Java Development Kit (JDK), version 11 ([Oracle JDK 11][], [Corretto 11][], [Eclipse Temurin 11][], or [Azul Zulu 11][])
+  - A JDK, version 21, for Gradle itself (from any of the same vendors)
   - A suitable [Git Client][] for your OS
 
 Download and install the **latest JDK 11 release**.  Make sure you select the full JDK;  _a JRE is
-not sufficient!_
+not sufficient!_  Point `JAVA_HOME` at it:  Tomcat, HSQLDB and the uPortal-start CLI tools run on
+that JDK.
+
+uPortal-start builds with Gradle 9, which needs Java 17 or later to run.  Also install a JDK 21;
+the Gradle Wrapper runs Gradle on it (see `gradle/gradle-daemon-jvm.properties`) whichever JDK
+`JAVA_HOME` points to.  Gradle finds JDKs installed in the usual places for your OS, with SDKMAN!,
+or by IntelliJ IDEA;  for a JDK somewhere else, add
+`org.gradle.java.installations.paths=/path/to/jdk-21` to `~/.gradle/gradle.properties`.
 
 :warning: _Always use Git_ to obtain a copy of uPortal-start.  (Please ignore the _Download ZIP_
 option provided by GitHub.)  The uPortal Developer Community makes improvements to uPortal-start

@@ -32,7 +32,7 @@ class GradleTomcatDeployPlugin implements Plugin<Project> {
                 logger.lifecycle("Deploying assembled application to servlet container at location:  ${deployDir}")
 
                 String artifactDir = project.plugins.hasPlugin(GradlePlutoPlugin) ? 'pluto' : 'libs'
-                File warFile = new File("${project.buildDir}/${artifactDir}/${project.name}.war")
+                File warFile = new File("${project.layout.buildDirectory.get().asFile}/${artifactDir}/${project.name}.war")
 
                 project.copy {
                     with project.copySpec {

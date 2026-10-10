@@ -56,4 +56,20 @@ subprojects {
         war tasks.war
     }
 
+    /*
+     * Gradle 9 builds the jar of every project that applies 'java' as part of 'assemble';  the
+     * overlays only produce WARs.
+     */
+    tasks.named('jar') {
+        enabled = false
+    }
+
+    /*
+     * Classes compiled in an overlay run in the portal's JVM:  target Java 11, the version uPortal 5
+     * is built for, whatever JDK runs Gradle.
+     */
+    tasks.withType(JavaCompile).configureEach {
+        options.release = 11
+    }
+
 }
