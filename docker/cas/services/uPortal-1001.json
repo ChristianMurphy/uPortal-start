@@ -1,0 +1,12 @@
+{
+  "@class" : "org.apereo.cas.services.CasRegisteredService",
+  "serviceId" : "^https?://localhost(:[0-9]+)?/.*",
+  "name" : "uPortal-start",
+  "id" : 1001,
+  "description" : "uPortal and its portlets on this machine. They may ask for proxy-granting tickets with callbacks on localhost: the portal's /uPortal/CasProxyServlet, and portlets' own (cas-proxy-test-portlet's /proxy/receptor).",
+  "evaluationOrder" : 1,
+  "proxyPolicy" : {
+    "@class" : "org.apereo.cas.services.RegexMatchingRegisteredServiceProxyPolicy",
+    "pattern" : "^https?://localhost(:[0-9]+)?/.*"
+  }
+}

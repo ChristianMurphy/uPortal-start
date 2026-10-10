@@ -6,6 +6,11 @@ node {
 
 // Base URL for tests/general-config.ts;  an exported PORTAL_BASE_URL wins over tomcatHttpPort
 String portalBaseUrl = System.getenv('PORTAL_BASE_URL') ?: "http://localhost:${tomcatHttpPort}/uPortal/"
+// The specs drive the login form of the portal's authMode (gradle/tasks/auth.gradle)
+Map<String, String> authEnvironment = [
+        'AUTH_MODE': authMode,
+        'CAS_BASE_URL': System.getenv('CAS_BASE_URL') ?: "${casServerUrl.replaceAll('/+$', '')}/".toString(),
+]
 
 task playwrightNpxInstall(type: NpxTask, dependsOn: npmInstall) {
     group = 'Testing'
@@ -43,7 +48,7 @@ task playwrightRun(type: NpxTask, dependsOn: [
     environment = [
             'PLAYWRIGHT_BROWSERS_PATH': '0',
             'PORTAL_BASE_URL': portalBaseUrl
-    ]
+    ] + authEnvironment
     command = 'playwright'
     args = ['test', '--config=tests/uportal-pw.config.ts']
 }
@@ -66,7 +71,7 @@ task playwrightDebug(type: NpxTask, dependsOn: [project.tasks.playwrightNpxInsta
             'PLAYWRIGHT_BROWSERS_PATH': '0',
             'PORTAL_BASE_URL': portalBaseUrl,
             'PWDEBUG': 'console'
-    ]
+    ] + authEnvironment
     command = 'playwright'
     args = ['test', '--config=tests/uportal-pw.config.ts', '--debug']
 }
