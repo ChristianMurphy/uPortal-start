@@ -1,0 +1,13 @@
+# Agent and planning jargon that ai-tells doesn't cover (MOD-D35). Name the concrete thing instead:
+# "gate" -> "required check" or the check's name; "seam" -> "interface" or "abstraction".
+extends: existence
+message: "Jargon: '%s'. Name the concrete thing, such as the required check, interface or dependency."
+level: error
+ignorecase: true
+tokens:
+  - '\bgat(?:e|es|ed|ing)\b'
+  - '\bseams?\b'
+  - '\bspines?\b'
+  - '\bload[- ]bearing\b'
+  - '\bblast radius\b'
+  - '\bfoot-?guns?\b'

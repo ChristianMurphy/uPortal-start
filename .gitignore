@@ -436,4 +436,6 @@ playwright-report/
 
 # Vale (MOD-D35): downloaded by .github/scripts/vale.sh
 .github/vale/bin/
-.github/vale/styles/
+.github/vale/styles/ai-tells/
+.github/vale/styles/ai-tells-commits/
+.github/vale/styles/.version
