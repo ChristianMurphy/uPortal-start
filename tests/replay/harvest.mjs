@@ -82,6 +82,9 @@ for (const zip of traces(resultsDir)) {
                 role = 'guest';
                 continue;
             }
+            // Aggregated skin resources are named by a hash of their content, so their names
+            // change with the build; the pages that load them are compared instead.
+            if (/\.aggr\.min\.(js|css)$/.test(parsed.pathname)) continue;
             const path = replayablePath(url);
             const headers = {};
             for (const name of KEPT_HEADERS) {

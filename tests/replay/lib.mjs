@@ -138,14 +138,25 @@ const STRING_MASKS = [
     // CAS 3.6 login flow execution keys are encrypted, random blobs.
     [/(execution=)[0-9a-f-]{8,}_[0-9A-Za-z+/=%_-]+/g, '$1{execution}'],
     // UUIDs are generated (analytics event ids, request ids, CSRF tokens in some forms).
-    [/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '{uuid}'],
+    [/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '{uuid}'],
+    // Transient portlet subscribe ids (search.ctf1) count up per session in the order portlets are
+    // first rendered, and portlets render on parallel worker threads.
+    [/\.ctf\d+\b/g, '.ctf{n}'],
+    // The portal's own host and port, also inside other URLs (CAS service=, encoded or not)
+    [/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g, '{origin}'],
+    [/https?%3A%2F%2F(localhost|127\.0\.0\.1)(%3A\d+)?/gi, '{origin}'],
+    // Aggregated skin resources are named by a hash of their content, which changes with every
+    // build that changes a skin script; the page outline still shows which aggregates load.
+    [/[\w-]{22}\.aggr\.min\.(js|css)\b/g, '{content-hash}.aggr.min.$1'],
     // jQuery's cache-busting `_=<epoch ms>` parameter and other epoch-millisecond values in URLs
     // are the time of the request.
     [/([?&]_=)\d{10,13}/g, '$1{epoch-ms}'],
 ];
 
 // Date and time strings keep their shape (every digit becomes 9), so a changed format is still
-// reported while the value, which is the time of the request, is not.
+// reported while the value, which is the time of the request, is not. HTTP dates (RFC 9110
+// IMF-fixdate, with a weekday that changes at midnight) become {http-date}; a date in another
+// format does not match and still shows.
 const DATE_TIME = /\b\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?\b/g;
 const HTTP_DATE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT\b/g;
 const shape = (text) => text.replaceAll(/\d/g, '9');
@@ -153,7 +164,7 @@ const shape = (text) => text.replaceAll(/\d/g, '9');
 export function maskString(text) {
     let masked = text;
     for (const [pattern, replacement] of STRING_MASKS) masked = masked.replace(pattern, replacement);
-    masked = masked.replace(DATE_TIME, shape).replace(HTTP_DATE, shape);
+    masked = masked.replace(DATE_TIME, shape).replace(HTTP_DATE, '{http-date}');
     return masked;
 }
 
@@ -305,6 +316,8 @@ const UNORDERED = [
     [/^\/uPortal\/api\/permissionAssignments/, ['permissionsList']],
     // a group's members (EntitiesRESTController, a Set of children)
     [/^\/uPortal\/api\/entities\//, ['jsonEntityBean', 'children']],
+    // entity search results (EntitiesRESTController, a Set filtered by @PostFilter)
+    [/^\/uPortal\/api\/entities\.json/, ['jsonEntityBeanList']],
     // marketplace entries and their categories (MarketplaceRESTController, Sets)
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets', '*', 'categories']],
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets']],
@@ -316,6 +329,10 @@ const UNSTABLE = [
     // portlet (PORTLET_ID.25) with the same number can get each other's name. See
     // docs/developer/modernization/notes/http-replay.md.
     [/^\/uPortal\/api\/permissionAssignments/, ['permissionsList', '*', 'targetName']],
+    // MarketplacePortletDefinition.getRandomSamplingRelatedPortlets shuffles on purpose; only how
+    // many related portlets there are is compared.
+    [/^\/uPortal\/api\/marketplace\/entries/, ['portlets', '*', 'relatedPortlets']],
+    [/^\/uPortal\/api\/marketplace\/entry\//, ['relatedPortlets']],
 ];
 
 function visit(node, keys, action) {
@@ -334,7 +351,8 @@ function visit(node, keys, action) {
 const sortArray = (array) => (Array.isArray(array) ? array.toSorted((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : array);
 
 function unorder(value, path) {
-    for (const [pattern, keys] of UNSTABLE) if (pattern.test(path)) visit(value, keys, () => '{unstable}');
+    const replace = (v) => (Array.isArray(v) ? `{unstable:${v.length} items}` : '{unstable}');
+    for (const [pattern, keys] of UNSTABLE) if (pattern.test(path)) visit(value, keys, replace);
     for (const [pattern, keys] of UNORDERED) if (pattern.test(path)) visit(value, keys, sortArray);
     return value;
 }
