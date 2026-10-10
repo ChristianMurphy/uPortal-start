@@ -277,7 +277,6 @@ jobs:
     needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    continue-on-error: ${{ matrix.known-drift }}
     strategy:
       fail-fast: false
       matrix:
@@ -286,21 +285,14 @@ jobs:
             image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
             port: 5432
             host-port: 15432
-            known-drift: false
           - vendor: sqlserver-2022
             image: mcr.microsoft.com/mssql/server:2022-latest@sha256:4402d880dd4c34bfa7d8705e56a86cd6c88da80a1f6bbbe741f999e76264a090
             port: 1433
             host-port: 15433
-            known-drift: false
           - vendor: oracle-23
             image: gvenzl/oracle-free:23-slim@sha256:6d61d267a3b978c24c5ac1790e62e927416a0aec446bd86e4b3a1527562757bd
             port: 1521
             host-port: 15521
-            # Known drift, pending a decision (MOD-D16 CI report): the value of a busy sequence
-            # (USER_SEQUENCES.LAST_NUMBER, the cache high-water mark) differs from the baseline,
-            # e.g. UP_PORTLET_DEF_PARAM_SEQ 546 instead of 1201 for 403 rows, while STRUCTURE
-            # and NAMES match. Oracle sizes sequence caches by the rate of use, so it is timing.
-            known-drift: true
     services:
       db:
         image: ${{ matrix.image }}

@@ -130,6 +130,27 @@ Zero drift means all four match the baseline. Column order is not compared: Hibe
 orders columns differently in new tables, and the order does not matter to an existing database.
 A rerun on unchanged code must show zero drift.
 
+### Sequence values
+
+Sequence values are compared exactly, because a changed value has caught a real change in how
+IDs are allocated: the `UP_SEQUENCE` counters of 5.17.9 and 5.17.10-SNAPSHOT differ (MOD-I72, see
+"5.17 reference results").
+
+Oracle is the exception. The snapshot reads `LAST_NUMBER`, the high-water mark of the sequence's
+cache, and Oracle sizes that cache by how fast the sequence is used, so the value changes from run
+to run of the same build: `UP_PORTLET_DEF_PARAM_SEQ` read 1201, 546 and 931 in three runs, with
+403 rows and a `max(id)` of 403 each time. `oracle-23.properties` therefore sets
+`verify.sequenceValues=invariant`. `dbVerify` then leaves sequence values out of the comparison
+and checks two rules on this run's `generators.txt` instead:
+
+* every sequence that backs an ID is above `max(id)` of each table it serves, so the next ID it
+  hands out is not taken;
+* its increment equals the `allocationSize` of the mapping that names it.
+
+A broken rule counts as `GENERATORS` drift and is listed in the report. The rest is still compared
+exactly: the sequence definitions (increment, bounds, cache), row counts and `max(id)`. A vendor
+file without the key uses `verify.sequenceValues=exact`.
+
 ## Choosing the baseline
 
 Without `--baseline` (or `-PdbBaseline` for the Gradle tasks), the harness compares with
