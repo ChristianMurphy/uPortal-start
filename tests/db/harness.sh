@@ -97,11 +97,16 @@ annotate_snapshot() {  # annotate_snapshot <vendor>: the snapshot files, as tar.
         [ -f "$dir/$f" ] && files+=("$f")
     done
     [ ${#files[@]} -gt 0 ] || return 0
-    data=$(tar -czf - -C "$dir" "${files[@]}" | base64 -w0)
-    # An annotation holds at most 64 KB
-    parts=$(( (${#data} + 59999) / 60000 ))
+    data=$(tar -cf - -C "$dir" "${files[@]}" | gzip -9 | base64 -w0)
+    # GitHub keeps the first 4096 characters of an annotation, and 10 notices per step: about
+    # 7 parts for one vendor's snapshot
+    parts=$(( (${#data} + 3999) / 4000 ))
+    if [ "$parts" -gt 10 ]; then
+        echo "The snapshot of $1 needs $parts annotations, more than a step can show" >&2
+        return 0
+    fi
     for ((i = 0; i < parts; i++)); do
-        echo "::notice title=snapshot of $1 (part $((i + 1)) of $parts)::${data:$((i * 60000)):60000}"
+        echo "::notice title=snapshot of $1 (part $((i + 1)) of $parts)::${data:$((i * 4000)):4000}"
     done
 }
 
