@@ -55,6 +55,17 @@ All dependency versions live there — most importantly `uPortalVersion` (which 
 
 Dependencies resolve `mavenLocal()` first, then Maven Central, then jitpack — so a locally-installed SNAPSHOT is picked up immediately. Tomcat installs to `.gradle/tomcat/`; logs in `.gradle/tomcat/logs/`; runtime portal config in `.gradle/tomcat/portal/`.
 
+### Running more than one portal
+
+Ports are Gradle properties, default in parentheses: `tomcatHttpPort` (8080), `tomcatShutdownPort` (8005), `hsqlPort` (8887). To run a portal next to another one, give its checkout (e.g. a worktree) its own values in its `gradle.properties`, or pass `-P` to **every** Gradle command there; a command without them uses the default ports (`hsqlStop` would stop the other portal's database).
+
+```bash
+./gradlew -PtomcatHttpPort=8180 -PtomcatShutdownPort=8105 -PhsqlPort=8987 portalInit tomcatStart
+PORTAL_BASE_URL=http://localhost:8180/uPortal/ npx playwright test --config=tests/uportal-pw.config.ts
+```
+
+The values fill `@tokens@` in `etc/tomcat/conf/server.xml`, `etc/portal/global.properties`, `etc/hsql/hsqldb.sqltool.rc` and the cas overlay when they are deployed, so rerun `tomcatInstall` + `tomcatDeploy` (or `portalInit`) after changing them. `tests/general-config.ts` reads `PORTAL_BASE_URL` (default `http://localhost:8080/uPortal/`).
+
 ### Data
 
 ```bash
