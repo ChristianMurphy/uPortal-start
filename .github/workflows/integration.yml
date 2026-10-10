@@ -22,6 +22,11 @@ name: Integration
 # Every database runs as a throwaway container that the scripts start from the image (pinned by
 # digest) in tests/db/vendors/<vendor>.properties, or as uPortal-start's own HSQLDB server.
 #
+# Prototype only (MOD-D30): a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs a light profile
+# to spare the account's runners: the uPortal build, Playwright on HSQLDB, the harness and
+# Playwright on PostgreSQL 18, and one cross-vendor G-migrate pair. The integration branch runs
+# everything above on every push, and the schedule the nightly sets.
+#
 on:
   push:
     branches:
@@ -49,7 +54,8 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Prototype only (MOD-D30): a newer push to a workstream branch cancels the older run.
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
 jobs:
   uportal:
@@ -152,24 +158,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      nightly: ${{ steps.set.outputs.nightly }}
+      set: ${{ steps.set.outputs.set }}
       migrate: ${{ steps.migrate.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Choose the push or the nightly set
+      # nightly: the schedule or a manual nightly run; workstream (prototype only, MOD-D30): a
+      # ccr-43ba0785-hzlrj5-<topic> branch; push: everything else
+      - name: Choose the set
         id: set
         env:
-          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
-        run: echo "nightly=$NIGHTLY" >> "$GITHUB_OUTPUT"
+          SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && 'workstream' || 'push' }}
+        run: echo "set=$SET" >> "$GITHUB_OUTPUT"
       # Checks the coverage rules too, so a pair list that misses a source or target fails here
       - name: G-migrate pairs
         id: migrate
         env:
-          NIGHTLY: ${{ steps.set.outputs.nightly }}
-        run: node tests/db/migrate/matrix.mjs "$([ "$NIGHTLY" = true ] && echo nightly || echo push)" >> "$GITHUB_OUTPUT"
+          SET: ${{ steps.set.outputs.set }}
+        run: node tests/db/migrate/matrix.mjs "$SET" >> "$GITHUB_OUTPUT"
 
   playwright:
     name: "Playwright: hsqldb"
@@ -264,14 +272,9 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
+      # Prototype only (MOD-D30): a workstream branch runs PostgreSQL 18 only
       matrix:
-        vendor:
-          - hsqldb
-          - postgres-18
-          - mysql-9.7
-          - mariadb-12.3
-          - sqlserver-2025
-          - oracle-23
+        vendor: ${{ fromJSON(startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && '["postgres-18"]' || '["hsqldb", "postgres-18", "mysql-9.7", "mariadb-12.3", "sqlserver-2025", "oracle-23"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -337,8 +340,9 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
+      # Prototype only (MOD-D30): a workstream branch runs PostgreSQL 18 only
       matrix:
-        vendor: ${{ fromJSON(needs.plan.outputs.nightly == 'true' && '["postgres-18", "mariadb-12.3", "mysql-9.7"]' || '["postgres-18", "mariadb-12.3"]') }}
+        vendor: ${{ fromJSON(needs.plan.outputs.set == 'workstream' && '["postgres-18"]' || needs.plan.outputs.set == 'nightly' && '["postgres-18", "mariadb-12.3", "mysql-9.7"]' || '["postgres-18", "mariadb-12.3"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -1,5 +1,5 @@
 {
-  "description": "G-migrate (MOD-D25): 5.17 databases on old servers (sources) copied with dbMigrate into current servers (targets). Names are files in tests/db/vendors. matrix.mjs turns this into the GitHub Actions matrices and checks their coverage.",
+  "description": "G-migrate (MOD-D25): 5.17 databases on old servers (sources) copied with dbMigrate into current servers (targets). Names are files in tests/db/vendors. matrix.mjs turns this into the GitHub Actions matrices and checks their coverage. workstream is the light profile of ccr-43ba0785-hzlrj5-<topic> branches (MOD-D30, prototype only).",
   "targets": {
     "postgres": "postgres-18",
     "mysql": "mysql-9.7",
@@ -16,6 +16,9 @@
     "oracle": ["oracle-xe-21"],
     "hsqldb": ["hsqldb-2.5.1", "hsqldb"]
   },
+  "workstream": [
+    { "source": "mariadb-11.4", "target": "postgres-18" }
+  ],
   "push": [
     { "source": "postgres-16", "target": "postgres-18", "playwright": true },
     { "source": "mariadb-11.4", "target": "postgres-18" },
