@@ -54,8 +54,10 @@ jobs:
           cache-provider: basic
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
-          mkdir -p ~/.gradle
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Install npm dependencies
         run: npm ci
       - name: dataInit, snapshot, compare, then run the API specs against the portal
@@ -133,8 +135,10 @@ jobs:
           cache-provider: basic
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
-          mkdir -p ~/.gradle
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Install npm dependencies
         run: npm ci
       # The service container is already running; dbWait polls JDBC until it accepts connections
@@ -197,8 +201,10 @@ jobs:
           cache-provider: basic
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
-          mkdir -p ~/.gradle
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Install npm dependencies
         run: npm ci
       - name: Start the database, dataInit, snapshot, compare, then run the API specs
