@@ -7,18 +7,19 @@ name: Integration
 #      with the JDK its .sdkmanrc names and its own Gradle wrapper, and installs it into
 #      ~/.m2, which is uploaded as an artifact;
 #   2. runs the full Playwright suite on HSQLDB against that build;
-#   3. runs the database upgrade harness (tests/db/harness.sh --portal) on every supported
-#      database, comparing with the baseline for the built version: tests/db/snapshots/5.17
-#      (recorded from 5.17.10-SNAPSHOT) unless one for its major.minor.patch exists;
-#   4. runs the full Playwright suite on PostgreSQL 16 and MariaDB 11.4
+#   3. runs the database upgrade harness (tests/db/harness.sh --portal) on every 6.0 runtime
+#      database (MOD-D25), comparing with the baseline for the built version:
+#      tests/db/snapshots/5.17 (recorded from 5.17.10-SNAPSHOT) unless one for its
+#      major.minor.patch exists;
+#   4. runs the full Playwright suite on PostgreSQL 18 and MariaDB 12.3, and nightly on MySQL 9.7
 #      (tests/db/harness.sh --full-suite);
 #   5. G-migrate: fills 5.17 databases on old servers and copies them into current ones with
 #      dbMigrate (tests/db/migrate.sh), the pairs coming from tests/db/migrate/matrix.json: a small
 #      set on every push, and nightly a set that covers every source version, every target and
 #      every pair of vendors.
 #
-# The harness jobs repeat the structure of db-harness.yml: the service-container settings repeat
-# tests/db/vendors/*.properties (image, container port, host.port, environment); keep them in sync.
+# Every database runs as a throwaway container that the scripts start from the image (pinned by
+# digest) in tests/db/vendors/<vendor>.properties, or as uPortal-start's own HSQLDB server.
 #
 on:
   push:
@@ -31,7 +32,7 @@ on:
   workflow_dispatch:
     inputs:
       nightly:
-        description: 'Run the nightly sets: G-migrate on every pair of vendors'
+        description: 'Run the nightly sets: G-migrate on every pair of vendors, and the Playwright suite on MySQL 9.7'
         type: boolean
         required: false
         default: false
@@ -153,7 +154,10 @@ jobs:
       - name: Choose the push or the nightly set
         id: set
         env:
-          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
+          # Temporary (MOD-D25): the nightly sets also on push, to prove them once on the fork,
+          # where the workflow is not on the default branch and cannot be scheduled or
+          # dispatched. Reverted next.
+          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true || github.event_name == 'push' }}
         run: echo "nightly=$NIGHTLY" >> "$GITHUB_OUTPUT"
       # Checks the coverage rules too, so a pair list that misses a source or target fails here
       - name: G-migrate pairs
@@ -245,165 +249,10 @@ jobs:
         if: always()
         run: ./gradlew -i -S tomcatStop
 
-  harness-hsqldb:
-    name: "DB harness: hsqldb"
-    needs: uportal
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Download the uPortal build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: uportal-maven-local
-          path: ~/.m2/repository/org/jasig/portal
-      - name: Bootstrap gradle.properties for the uPortal build
-        env:
-          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
-        run: |
-          cp gradle.properties.example gradle.properties
-          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
-          grep '^uPortalVersion=' gradle.properties
-      - name: Setup Java
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
-          java-version: |
-            21
-            11
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-        with:
-          cache-provider: basic
-      - name: Point Gradle at the JDK 21 for its daemon
-        run: |
-          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
-          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
-          mkdir -p "$gradle_user_home"
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
-      - name: Install npm dependencies
-        run: npm ci
-      - name: dataInit, snapshot, compare, then run the API specs against the portal
-        run: tests/db/harness.sh --portal hsqldb
-      - name: Upload snapshots and logs
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: integration-db-harness-hsqldb
-          path: |
-            build/db-harness/
-            .gradle/tomcat/logs/
-
-  harness-service-container:
-    name: "DB harness: ${{ matrix.vendor }}"
-    needs: uportal
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - vendor: postgres-16
-            image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
-            port: 5432
-            host-port: 15432
-          - vendor: sqlserver-2022
-            image: mcr.microsoft.com/mssql/server:2022-latest@sha256:4402d880dd4c34bfa7d8705e56a86cd6c88da80a1f6bbbe741f999e76264a090
-            port: 1433
-            host-port: 15433
-          - vendor: oracle-23
-            image: gvenzl/oracle-free:23-slim@sha256:6d61d267a3b978c24c5ac1790e62e927416a0aec446bd86e4b3a1527562757bd
-            port: 1521
-            host-port: 15521
-    services:
-      db:
-        image: ${{ matrix.image }}
-        ports:
-          - ${{ matrix.host-port }}:${{ matrix.port }}
-        # One environment for every image; each image reads only its own variables.
-        # Throwaway CI credentials, the same as tests/db/vendors/*.properties.
-        env:
-          POSTGRES_DB: uportal
-          POSTGRES_USER: uportal
-          POSTGRES_PASSWORD: uportal
-          ACCEPT_EULA: 'Y'
-          MSSQL_PID: Developer
-          MSSQL_SA_PASSWORD: uPortal-Harness-1
-          ORACLE_PASSWORD: uportal-sys
-          APP_USER: uportal
-          APP_USER_PASSWORD: uportal
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Download the uPortal build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: uportal-maven-local
-          path: ~/.m2/repository/org/jasig/portal
-      - name: Bootstrap gradle.properties for the uPortal build
-        env:
-          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
-        run: |
-          cp gradle.properties.example gradle.properties
-          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
-          grep '^uPortalVersion=' gradle.properties
-      - name: Setup Java
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
-          java-version: |
-            21
-            11
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-        with:
-          cache-provider: basic
-      - name: Point Gradle at the JDK 21 for its daemon
-        run: |
-          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
-          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
-          mkdir -p "$gradle_user_home"
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
-      - name: Install npm dependencies
-        run: npm ci
-      # The service container is already running; dbWait polls JDBC until it accepts connections
-      # (Oracle Free and SQL Server need a minute or two after the port opens).
-      - name: dataInit, snapshot, compare, then run the API specs against the portal
-        env:
-          HARNESS_DB_CONTAINER: ${{ job.services.db.id }}
-          VENDOR: ${{ matrix.vendor }}
-        run: >-
-          tests/db/harness.sh --external --portal
-          "$VENDOR"
-          -- -PdbWaitSeconds=600
-      - name: Upload snapshots and logs
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: integration-db-harness-${{ matrix.vendor }}
-          path: |
-            build/db-harness/
-            .gradle/tomcat/logs/
-
-  # MySQL and MariaDB need a server option (lower_case_table_names=1, which MySQL only accepts
-  # when the data directory is created). Service containers cannot pass server arguments, so the
-  # harness starts these containers itself with `docker run` (see container.args).
-  harness-docker-run:
+  # The in-place upgrade harness (G-db) on every 6.0 runtime database (MOD-D25). The scripts
+  # start each database themselves (MySQL and MariaDB need server options that a service container
+  # cannot be given), from the pinned image in its vendor file.
+  harness:
     name: "DB harness: ${{ matrix.vendor }}"
     needs: uportal
     runs-on: ubuntu-latest
@@ -412,9 +261,12 @@ jobs:
       fail-fast: false
       matrix:
         vendor:
-          - mysql-8.4
-          - mariadb-10.6
-          - mariadb-11.4
+          - hsqldb
+          - postgres-18
+          - mysql-9.7
+          - mariadb-12.3
+          - sqlserver-2025
+          - oracle-23
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -456,10 +308,12 @@ jobs:
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Install npm dependencies
         run: npm ci
+      # dbWait polls JDBC until the database accepts connections (Oracle and SQL Server need a
+      # minute or two after their container starts)
       - name: Start the database, dataInit, snapshot, compare, then run the API specs
         env:
           VENDOR: ${{ matrix.vendor }}
-        run: tests/db/harness.sh --portal "$VENDOR"
+        run: tests/db/harness.sh --portal "$VENDOR" -- -PdbWaitSeconds=600
       - name: Upload snapshots and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -470,18 +324,16 @@ jobs:
             .gradle/tomcat/logs/
 
   # MOD-D16 item 3: the whole Playwright suite with uPortal and the bundled portlets on a real
-  # database. The harness starts each database with `docker run` (MariaDB needs container.args).
+  # database: PostgreSQL 18 and MariaDB 12.3 on every push, MySQL 9.7 nightly as well.
   playwright-database:
     name: "Playwright: ${{ matrix.vendor }}"
-    needs: uportal
+    needs: [uportal, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        vendor:
-          - postgres-16
-          - mariadb-11.4
+        vendor: ${{ fromJSON(needs.plan.outputs.nightly == 'true' && '["postgres-18", "mariadb-12.3", "mysql-9.7"]' || '["postgres-18", "mariadb-12.3"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -528,7 +380,7 @@ jobs:
       - name: Start the database, deploy everything, dataInit, compare, then run every spec
         env:
           VENDOR: ${{ matrix.vendor }}
-        run: tests/db/harness.sh --full-suite "$VENDOR"
+        run: tests/db/harness.sh --full-suite "$VENDOR" -- -PdbWaitSeconds=600
       - name: Upload snapshots, test results and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -609,79 +461,4 @@ jobs:
           name: integration-migrate-${{ matrix.source }}-to-${{ matrix.target }}
           path: |
             build/db-migrate/
-            .gradle/tomcat/logs/
-
-  # Temporary (MOD-D25): records the 5.17 baselines of the new runtime servers once, attached to
-  # the run as annotations (tests/db/fetch-ci-snapshot.sh), then compares a second fresh database
-  # with them. Reverted once the baselines are committed.
-  record:
-    name: "Record baseline: ${{ matrix.vendor }}"
-    needs: uportal
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        vendor:
-          - postgres-18
-          - mysql-9.7
-          - mariadb-12.3
-          - sqlserver-2025
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Download the uPortal build
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: uportal-maven-local
-          path: ~/.m2/repository/org/jasig/portal
-      - name: Bootstrap gradle.properties for the uPortal build
-        env:
-          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
-        run: |
-          cp gradle.properties.example gradle.properties
-          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
-          grep '^uPortalVersion=' gradle.properties
-      - name: Setup Java
-        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
-          java-version: |
-            21
-            11
-      - name: Setup Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-        with:
-          cache-provider: basic
-      - name: Point Gradle at the JDK 21 for its daemon
-        run: |
-          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
-          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
-          mkdir -p "$gradle_user_home"
-          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
-      - name: Install npm dependencies
-        run: npm ci
-      - name: Record the 5.17 baseline
-        env:
-          VENDOR: ${{ matrix.vendor }}
-        run: tests/db/harness.sh --record --baseline 5.17 "$VENDOR" -- -PdbWaitSeconds=600
-      - name: Compare a second fresh database with it, then run the API specs
-        env:
-          VENDOR: ${{ matrix.vendor }}
-        run: tests/db/harness.sh --portal "$VENDOR" -- -PdbWaitSeconds=600
-      - name: Upload snapshots and logs
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: integration-record-${{ matrix.vendor }}
-          path: |
-            build/db-harness/
-            tests/db/snapshots/5.17/${{ matrix.vendor }}/
             .gradle/tomcat/logs/

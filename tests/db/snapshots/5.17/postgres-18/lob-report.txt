@@ -1,0 +1,13 @@
+# PostgreSQL large-object (LOB) report (MOD-I24)
+# vacuumlo deletes every large object whose OID is not stored in a column of type oid or lo.
+# A text column whose values are OIDs of existing large objects therefore loses data to vacuumlo.
+[large objects]
+total=0
+[columns]
+up_analytics_events.event_data type=text non-null=0 oid-like=0 live-lob-refs=0 -> empty
+up_raw_events.event_data type=text non-null=0 oid-like=0 live-lob-refs=0 -> empty
+[vacuumlo simulation]
+large objects referenced from oid/lo columns (kept): 0
+large objects referenced only from text columns (DELETED, data loss): 0
+large objects not referenced anywhere in this schema (deleted, orphans): 0
+total vacuumlo would remove: 0
