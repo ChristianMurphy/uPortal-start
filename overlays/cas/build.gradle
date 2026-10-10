@@ -1,3 +1,5 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 apply plugin: 'java'
 
 dependencies {
@@ -46,4 +48,15 @@ war {
     exclude 'WEB-INF/lib/xml-apis-1.0.b2.jar'
     exclude 'WEB-INF/lib/aspectjrt-1.6.10.jar'
     exclude 'WEB-INF/lib/aspectjweaver-1.6.10.jar'
+
+    // Point CAS at this build's Tomcat and HSQLDB ports (see portTokens in the root build.gradle)
+    inputs.properties(portTokens)
+    filesMatching([
+        'WEB-INF/cas.properties',
+        'WEB-INF/deployerConfigContext.xml',
+        'WEB-INF/spring-configuration/clearpass-configuration.xml',
+    ]) {
+        filter(ReplaceTokens, tokens: portTokens)
+    }
+    filteringCharset = 'ISO-8859-1'  // Leaves every byte other than the tokens as-is
 }

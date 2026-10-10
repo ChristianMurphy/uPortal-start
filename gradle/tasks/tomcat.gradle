@@ -1,3 +1,5 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 repositories {
     mavenLocal()
     mavenCentral()
@@ -24,7 +26,7 @@ dependencies {
 private boolean verifyTomcatState(Project project, boolean verifyRunning) {
     project.ant {
         condition(property: 'tomcatIsRunning', value: true, else: false) {
-            socket(server: 'localhost', port: 8080)
+            socket(server: 'localhost', port: project.tomcatHttpPort)
         }
         if (Boolean.valueOf(tomcatIsRunning) != verifyRunning) {
             logger.lifecycle("The embedded Tomcat servlet container ${verifyRunning ? 'is not currently' : 'is already'} running; nothing to do")
@@ -85,6 +87,10 @@ task tomcatConfig() {
         copy {
             from 'etc/tomcat'
             into serverHome
+            filesMatching('conf/server.xml') {
+                filter(ReplaceTokens, tokens: portTokens)
+            }
+            filteringCharset = 'ISO-8859-1'  // Leaves every byte other than the tokens as-is
         }
 
         // Add shared.loader dependencies
@@ -102,6 +108,10 @@ task tomcatConfig() {
         copy {
             from 'etc/portal'
             into portalHomeDir
+            filesMatching('**/*.properties') {
+                filter(ReplaceTokens, tokens: portTokens)
+            }
+            filteringCharset = 'ISO-8859-1'
         }
     }
 }
@@ -142,7 +152,7 @@ task tomcatStart() {
         }
 
         ant.waitfor() {
-            http(url: 'http://localhost:8080/uPortal', followRedirects: false)
+            http(url: "http://localhost:${tomcatHttpPort}/uPortal", followRedirects: false)
         }
 
         logger.lifecycle('Tomcat has finished loading webapps, local uPortal server is live')
@@ -168,7 +178,7 @@ task tomcatStop() {
         }
         ant.waitfor() {
             not() {
-                http(url: 'http://localhost:8080/uPortal', followRedirects: false)
+                http(url: "http://localhost:${tomcatHttpPort}/uPortal", followRedirects: false)
             }
         }
     }

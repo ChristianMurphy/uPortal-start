@@ -62,6 +62,13 @@ casSpringVersion=3.2.18.RELEASE
 casXercesImplVersion=2.12.1
 
 
+# Ports of the integrated Tomcat and HSQLDB (defaults shown).  Uncomment and change
+# them, or pass e.g. -PtomcatHttpPort=8180, to run more than one portal on the
+# same machine.  See "Running more than one portal" in README.md.
+#tomcatHttpPort=8080
+#tomcatShutdownPort=8005
+#hsqlPort=8887
+
 org.gradle.parallel=true
 
 # These properties control image & version settings of Docker images built by the CLI.
