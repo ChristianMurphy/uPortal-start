@@ -396,25 +396,45 @@ GROUP BY k.table_name, k.constraint_name, k.referenced_table_name
 
 MY_INDEX_USAGE = """
 SELECT LOWER(object_name) AS tbl, index_name AS idx, count_star AS uses
-FROM performance_schema.table_io_waits_summary_by_index_usage
-WHERE object_schema = DATABASE() AND index_name IS NOT NULL
+FROM gindex.workload_index_usage
+WHERE index_name IS NOT NULL
 """
 
 MY_TOP = """
 SELECT digest AS queryid, count_star AS calls, ROUND(sum_timer_wait / 1e9, 1) AS total_ms,
        ROUND(avg_timer_wait / 1e9, 3) AS mean_ms, sum_rows_examined AS rows_examined,
        sum_no_index_used AS no_index_used, LEFT(digest_text, 400) AS query
-FROM performance_schema.events_statements_summary_by_digest
-WHERE schema_name = DATABASE() AND digest_text NOT REGEXP '^(SET|SHOW|COMMIT|ROLLBACK|SELECT @@|SELECT \\\\? $)'
+FROM gindex.workload_digests
+WHERE digest_text NOT REGEXP '^(SET|SHOW|COMMIT|ROLLBACK|SELECT @@|SELECT \\\\? $)'
 ORDER BY {order} DESC LIMIT {limit}
 """
 
 MY_FULL_SCANS = """
 SELECT digest AS queryid, count_star AS calls, sum_no_index_used AS no_index_used,
        sum_rows_examined AS rows_examined, sum_rows_sent AS rows_sent, LEFT(digest_text, 600) AS query
-FROM performance_schema.events_statements_summary_by_digest
-WHERE schema_name = DATABASE() AND sum_no_index_used > 0
+FROM gindex.workload_digests
+WHERE sum_no_index_used > 0
 """
+
+
+def explain_full_scans(db, digest):
+    """Tables a MariaDB digest reads with access type ALL, from EXPLAIN of its text."""
+    if not re.match(r"(?is)^\s*(select|with)\b", digest) or digest.rstrip().endswith("..."):
+        return None
+    text = re.sub(r"\(\s*\?\s*(,\s*\?\s*)*(,\s*\.\.\.)?\s*\)", "('1')", digest)
+    text = text.replace("?", "'1'")
+    aliases = {a.lower(): t.lower() for t, a in re.findall(r"`(up_\w+)`\s+(?:AS\s+)?`(\w+)`", text, re.I)}
+    try:
+        out = db.execute("EXPLAIN " + text + ";")
+    except RuntimeError:
+        return None
+    found = set()
+    for line in out.splitlines():
+        cols = line.split("\t")
+        if len(cols) >= 4 and cols[3] == "ALL":
+            alias = cols[2].lower()
+            found.add(aliases.get(alias, alias))
+    return {t for t in found if t.startswith("up_")}
 
 
 def audit_mariadb(db, args):
@@ -427,19 +447,23 @@ def audit_mariadb(db, args):
             info["rows"] = int(db.execute(f"SELECT COUNT(*) FROM `{name}`;").strip())
     findings = []
 
-    # Full scans: digests whose executions used no index, attributed to the large tables they name
+    # Full scans: digests whose executions used no index. EXPLAIN the digest text with '1' for
+    # each placeholder to find the tables read with type ALL; if that fails, name every large table
     for r in my_json(db, MY_FULL_SCANS, ["queryid", "calls", "no_index_used", "rows_examined",
                                          "rows_sent", "query"]):
-        named = {t.lower() for t in re.findall(r"`?\b(up_[a-z0-9_]+)\b`?", r["query"], re.I)}
+        scanned = explain_full_scans(db, r["query"])
+        named = scanned if scanned is not None else {
+            t.lower() for t in re.findall(r"`?\b(up_[a-z0-9_]+)\b`?", r["query"], re.I)}
         for table in sorted(named):
             info = tables.get(table)
             if info is None or info["rows"] < args.min_rows:
                 continue
             findings.append({"check": "seq-scan", "subject": f"{table}@{str(r['queryid'])[:8]}", "table": table,
-                             "rows": info["rows"],
-                             "queryid": r["queryid"], "query": re.sub(r"\s+", " ", r["query"]),
+                             "rows": info["rows"], "queryid": r["queryid"], "query": re.sub(r"\s+", " ", r["query"]),
                              "executions": int(r["no_index_used"]), "rows_examined": int(r["rows_examined"]),
-                             "note": "digest ran without an index (performance_schema)"})
+                             "index_exists": None if scanned is None else False,
+                             "note": "type ALL in EXPLAIN of the digest" if scanned is not None
+                             else "digest ran without an index (not explained)"})
 
     # Indexes as column lists
     index_cols = defaultdict(lambda: {"cols": [], "unique": False, "type": ""})
@@ -488,8 +512,7 @@ def audit_mariadb(db, args):
             r["check"], r["subject"] = check, r["queryid"]
             findings.append(r)
 
-    stats = my_json(db, "SELECT COUNT(*) AS statements, SUM(count_star) AS calls FROM "
-                        "performance_schema.events_statements_summary_by_digest WHERE schema_name = DATABASE()",
+    stats = my_json(db, "SELECT COUNT(*) AS statements, SUM(count_star) AS calls FROM gindex.workload_digests",
                     ["statements", "calls"])[0]
     stats["tables"], stats["indexes"] = len(tables), len(indexes)
     return findings, stats
@@ -528,7 +551,8 @@ def apply_allowlist(findings, entries):
         if f["check"] not in GATE_CHECKS:
             continue
         for e in entries:
-            if e["check"] == f["check"] and fnmatch.fnmatchcase(f["subject"], e["subject"]):
+            # Case-insensitive: MariaDB reports index names upper case
+            if e["check"] == f["check"] and fnmatch.fnmatchcase(f["subject"].lower(), e["subject"].lower()):
                 f["allowed"] = e["reason"]
                 e["used"] = True
                 break
