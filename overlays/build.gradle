@@ -83,6 +83,20 @@ subprojects {
                     "org.apache.taglibs:taglibs-standard-jstlel:${taglibsStandardVersion}"
             reason = 'MOD-I60, JSTL 1.1.2 uses the jsp.el API that Pages 4.0 removed'
         }
+        /*
+         * MOD-I61:  Spring 3.1/3.2's ExpressionEvaluationUtils, which every Spring form and message
+         * tag calls, links against the same removed jsp.el API (CAS 3.6, FeedbackPortlet,
+         * ResourceServingWebapp and esup-filemanager).  Replace that one class with a copy that
+         * evaluates through the unified EL;  see overlays/patches/spring3-jsp-el.
+         */
+        patch('spring3JspEl') {
+            whenWarContains = ~/spring-web-3\.[0-9.]+(RELEASE)?\.jar/
+            source 'overlays/patches/spring3-jsp-el'
+            compileOnly servletApiDependency,
+                    "javax.servlet.jsp:javax.servlet.jsp-api:${jspApiVersion}",
+                    "javax.el:javax.el-api:${elApiVersion}"
+            reason = 'MOD-I61, Spring 3.x ExpressionEvaluationUtils uses the jsp.el API that Pages 4.0 removed'
+        }
     }
 
     /*

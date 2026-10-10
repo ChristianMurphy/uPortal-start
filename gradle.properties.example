@@ -33,6 +33,8 @@ ckeditor4Version=4.22.1
 # Dependencies driven by Tomcat version
 tomcatVersion=9.0.122
 servletApiDependency=javax.servlet:javax.servlet-api:4.0.1
+jspApiVersion=2.3.3
+elApiVersion=3.0.0
 # JSTL packaged into every overlaid WAR that ships one (MOD-I60, see overlays/build.gradle)
 taglibsStandardVersion=1.2.5
 ccppVersion=1.0
