@@ -579,6 +579,14 @@ check_no_overlap() {
     fi
 }
 
+node_errors() {  # the distinct errors in both nodes' portal logs, as a warning annotation
+    local text
+    text=$(grep -hE '^(ERROR|WARN) ' "$OUT"/logs-a/portal/portal.log "$OUT"/logs-b/portal/portal.log 2> /dev/null |
+        sed -E 's/ [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:,]+ - / - /' | cut -c1-250 | sort | uniq -c | sort -rn | head -n 20)
+    echo "$text"
+    if [ -n "$text" ]; then github_annotation warning "cluster: node log errors" "$text"; fi
+}
+
 # ---- Run ---------------------------------------------------------------------------------------
 
 cleanup() {
@@ -627,6 +635,7 @@ cat "$OUT/results.txt"
 if [ "$setup_ok" = false ]; then
     echo "FAILED: the cluster did not start (see $OUT)"
     github_annotation error "cluster: setup" "$(tail -n 30 "$OUT/deploy.log" 2> /dev/null; tomcat_errors)"
+    node_errors
     exit 1
 fi
 
@@ -649,6 +658,7 @@ fi
 for check in "${CHECK_ORDER[@]}"; do
     if [ "${RESULTS[$check]}" = FAIL ]; then
         echo "FAILED (see $OUT)"
+        node_errors
         exit 1
     fi
 done
