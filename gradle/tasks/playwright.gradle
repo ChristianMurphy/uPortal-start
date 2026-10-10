@@ -4,6 +4,9 @@ node {
     download = true
 }
 
+// Base URL for tests/general-config.ts;  an exported PORTAL_BASE_URL wins over tomcatHttpPort
+String portalBaseUrl = System.getenv('PORTAL_BASE_URL') ?: "http://localhost:${tomcatHttpPort}/uPortal/"
+
 task playwrightNpxInstall(type: NpxTask, dependsOn: npmInstall) {
     group 'Testing'
     description 'Installs Playwright dependencies. Playwright/test is already installed via npmInstall'
@@ -38,7 +41,8 @@ task playwrightRun(type: NpxTask, dependsOn: [
     group 'Testing'
     description 'Runs Playwright scripts as per tests/uportal-pw.config.ts'
     environment = [
-            'PLAYWRIGHT_BROWSERS_PATH': '0'
+            'PLAYWRIGHT_BROWSERS_PATH': '0',
+            'PORTAL_BASE_URL': portalBaseUrl
     ]
     command = 'playwright'
     args = ['test', '--config=tests/uportal-pw.config.ts']
@@ -60,6 +64,7 @@ task playwrightDebug(type: NpxTask, dependsOn: [project.tasks.playwrightNpxInsta
     description 'Runs Playwright scripts as per tests/uportal-pw.config.ts in debug mode'
     environment = [
             'PLAYWRIGHT_BROWSERS_PATH': '0',
+            'PORTAL_BASE_URL': portalBaseUrl,
             'PWDEBUG': 'console'
     ]
     command = 'playwright'

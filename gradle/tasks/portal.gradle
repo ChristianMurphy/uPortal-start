@@ -17,7 +17,7 @@ task portalOpen() {
     dependsOn project.tasks.tomcatStart
 
     doLast {
-        String portalUrl = 'http://localhost:8080/uPortal/' // Can we calculate?
+        String portalUrl = "http://localhost:${tomcatHttpPort}/uPortal/"
         logger.lifecycle("Opening uPortal in the default browser at ${portalUrl}")
         java.awt.Desktop.desktop.browse portalUrl.toURI()
     }
