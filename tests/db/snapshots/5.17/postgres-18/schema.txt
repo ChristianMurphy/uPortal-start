@@ -1,0 +1,1095 @@
+# uPortal schema snapshot with object names (names the database generates itself are shown as <db-generated>)
+# Lines starting with '#' are informational; snapshot comparison ignores them.
+# vendor: postgres-18
+# uPortalVersion: 5.17.10-SNAPSHOT
+# dialect (resolved by the deployed uPortal): org.hibernate.dialect.PostgreSQL81Dialect (chosen by Hibernate StandardDialectResolver)
+# database: PostgreSQL 18.6
+# jdbc driver: PostgreSQL JDBC Driver 42.7.11
+# catalog: uportal  schema: public
+# sequence value: last_value (PostgreSQL), next value (HSQLDB), LAST_NUMBER incl. cache (Oracle), current_value (SQL Server), next_not_cached_value (MariaDB)
+[tables]
+jgroupsping
+up_academic_term_detail
+up_aggr_group_mapping
+up_aggr_portlet_mapping
+up_aggr_tab_mapping
+up_analytics_events
+up_concurrent_user_aggr
+up_date_dimension
+up_dlm_evaluator
+up_dlm_evaluator_paren
+up_entity_cache_invalidation
+up_entity_lock
+up_entity_type
+up_event_aggr_conf_groups
+up_event_aggr_conf_groups_exc
+up_event_aggr_conf_groups_inc
+up_event_aggr_conf_intrvl
+up_event_aggr_conf_intrvl_exc
+up_event_aggr_conf_intrvl_inc
+up_event_aggr_status
+up_event_session
+up_event_session_groups
+up_group
+up_group_membership
+up_jgroups_auth
+up_layout_param
+up_layout_struct
+up_login_event_aggr
+up_message
+up_mutex
+up_pags_group
+up_pags_group_members
+up_pags_test
+up_pags_test_group
+up_permission
+up_permission_activity
+up_permission_owner
+up_person_attr
+up_person_attr_values
+up_person_dir
+up_portal_cookies
+up_portlet_cookies
+up_portlet_def
+up_portlet_def_mdata
+up_portlet_def_param
+up_portlet_ent
+up_portlet_ent__states
+up_portlet_exec_aggr
+up_portlet_layout_aggr
+up_portlet_lifecycle
+up_portlet_list
+up_portlet_list_item
+up_portlet_pref
+up_portlet_pref_values
+up_portlet_prefs
+up_portlet_rating
+up_portlet_type
+up_profile_selection
+up_quarter_detail
+up_raw_events
+up_search_req_aggr
+up_sequence
+up_ss_desc
+up_ss_desc_lay_attr
+up_ss_desc_lay_attr_elms
+up_ss_desc_output_prop
+up_ss_desc_param
+up_ss_user_pref
+up_ss_user_pref_lay_attr
+up_ss_user_pref_lay_attr_val
+up_ss_user_pref_output_prop
+up_ss_user_pref_param
+up_tab_render_aggr
+up_tenant
+up_tenant_attributes
+up_time_dimension
+up_unique_str
+up_unique_str_segment
+up_unique_str_segment__uids
+up_user
+up_user_layout
+up_user_locale
+up_user_profile
+up_version
+[columns]
+jgroupsping.cluster_name varchar(200,0) not null
+jgroupsping.own_addr varchar(200,0) not null
+jgroupsping.ping_data bytea(2147483647,0)
+up_academic_term_detail.term_end timestamp(29,6) not null
+up_academic_term_detail.term_id int8(19,0) not null
+up_academic_term_detail.term_name varchar(255,0) not null
+up_academic_term_detail.term_start timestamp(29,6) not null
+up_aggr_group_mapping.group_name varchar(200,0) not null
+up_aggr_group_mapping.group_service varchar(200,0) not null
+up_aggr_group_mapping.id int8(19,0) not null
+up_aggr_portlet_mapping.id int8(19,0) not null
+up_aggr_portlet_mapping.portlet_fname varchar(255,0) not null
+up_aggr_portlet_mapping.portlet_name varchar(128,0) not null
+up_aggr_tab_mapping.fragment_name varchar(200,0) not null
+up_aggr_tab_mapping.id int8(19,0) not null
+up_aggr_tab_mapping.tab_name varchar(200,0) not null
+up_analytics_events.event_data text(2147483647,0) not null
+up_analytics_events.event_id int8(19,0) not null
+up_analytics_events.event_type varchar(200,0) not null
+up_analytics_events.server_id varchar(200,0) not null
+up_analytics_events.session_id varchar(500,0) not null
+up_analytics_events.timestamp timestamp(29,6) not null
+up_analytics_events.user_name varchar(100,0) not null
+up_concurrent_user_aggr.aggr_group_id int8(19,0) not null
+up_concurrent_user_aggr.aggr_interval varchar(255,0) not null
+up_concurrent_user_aggr.concurrent_users int4(10,0) not null
+up_concurrent_user_aggr.date_dimension_id int8(19,0) not null
+up_concurrent_user_aggr.duration int4(10,0) not null
+up_concurrent_user_aggr.id int8(19,0) not null
+up_concurrent_user_aggr.time_dimension_id int8(19,0) not null
+up_concurrent_user_aggr.unique_strings_id int8(19,0)
+up_date_dimension.date_id int8(19,0) not null
+up_date_dimension.dd_date date(13,0) not null
+up_date_dimension.dd_day int4(10,0) not null
+up_date_dimension.dd_month int4(10,0) not null
+up_date_dimension.dd_quarter int4(10,0) not null
+up_date_dimension.dd_term varchar(200,0)
+up_date_dimension.dd_week int4(10,0) not null
+up_date_dimension.dd_year int4(10,0) not null
+up_dlm_evaluator.attribute_mode int4(10,0)
+up_dlm_evaluator.attribute_name varchar(255,0)
+up_dlm_evaluator.attribute_value varchar(255,0)
+up_dlm_evaluator.description varchar(255,0)
+up_dlm_evaluator.entity_version int8(19,0)
+up_dlm_evaluator.evaluator_id int8(19,0) not null
+up_dlm_evaluator.evaluator_mode int4(10,0)
+up_dlm_evaluator.evaluator_type varchar(31,0) not null
+up_dlm_evaluator.fragment_name varchar(255,0)
+up_dlm_evaluator.group_key varchar(255,0)
+up_dlm_evaluator.group_name varchar(255,0)
+up_dlm_evaluator.owner_id varchar(255,0)
+up_dlm_evaluator.paren_type int4(10,0)
+up_dlm_evaluator.precedence float8(17,17)
+up_dlm_evaluator.profile_fname varchar(255,0)
+up_dlm_evaluator_paren.child_eval_id int8(19,0) not null
+up_dlm_evaluator_paren.eval_index int4(10,0) not null
+up_dlm_evaluator_paren.paren_eval_id int8(19,0) not null
+up_entity_cache_invalidation.entity_cache_id int4(10,0) not null
+up_entity_cache_invalidation.entity_key varchar(240,0) not null
+up_entity_cache_invalidation.entity_type_id int4(10,0) not null
+up_entity_cache_invalidation.invalidation_time timestamp(29,6) not null
+up_entity_lock.entity_key varchar(240,0) not null
+up_entity_lock.entity_type_id int4(10,0) not null
+up_entity_lock.expiration_time timestamp(29,6) not null
+up_entity_lock.lock_owner varchar(240,0) not null
+up_entity_lock.lock_type int4(10,0) not null
+up_entity_type.descriptive_name varchar(255,0)
+up_entity_type.entity_type_id int4(10,0) not null
+up_entity_type.entity_type_name varchar(255,0)
+up_event_aggr_conf_groups.aggregator_type varchar(255,0) not null
+up_event_aggr_conf_groups.entity_version int8(19,0)
+up_event_aggr_conf_groups.id int8(19,0) not null
+up_event_aggr_conf_groups_exc.group_id int8(19,0) not null
+up_event_aggr_conf_groups_exc.up_event_aggr_conf_groups_id int8(19,0) not null
+up_event_aggr_conf_groups_inc.group_id int8(19,0) not null
+up_event_aggr_conf_groups_inc.up_event_aggr_conf_groups_id int8(19,0) not null
+up_event_aggr_conf_intrvl.aggregator_type varchar(255,0) not null
+up_event_aggr_conf_intrvl.entity_version int8(19,0)
+up_event_aggr_conf_intrvl.id int8(19,0) not null
+up_event_aggr_conf_intrvl_exc.aggr_interval varchar(255,0)
+up_event_aggr_conf_intrvl_exc.up_event_aggr_conf_intrvl_id int8(19,0) not null
+up_event_aggr_conf_intrvl_inc.aggr_interval varchar(255,0)
+up_event_aggr_conf_intrvl_inc.up_event_aggr_conf_intrvl_id int8(19,0) not null
+up_event_aggr_status.entity_version int8(19,0)
+up_event_aggr_status.id int8(19,0) not null
+up_event_aggr_status.last_end timestamp(29,6)
+up_event_aggr_status.last_event_date timestamp(29,6)
+up_event_aggr_status.last_start timestamp(29,6)
+up_event_aggr_status.processing_type varchar(255,0) not null
+up_event_aggr_status.server_name varchar(200,0)
+up_event_session.id int8(19,0) not null
+up_event_session.last_accessed timestamp(29,6) not null
+up_event_session.session_id varchar(500,0) not null
+up_event_session_groups.group_id int8(19,0) not null
+up_event_session_groups.up_event_session_id int8(19,0) not null
+up_group.creator_id varchar(240,0) not null
+up_group.description varchar(255,0)
+up_group.entity_type_id int4(10,0) not null
+up_group.group_id varchar(240,0) not null
+up_group.group_name varchar(255,0) not null
+up_group_membership.group_id varchar(200,0) not null
+up_group_membership.member_is_group varchar(1,0) not null
+up_group_membership.member_key varchar(200,0) not null
+up_group_membership.member_service varchar(80,0) not null
+up_jgroups_auth.random_token varchar(4000,0)
+up_jgroups_auth.service_name varchar(100,0) not null
+up_layout_param.layout_id int4(10,0) not null
+up_layout_param.struct_id int4(10,0) not null
+up_layout_param.struct_parm_nm varchar(35,0) not null
+up_layout_param.struct_parm_val varchar(2000,0) not null
+up_layout_param.user_id int4(10,0) not null
+up_layout_struct.chan_id int4(10,0)
+up_layout_struct.chld_struct_id int4(10,0)
+up_layout_struct.external_id varchar(64,0)
+up_layout_struct.hidden varchar(1,0)
+up_layout_struct.immutable varchar(1,0)
+up_layout_struct.layout_id int4(10,0) not null
+up_layout_struct.name varchar(35,0)
+up_layout_struct.next_struct_id int4(10,0)
+up_layout_struct.struct_id int4(10,0) not null
+up_layout_struct.type varchar(35,0)
+up_layout_struct.unremovable varchar(1,0)
+up_layout_struct.user_id int4(10,0) not null
+up_login_event_aggr.aggr_group_id int8(19,0) not null
+up_login_event_aggr.aggr_interval varchar(255,0) not null
+up_login_event_aggr.date_dimension_id int8(19,0) not null
+up_login_event_aggr.duration int4(10,0) not null
+up_login_event_aggr.id int8(19,0) not null
+up_login_event_aggr.login_count int4(10,0) not null
+up_login_event_aggr.time_dimension_id int8(19,0) not null
+up_login_event_aggr.unique_login_count int4(10,0) not null
+up_login_event_aggr.unique_strings_id int8(19,0)
+up_message.code varchar(128,0) not null
+up_message.id int8(19,0) not null
+up_message.locale varchar(64,0) not null
+up_message.value varchar(1024,0) not null
+up_mutex.entity_version int8(19,0)
+up_mutex.lock_end timestamp(29,6) not null
+up_mutex.lock_start timestamp(29,6) not null
+up_mutex.lock_update timestamp(29,6) not null
+up_mutex.locked bool(1,0) not null
+up_mutex.mutex_id int8(19,0) not null
+up_mutex.mutex_name varchar(200,0) not null
+up_mutex.prev_server_id varchar(200,0)
+up_mutex.server_id varchar(200,0)
+up_pags_group.description varchar(500,0)
+up_pags_group.entity_version int8(19,0)
+up_pags_group.name varchar(500,0) not null
+up_pags_group.pags_group_id int8(19,0) not null
+up_pags_group_members.pags_group_id int8(19,0) not null
+up_pags_group_members.pags_group_member_id int8(19,0) not null
+up_pags_test.attribute_name varchar(500,0)
+up_pags_test.entity_version int8(19,0)
+up_pags_test.pags_test_group_id int8(19,0) not null
+up_pags_test.pags_test_id int8(19,0) not null
+up_pags_test.test_value varchar(500,0)
+up_pags_test.tester_class varchar(500,0)
+up_pags_test_group.entity_version int8(19,0)
+up_pags_test_group.pags_group_id int8(19,0) not null
+up_pags_test_group.pags_test_group_id int8(19,0) not null
+up_permission.activity varchar(255,0)
+up_permission.effective timestamp(29,6)
+up_permission.expires timestamp(29,6)
+up_permission.owner varchar(255,0)
+up_permission.permission_type varchar(255,0)
+up_permission.principal_key varchar(255,0)
+up_permission.principal_type int4(10,0)
+up_permission.target varchar(255,0)
+up_permission_activity.activity_description varchar(255,0)
+up_permission_activity.activity_fname varchar(128,0) not null
+up_permission_activity.activity_id int8(19,0) not null
+up_permission_activity.activity_name varchar(128,0) not null
+up_permission_activity.entity_version int8(19,0)
+up_permission_activity.owner_id int8(19,0)
+up_permission_activity.owner_target_provider varchar(255,0) not null
+up_permission_owner.entity_version int8(19,0)
+up_permission_owner.owner_description varchar(255,0)
+up_permission_owner.owner_fname varchar(128,0) not null
+up_permission_owner.owner_id int8(19,0) not null
+up_permission_owner.owner_name varchar(128,0) not null
+up_person_attr.attr_name varchar(255,0) not null
+up_person_attr.entity_version int8(19,0)
+up_person_attr.id int4(10,0) not null
+up_person_attr.user_dir_id int8(19,0) not null
+up_person_attr_values.attr_id int4(10,0) not null
+up_person_attr_values.attr_value varchar(255,0)
+up_person_attr_values.value_order int4(10,0) not null
+up_person_dir.encrptd_pswd varchar(256,0)
+up_person_dir.entity_version int8(19,0)
+up_person_dir.lst_pswd_cgh_dt timestamp(29,6)
+up_person_dir.user_dir_id int8(19,0) not null
+up_person_dir.user_name varchar(100,0) not null
+up_portal_cookies.cookie_value varchar(100,0) not null
+up_portal_cookies.created timestamp(29,6) not null
+up_portal_cookies.entity_version int8(19,0)
+up_portal_cookies.expires timestamp(29,6) not null
+up_portal_cookies.portal_cookie_id int8(19,0) not null
+up_portlet_cookies.cookie_comment varchar(1000,0)
+up_portlet_cookies.cookie_domain varchar(500,0)
+up_portlet_cookies.cookie_name varchar(500,0) not null
+up_portlet_cookies.cookie_path varchar(1000,0)
+up_portlet_cookies.cookie_value varchar(1000,0) not null
+up_portlet_cookies.entity_version int8(19,0)
+up_portlet_cookies.expires timestamp(29,6) not null
+up_portlet_cookies.portal_cookie_id int8(19,0)
+up_portlet_cookies.portalcookie_portal_cookie_id int8(19,0)
+up_portlet_cookies.portlet_cookie_id int8(19,0) not null
+up_portlet_cookies.secure bool(1,0) not null
+up_portlet_cookies.version int4(10,0) not null
+up_portlet_def.action_timeout int4(10,0)
+up_portlet_def.avg_rating float8(17,17)
+up_portlet_def.avg_rating_user_count int8(19,0)
+up_portlet_def.entity_version int8(19,0)
+up_portlet_def.event_timeout int4(10,0)
+up_portlet_def.portlet_application_name varchar(255,0) not null
+up_portlet_def.portlet_def_id int8(19,0) not null
+up_portlet_def.portlet_desc varchar(255,0)
+up_portlet_def.portlet_fname varchar(255,0) not null
+up_portlet_def.portlet_framework bool(1,0) not null
+up_portlet_def.portlet_name varchar(128,0) not null
+up_portlet_def.portlet_prefs_id int8(19,0) not null
+up_portlet_def.portlet_timeout int4(10,0) not null
+up_portlet_def.portlet_title varchar(128,0) not null
+up_portlet_def.portlet_type_id int4(10,0) not null
+up_portlet_def.portlet_webapp_name varchar(255,0)
+up_portlet_def.render_timeout int4(10,0)
+up_portlet_def.resource_timeout int4(10,0)
+up_portlet_def_mdata.locale varchar(64,0) not null
+up_portlet_def_mdata.portlet_desc varchar(255,0)
+up_portlet_def_mdata.portlet_id int8(19,0) not null
+up_portlet_def_mdata.portlet_name varchar(128,0)
+up_portlet_def_mdata.portlet_title varchar(128,0)
+up_portlet_def_param.param_desc varchar(255,0)
+up_portlet_def_param.param_id int8(19,0) not null
+up_portlet_def_param.param_name varchar(255,0) not null
+up_portlet_def_param.param_val varchar(2000,0)
+up_portlet_def_param.portlet_def_id int8(19,0) not null
+up_portlet_ent.entity_version int8(19,0)
+up_portlet_ent.layout_node_id varchar(255,0) not null
+up_portlet_ent.portlet_def_id int8(19,0) not null
+up_portlet_ent.portlet_ent_id int8(19,0) not null
+up_portlet_ent.portlet_prefs_id int8(19,0) not null
+up_portlet_ent.user_id int4(10,0) not null
+up_portlet_ent__states.portlet_ent_id int8(19,0) not null
+up_portlet_ent__states.stylesheet_descriptor_id int8(19,0) not null
+up_portlet_ent__states.window_state varchar(255,0)
+up_portlet_exec_aggr.aggr_group_id int8(19,0) not null
+up_portlet_exec_aggr.aggr_interval varchar(255,0) not null
+up_portlet_exec_aggr.aggr_portlet_id int8(19,0) not null
+up_portlet_exec_aggr.cm_1mmnt_dev float8(17,17)
+up_portlet_exec_aggr.cm_1mmnt_m1 float8(17,17)
+up_portlet_exec_aggr.cm_1mmnt_n int8(19,0)
+up_portlet_exec_aggr.cm_1mmnt_ndev float8(17,17)
+up_portlet_exec_aggr.cm_2mmnt_m2 float8(17,17)
+up_portlet_exec_aggr.cm_max_n int8(19,0)
+up_portlet_exec_aggr.cm_max_value float8(17,17)
+up_portlet_exec_aggr.cm_min_n int8(19,0)
+up_portlet_exec_aggr.cm_min_value float8(17,17)
+up_portlet_exec_aggr.cm_sum_n int8(19,0)
+up_portlet_exec_aggr.cm_sum_value float8(17,17)
+up_portlet_exec_aggr.cm_sumologs_n int4(10,0)
+up_portlet_exec_aggr.cm_sumologs_value float8(17,17)
+up_portlet_exec_aggr.cm_sumosqrs_n int8(19,0)
+up_portlet_exec_aggr.cm_sumosqrs_value float8(17,17)
+up_portlet_exec_aggr.date_dimension_id int8(19,0) not null
+up_portlet_exec_aggr.duration int4(10,0) not null
+up_portlet_exec_aggr.execution_type varchar(50,0) not null
+up_portlet_exec_aggr.geometric_mean_time float8(17,17) not null
+up_portlet_exec_aggr.id int8(19,0) not null
+up_portlet_exec_aggr.max_time float8(17,17) not null
+up_portlet_exec_aggr.mean_time float8(17,17) not null
+up_portlet_exec_aggr.min_time float8(17,17) not null
+up_portlet_exec_aggr.population_variance_time float8(17,17) not null
+up_portlet_exec_aggr.second_moment_time float8(17,17) not null
+up_portlet_exec_aggr.stats_complete bool(1,0) not null
+up_portlet_exec_aggr.std_deviation_time float8(17,17) not null
+up_portlet_exec_aggr.sum_of_logs_time float8(17,17) not null
+up_portlet_exec_aggr.sum_time float8(17,17) not null
+up_portlet_exec_aggr.sumsq_time float8(17,17) not null
+up_portlet_exec_aggr.time_count int4(10,0) not null
+up_portlet_exec_aggr.time_dimension_id int8(19,0) not null
+up_portlet_exec_aggr.variance_time float8(17,17) not null
+up_portlet_layout_aggr.add_count int4(10,0) not null
+up_portlet_layout_aggr.aggr_group_id int8(19,0) not null
+up_portlet_layout_aggr.aggr_interval varchar(255,0) not null
+up_portlet_layout_aggr.aggr_portlet_id int8(19,0) not null
+up_portlet_layout_aggr.date_dimension_id int8(19,0) not null
+up_portlet_layout_aggr.del_count int4(10,0) not null
+up_portlet_layout_aggr.duration int4(10,0) not null
+up_portlet_layout_aggr.id int8(19,0) not null
+up_portlet_layout_aggr.move_count int4(10,0) not null
+up_portlet_layout_aggr.stats_complete bool(1,0) not null
+up_portlet_layout_aggr.time_dimension_id int8(19,0) not null
+up_portlet_lifecycle.entry_date timestamp(29,6)
+up_portlet_lifecycle.entry_id int8(19,0) not null
+up_portlet_lifecycle.lifecycle_state_id int4(10,0)
+up_portlet_lifecycle.portlet_def_id int8(19,0) not null
+up_portlet_lifecycle.user_id int4(10,0)
+up_portlet_list.created_by varchar(255,0) not null
+up_portlet_list.created_on timestamp(29,6) not null
+up_portlet_list.id varchar(255,0) not null
+up_portlet_list.name varchar(255,0) not null
+up_portlet_list.owner_username varchar(255,0) not null
+up_portlet_list.updated_by varchar(255,0) not null
+up_portlet_list.updated_on timestamp(29,6) not null
+up_portlet_list_item.entity_id varchar(255,0) not null
+up_portlet_list_item.id varchar(255,0) not null
+up_portlet_list_item.list_id varchar(255,0) not null
+up_portlet_list_item.list_order int4(10,0) not null
+up_portlet_pref.entity_version int8(19,0)
+up_portlet_pref.null_values bool(1,0) not null
+up_portlet_pref.portlet_pref_id int8(19,0) not null
+up_portlet_pref.portlet_prefs_id int8(19,0)
+up_portlet_pref.pref_name varchar(100000,0)
+up_portlet_pref.pref_order int4(10,0)
+up_portlet_pref.read_only bool(1,0) not null
+up_portlet_pref_values.portlet_pref_id int8(19,0) not null
+up_portlet_pref_values.pref_value varchar(100000,0)
+up_portlet_pref_values.value_order int4(10,0) not null
+up_portlet_prefs.entity_version int8(19,0)
+up_portlet_prefs.portlet_prefs_id int8(19,0) not null
+up_portlet_rating.portlet_id int8(19,0) not null
+up_portlet_rating.rating int4(10,0)
+up_portlet_rating.review varchar(160,0)
+up_portlet_rating.user_name varchar(255,0) not null
+up_portlet_type.entity_version int8(19,0)
+up_portlet_type.type_def_uri varchar(255,0) not null
+up_portlet_type.type_descr varchar(2000,0)
+up_portlet_type.type_id int4(10,0) not null
+up_portlet_type.type_name varchar(70,0)
+up_profile_selection.entity_version int8(19,0)
+up_profile_selection.profile_fname varchar(70,0) not null
+up_profile_selection.selection_id int4(10,0) not null
+up_profile_selection.username varchar(70,0) not null
+up_quarter_detail.quarter_end varchar(255,0) not null
+up_quarter_detail.quarter_id int8(19,0) not null
+up_quarter_detail.quarter_number int4(10,0) not null
+up_quarter_detail.quarter_start varchar(255,0) not null
+up_raw_events.aggregated bool(1,0)
+up_raw_events.error_aggr bool(1,0)
+up_raw_events.event_data text(2147483647,0) not null
+up_raw_events.event_id int8(19,0) not null
+up_raw_events.event_type varchar(200,0) not null
+up_raw_events.server_id varchar(200,0) not null
+up_raw_events.session_id varchar(500,0) not null
+up_raw_events.timestamp timestamp(29,6) not null
+up_raw_events.user_name varchar(100,0) not null
+up_search_req_aggr.aggr_group_id int8(19,0) not null
+up_search_req_aggr.aggr_interval varchar(255,0) not null
+up_search_req_aggr.date_dimension_id int8(19,0) not null
+up_search_req_aggr.duration int4(10,0) not null
+up_search_req_aggr.id int8(19,0) not null
+up_search_req_aggr.search_count int4(10,0) not null
+up_search_req_aggr.search_term varchar(255,0) not null
+up_search_req_aggr.stats_complete bool(1,0) not null
+up_search_req_aggr.time_dimension_id int8(19,0) not null
+up_sequence.sequence_name varchar(255,0) not null
+up_sequence.sequence_value int4(10,0)
+up_ss_desc.description varchar(2000,0)
+up_ss_desc.entity_version int8(19,0)
+up_ss_desc.ss_desc_id int8(19,0) not null
+up_ss_desc.ss_name varchar(100,0) not null
+up_ss_desc.stylesheet varchar(2000,0) not null
+up_ss_desc.url_syntax_helper_name varchar(100,0)
+up_ss_desc_lay_attr.data_name varchar(100,0) not null
+up_ss_desc_lay_attr.default_value varchar(500,0)
+up_ss_desc_lay_attr.description varchar(2000,0)
+up_ss_desc_lay_attr.entity_version int8(19,0)
+up_ss_desc_lay_attr.persistence_scope varchar(255,0) not null
+up_ss_desc_lay_attr.ss_desc_id int8(19,0) not null
+up_ss_desc_lay_attr.ss_desc_layout_attr_id int8(19,0) not null
+up_ss_desc_lay_attr_elms.attr_id int8(19,0) not null
+up_ss_desc_lay_attr_elms.element_name varchar(255,0)
+up_ss_desc_output_prop.data_name varchar(100,0) not null
+up_ss_desc_output_prop.default_value varchar(500,0)
+up_ss_desc_output_prop.description varchar(2000,0)
+up_ss_desc_output_prop.entity_version int8(19,0)
+up_ss_desc_output_prop.persistence_scope varchar(255,0) not null
+up_ss_desc_output_prop.ss_desc_id int8(19,0) not null
+up_ss_desc_output_prop.ss_desc_layout_attr_id int8(19,0) not null
+up_ss_desc_param.data_name varchar(100,0) not null
+up_ss_desc_param.default_value varchar(500,0)
+up_ss_desc_param.description varchar(2000,0)
+up_ss_desc_param.entity_version int8(19,0)
+up_ss_desc_param.persistence_scope varchar(255,0) not null
+up_ss_desc_param.ss_desc_id int8(19,0) not null
+up_ss_desc_param.ss_desc_param_id int8(19,0) not null
+up_ss_user_pref.entity_version int8(19,0)
+up_ss_user_pref.profile_id int4(10,0) not null
+up_ss_user_pref.ss_user_pref_id int8(19,0) not null
+up_ss_user_pref.up_ss_descriptor_id int8(19,0) not null
+up_ss_user_pref.user_id int4(10,0) not null
+up_ss_user_pref_lay_attr.entity_version int8(19,0)
+up_ss_user_pref_lay_attr.node_id varchar(200,0) not null
+up_ss_user_pref_lay_attr.ss_user_pref_id int8(19,0) not null
+up_ss_user_pref_lay_attr.up_ss_user_pref_lay_attr_id int8(19,0) not null
+up_ss_user_pref_lay_attr_val.attr_name varchar(500,0) not null
+up_ss_user_pref_lay_attr_val.attr_value varchar(2000,0) not null
+up_ss_user_pref_lay_attr_val.up_ss_user_pref_lay_attr_id int8(19,0) not null
+up_ss_user_pref_output_prop.prop_name varchar(500,0) not null
+up_ss_user_pref_output_prop.prop_value varchar(2000,0) not null
+up_ss_user_pref_output_prop.ss_user_pref_id int8(19,0) not null
+up_ss_user_pref_param.param_name varchar(500,0) not null
+up_ss_user_pref_param.param_value varchar(2000,0) not null
+up_ss_user_pref_param.ss_user_pref_id int8(19,0) not null
+up_tab_render_aggr.aggr_group_id int8(19,0) not null
+up_tab_render_aggr.aggr_interval varchar(255,0) not null
+up_tab_render_aggr.aggr_tab_id int8(19,0) not null
+up_tab_render_aggr.cm_1mmnt_dev float8(17,17)
+up_tab_render_aggr.cm_1mmnt_m1 float8(17,17)
+up_tab_render_aggr.cm_1mmnt_n int8(19,0)
+up_tab_render_aggr.cm_1mmnt_ndev float8(17,17)
+up_tab_render_aggr.cm_2mmnt_m2 float8(17,17)
+up_tab_render_aggr.cm_max_n int8(19,0)
+up_tab_render_aggr.cm_max_value float8(17,17)
+up_tab_render_aggr.cm_min_n int8(19,0)
+up_tab_render_aggr.cm_min_value float8(17,17)
+up_tab_render_aggr.cm_sum_n int8(19,0)
+up_tab_render_aggr.cm_sum_value float8(17,17)
+up_tab_render_aggr.cm_sumologs_n int4(10,0)
+up_tab_render_aggr.cm_sumologs_value float8(17,17)
+up_tab_render_aggr.cm_sumosqrs_n int8(19,0)
+up_tab_render_aggr.cm_sumosqrs_value float8(17,17)
+up_tab_render_aggr.date_dimension_id int8(19,0) not null
+up_tab_render_aggr.duration int4(10,0) not null
+up_tab_render_aggr.geometric_mean_time float8(17,17) not null
+up_tab_render_aggr.id int8(19,0) not null
+up_tab_render_aggr.max_time float8(17,17) not null
+up_tab_render_aggr.mean_time float8(17,17) not null
+up_tab_render_aggr.min_time float8(17,17) not null
+up_tab_render_aggr.population_variance_time float8(17,17) not null
+up_tab_render_aggr.second_moment_time float8(17,17) not null
+up_tab_render_aggr.stats_complete bool(1,0) not null
+up_tab_render_aggr.std_deviation_time float8(17,17) not null
+up_tab_render_aggr.sum_of_logs_time float8(17,17) not null
+up_tab_render_aggr.sum_time float8(17,17) not null
+up_tab_render_aggr.sumsq_time float8(17,17) not null
+up_tab_render_aggr.time_count int4(10,0) not null
+up_tab_render_aggr.time_dimension_id int8(19,0) not null
+up_tab_render_aggr.variance_time float8(17,17) not null
+up_tenant.tenant_fname varchar(128,0) not null
+up_tenant.tenant_id int8(19,0) not null
+up_tenant.tenant_name varchar(255,0) not null
+up_tenant_attributes.attr_name varchar(500,0) not null
+up_tenant_attributes.attr_value varchar(2000,0) not null
+up_tenant_attributes.tenant_id int8(19,0) not null
+up_time_dimension.td_five_minute_increment int4(10,0) not null
+up_time_dimension.td_hour int4(10,0) not null
+up_time_dimension.td_minute int4(10,0) not null
+up_time_dimension.td_time time(15,6) not null
+up_time_dimension.time_id int8(19,0) not null
+up_unique_str.unique_str_id int8(19,0) not null
+up_unique_str_segment.unique_str_id int8(19,0) not null
+up_unique_str_segment.unique_str_segment_id int8(19,0) not null
+up_unique_str_segment__uids.unique_str varchar(255,0) not null
+up_unique_str_segment__uids.unique_str_segment_id int8(19,0) not null
+up_user.lst_chan_updt_dt timestamp(29,6)
+up_user.next_struct_id int4(10,0)
+up_user.user_dflt_lay_id int4(10,0)
+up_user.user_id int4(10,0) not null
+up_user.user_name varchar(100,0)
+up_user_layout.init_struct_id int4(10,0)
+up_user_layout.layout_id int4(10,0) not null
+up_user_layout.layout_title varchar(15,0)
+up_user_layout.user_id int4(10,0) not null
+up_user_locale.locale varchar(64,0) not null
+up_user_locale.priority int4(10,0)
+up_user_locale.user_id int4(10,0) not null
+up_user_profile.description varchar(100,0)
+up_user_profile.layout_id int4(10,0)
+up_user_profile.profile_fname varchar(50,0) not null
+up_user_profile.profile_id int4(10,0) not null
+up_user_profile.profile_name varchar(50,0)
+up_user_profile.structure_ss_id int4(10,0)
+up_user_profile.theme_ss_id int4(10,0)
+up_user_profile.user_id int4(10,0) not null
+up_version.entity_version int8(19,0)
+up_version.local_ver int4(10,0)
+up_version.major_ver int4(10,0) not null
+up_version.minor_ver int4(10,0) not null
+up_version.patch_ver int4(10,0) not null
+up_version.product varchar(128,0) not null
+up_version.version_id int8(19,0) not null
+[primary keys]
+jgroupsping jgroupsping_pkey (own_addr, cluster_name)
+up_academic_term_detail up_academic_term_detail_pkey (term_id)
+up_aggr_group_mapping up_aggr_group_mapping_pkey (id)
+up_aggr_portlet_mapping up_aggr_portlet_mapping_pkey (id)
+up_aggr_tab_mapping up_aggr_tab_mapping_pkey (id)
+up_analytics_events up_analytics_events_pkey (event_id)
+up_concurrent_user_aggr up_concurrent_user_aggr_pkey (id)
+up_date_dimension up_date_dimension_pkey (date_id)
+up_dlm_evaluator up_dlm_evaluator_pkey (evaluator_id)
+up_dlm_evaluator_paren up_dlm_evaluator_paren_pkey (paren_eval_id, eval_index)
+up_entity_cache_invalidation up_entity_cache_invalidation_pkey (entity_type_id, entity_key)
+up_entity_lock up_entity_lock_pkey (entity_type_id, entity_key, lock_owner, expiration_time)
+up_entity_type up_entity_type_pkey (entity_type_id)
+up_event_aggr_conf_groups up_event_aggr_conf_groups_pkey (id)
+up_event_aggr_conf_groups_exc up_event_aggr_conf_groups_exc_pkey (up_event_aggr_conf_groups_id, group_id)
+up_event_aggr_conf_groups_inc up_event_aggr_conf_groups_inc_pkey (up_event_aggr_conf_groups_id, group_id)
+up_event_aggr_conf_intrvl up_event_aggr_conf_intrvl_pkey (id)
+up_event_aggr_status up_event_aggr_status_pkey (id)
+up_event_session up_event_session_pkey (id)
+up_event_session_groups up_event_session_groups_pkey (up_event_session_id, group_id)
+up_group up_group_pkey (group_id)
+up_group_membership up_group_membership_pkey (group_id, member_service, member_key, member_is_group)
+up_jgroups_auth up_jgroups_auth_pkey (service_name)
+up_layout_param up_layout_param_pkey (user_id, layout_id, struct_id, struct_parm_nm)
+up_layout_struct up_layout_struct_pkey (layout_id, user_id, struct_id)
+up_login_event_aggr up_login_event_aggr_pkey (id)
+up_message up_message_pkey (id)
+up_mutex up_mutex_pkey (mutex_id)
+up_pags_group up_pags_group_pkey (pags_group_id)
+up_pags_group_members up_pags_group_members_pkey (pags_group_id, pags_group_member_id)
+up_pags_test up_pags_test_pkey (pags_test_id)
+up_pags_test_group up_pags_test_group_pkey (pags_test_group_id)
+up_permission_activity up_permission_activity_pkey (activity_id)
+up_permission_owner up_permission_owner_pkey (owner_id)
+up_person_attr up_person_attr_pkey (id)
+up_person_attr_values up_person_attr_values_pkey (attr_id, value_order)
+up_person_dir up_person_dir_pkey (user_dir_id)
+up_portal_cookies up_portal_cookies_pkey (portal_cookie_id)
+up_portlet_cookies up_portlet_cookies_pkey (portlet_cookie_id)
+up_portlet_def up_portlet_def_pkey (portlet_def_id)
+up_portlet_def_mdata up_portlet_def_mdata_pkey (portlet_id, locale)
+up_portlet_def_param up_portlet_def_param_pkey (param_id)
+up_portlet_ent up_portlet_ent_pkey (portlet_ent_id)
+up_portlet_ent__states up_portlet_ent__states_pkey (portlet_ent_id, stylesheet_descriptor_id)
+up_portlet_exec_aggr up_portlet_exec_aggr_pkey (id)
+up_portlet_layout_aggr up_portlet_layout_aggr_pkey (id)
+up_portlet_lifecycle up_portlet_lifecycle_pkey (entry_id)
+up_portlet_list up_portlet_list_pkey (id)
+up_portlet_list_item up_portlet_list_item_pkey (id)
+up_portlet_pref up_portlet_pref_pkey (portlet_pref_id)
+up_portlet_pref_values up_portlet_pref_values_pkey (portlet_pref_id, value_order)
+up_portlet_prefs up_portlet_prefs_pkey (portlet_prefs_id)
+up_portlet_rating up_portlet_rating_pkey (portlet_id, user_name)
+up_portlet_type up_portlet_type_pkey (type_id)
+up_profile_selection up_profile_selection_pkey (selection_id)
+up_quarter_detail up_quarter_detail_pkey (quarter_id)
+up_raw_events up_raw_events_pkey (event_id)
+up_search_req_aggr up_search_req_aggr_pkey (id)
+up_sequence up_sequence_pkey (sequence_name)
+up_ss_desc up_ss_desc_pkey (ss_desc_id)
+up_ss_desc_lay_attr up_ss_desc_lay_attr_pkey (ss_desc_layout_attr_id)
+up_ss_desc_output_prop up_ss_desc_output_prop_pkey (ss_desc_layout_attr_id)
+up_ss_desc_param up_ss_desc_param_pkey (ss_desc_param_id)
+up_ss_user_pref up_ss_user_pref_pkey (ss_user_pref_id)
+up_ss_user_pref_lay_attr up_ss_user_pref_lay_attr_pkey (up_ss_user_pref_lay_attr_id)
+up_ss_user_pref_lay_attr_val up_ss_user_pref_lay_attr_val_pkey (up_ss_user_pref_lay_attr_id, attr_name)
+up_ss_user_pref_output_prop up_ss_user_pref_output_prop_pkey (ss_user_pref_id, prop_name)
+up_ss_user_pref_param up_ss_user_pref_param_pkey (ss_user_pref_id, param_name)
+up_tab_render_aggr up_tab_render_aggr_pkey (id)
+up_tenant up_tenant_pkey (tenant_id)
+up_tenant_attributes up_tenant_attributes_pkey (tenant_id, attr_name)
+up_time_dimension up_time_dimension_pkey (time_id)
+up_unique_str up_unique_str_pkey (unique_str_id)
+up_unique_str_segment up_unique_str_segment_pkey (unique_str_segment_id)
+up_unique_str_segment__uids up_unique_str_segment__uids_pkey (unique_str_segment_id, unique_str)
+up_user up_user_pkey (user_id)
+up_user_layout up_user_layout_pkey (layout_id, user_id)
+up_user_locale up_user_locale_pkey (user_id, locale)
+up_user_profile up_user_profile_pkey (user_id, profile_id)
+up_version up_version_pkey (version_id)
+[unique constraints]
+up_academic_term_detail uk_h3gl6cihs58jmkw0p8rxctq6e (term_end, term_start)
+up_aggr_group_mapping uk_nrmtcrt3gptt26te8fpbxbb4e (group_name, group_service)
+up_aggr_portlet_mapping uk_q4ftp6nhgswiqanlg780qiwcu (portlet_fname)
+up_aggr_tab_mapping uk_12yxp003diq8eq805d5m2csj6 (fragment_name, tab_name)
+up_concurrent_user_aggr uk_m45t21vwp58e3wsj4gkweeorn (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id)
+up_date_dimension uk_5kwskd18xjj0wlptbm8eo1x0c (dd_date)
+up_dlm_evaluator_paren uk_b3rertpqnnjrvd257fge2sj75 (child_eval_id)
+up_entity_type upet_name_unq (entity_type_name)
+up_event_aggr_conf_groups uk_l5try4bca55a1p0wg6x6b44qh (aggregator_type)
+up_event_aggr_conf_groups_exc uk_9jw0rlw4hvpybrd8usmwua0jm (group_id)
+up_event_aggr_conf_groups_inc uk_943ene82efvoquc5lb9kj4s75 (group_id)
+up_event_aggr_conf_intrvl uk_3u4sinvms4movbo7d84dy5kdh (aggregator_type)
+up_event_aggr_status uk_mwta3uf64ob3h78rpg6gslo (processing_type)
+up_event_session uk_giqfk378nexxed95q5ogmb0yj (session_id)
+up_login_event_aggr uk_8ib84bs8q3a7knrcvw8cmkljw (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id)
+up_message uk_65m5c9buejonoq0ut61lvj3ic (code, locale)
+up_mutex uk_qj79fotsiap16odx3dtad2she (mutex_name)
+up_pags_group uk_oedpp3d5kyxoex9ge9ct35nw1 (name)
+up_permission_activity uk_11q11jd5ueijrwnxdr33vb1dp (activity_fname)
+up_permission_activity uk_emvbet2cncdkxc1pdho9jwsjr (activity_name)
+up_permission_owner uk_mp27o5pynt9lms7yeuhkqk3rx (owner_fname)
+up_person_dir uk_lx6h4h5oxdu3u1in1x5tuwmlb (user_name)
+up_portal_cookies uk_6mo5bic5mh18wmnsixay4lte8 (cookie_value)
+up_portlet_cookies uk_b0x095hghtkdlthyahnocecsn (portal_cookie_id, cookie_name)
+up_portlet_def uk_3fkifhnxe461tuvfr9lf06jkh (portlet_fname)
+up_portlet_def uk_3lfnk29hf61sjrasap81gjimr (portlet_name)
+up_portlet_ent uk_p412wnejx7lpcmnk242fvi7g (layout_node_id, user_id)
+up_portlet_exec_aggr uk_990hgx1f1hsp9ss5wcdvskyec (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, aggr_portlet_id, execution_type)
+up_portlet_layout_aggr uk_2hs7cvsd60i1x4cl4myq30f4f (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, aggr_portlet_id)
+up_portlet_list uk_53sa73kbqlb0xe1dh2ekvoquc (owner_username, name)
+up_portlet_list_item uk_9272fgiw76nqfefv2rt2hhy9u (list_id, list_order, entity_id)
+up_portlet_list_item uk_e52akww6cs9bgpjtvvf1xkoy1 (list_id, entity_id)
+up_portlet_type uk_5pdec3and8u5oaoymoo404lba (type_name)
+up_profile_selection uk_q17d2ct8ag13hwtwjsnci8pi3 (username)
+up_quarter_detail uk_a6f6djxsml79jyhlx2tyfy8gx (quarter_end, quarter_number, quarter_start)
+up_search_req_aggr uk_tbujmrks9rhe0ug5ddio6axaq (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, search_term)
+up_ss_desc uk_9ncctlknsd49yatplkxt6xohf (ss_name)
+up_ss_user_pref uk_5a45fvux2roc7iy9ct3fre0ff (profile_id, up_ss_descriptor_id, user_id)
+up_tab_render_aggr uk_r3uvcgag0blkx26bn4i9mmatu (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, aggr_tab_id)
+up_tenant uk_ea8k2ourgxq1jigwh40k9fm1 (tenant_name)
+up_tenant uk_gw8o79thm9v8h89f75xf9wm0y (tenant_fname)
+up_time_dimension uk_5ug8chvtlslmrbriy407orck (td_time)
+up_user upu_user_name (user_name)
+up_version uk_j3y9luccxamojumbsi0ksray8 (product)
+[foreign keys]
+up_concurrent_user_aggr fk_1crh0u5hdegnhoauxieag3a4r (time_dimension_id) -> up_time_dimension (time_id) on-update=no-action on-delete=no-action
+up_concurrent_user_aggr fk_2nygg0lvedcjb61ku9091b6dn (date_dimension_id) -> up_date_dimension (date_id) on-update=no-action on-delete=no-action
+up_concurrent_user_aggr fk_ah140ktotfckypsu0bikxxdms (aggr_group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_concurrent_user_aggr fk_fevflomiojm7s6aka5ar6md9b (unique_strings_id) -> up_unique_str (unique_str_id) on-update=no-action on-delete=no-action
+up_dlm_evaluator_paren fk_3hbkemg0gydgc606l2io1x0gp (paren_eval_id) -> up_dlm_evaluator (evaluator_id) on-update=no-action on-delete=no-action
+up_dlm_evaluator_paren fk_b3rertpqnnjrvd257fge2sj75 (child_eval_id) -> up_dlm_evaluator (evaluator_id) on-update=no-action on-delete=no-action
+up_event_aggr_conf_groups_exc fk_74rcg2txnpblpo44d3o06d7rf (up_event_aggr_conf_groups_id) -> up_event_aggr_conf_groups (id) on-update=no-action on-delete=no-action
+up_event_aggr_conf_groups_exc fk_9jw0rlw4hvpybrd8usmwua0jm (group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_event_aggr_conf_groups_inc fk_943ene82efvoquc5lb9kj4s75 (group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_event_aggr_conf_groups_inc fk_iao8dyvaqe3eofd3tsov4ajvj (up_event_aggr_conf_groups_id) -> up_event_aggr_conf_groups (id) on-update=no-action on-delete=no-action
+up_event_aggr_conf_intrvl_exc fk_olivv7buxiyxirms24kwnltdv (up_event_aggr_conf_intrvl_id) -> up_event_aggr_conf_intrvl (id) on-update=no-action on-delete=no-action
+up_event_aggr_conf_intrvl_inc fk_5bn3fmi5gtm9sodb7tra6ifj3 (up_event_aggr_conf_intrvl_id) -> up_event_aggr_conf_intrvl (id) on-update=no-action on-delete=no-action
+up_event_session_groups fk_59xvrgdwm8ti0jfk8aboi3bxq (up_event_session_id) -> up_event_session (id) on-update=no-action on-delete=no-action
+up_event_session_groups fk_f955axnw72t6o8j9pg7ar126s (group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_login_event_aggr fk_a0ytd5or6pogsgpiw2dwrekar (unique_strings_id) -> up_unique_str (unique_str_id) on-update=no-action on-delete=no-action
+up_login_event_aggr fk_b3e3bhqcgbavdw2ooy5lc32du (time_dimension_id) -> up_time_dimension (time_id) on-update=no-action on-delete=no-action
+up_login_event_aggr fk_i0jl7o218lqxqaqt0ihyycayt (date_dimension_id) -> up_date_dimension (date_id) on-update=no-action on-delete=no-action
+up_login_event_aggr fk_j242b9y972r8yjm9lhmw4ukfk (aggr_group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_pags_group_members fk_561gbtgfe5oi30yc2bspcoom (pags_group_id) -> up_pags_group (pags_group_id) on-update=no-action on-delete=no-action
+up_pags_group_members fk_fsr7qaohryhcdv877sg60id6e (pags_group_member_id) -> up_pags_group (pags_group_id) on-update=no-action on-delete=no-action
+up_pags_test fk_474tvkmldo7agadpwp0c7v3ko (pags_test_group_id) -> up_pags_test_group (pags_test_group_id) on-update=no-action on-delete=no-action
+up_pags_test_group fk_hygx3nc0f1dl8tgsmvte36ggo (pags_group_id) -> up_pags_group (pags_group_id) on-update=no-action on-delete=no-action
+up_permission_activity fk_16ncixqeffipy3vhia0bksvwy (owner_id) -> up_permission_owner (owner_id) on-update=no-action on-delete=no-action
+up_person_attr fk_4s6n2w5mggpiif98ukmoyx5f8 (user_dir_id) -> up_person_dir (user_dir_id) on-update=no-action on-delete=no-action
+up_person_attr_values fk_qqexbdecsbkj4q5kiomuwn62d (attr_id) -> up_person_attr (id) on-update=no-action on-delete=no-action
+up_portlet_cookies fk_1eiw3v16g4l8uic967eefpupv (portalcookie_portal_cookie_id) -> up_portal_cookies (portal_cookie_id) on-update=no-action on-delete=no-action
+up_portlet_cookies fk_5nbeljrfl8xrselnib4jlc8rm (portal_cookie_id) -> up_portal_cookies (portal_cookie_id) on-update=no-action on-delete=no-action
+up_portlet_def fk_aw02n7y507j2o7a5unh3x6gmx (portlet_type_id) -> up_portlet_type (type_id) on-update=no-action on-delete=no-action
+up_portlet_def fk_sk16u3b6h5onabw0tkbfjb9t3 (portlet_prefs_id) -> up_portlet_prefs (portlet_prefs_id) on-update=no-action on-delete=no-action
+up_portlet_def_mdata fk_3mblqw8kx445e1wphecduvkal (portlet_id) -> up_portlet_def (portlet_def_id) on-update=no-action on-delete=no-action
+up_portlet_def_param fk_8pr53vk0s7cj591svwm55mwuf (portlet_def_id) -> up_portlet_def (portlet_def_id) on-update=no-action on-delete=no-action
+up_portlet_ent fk_9g5u5s6q6fyllrocmjknkgke1 (portlet_prefs_id) -> up_portlet_prefs (portlet_prefs_id) on-update=no-action on-delete=no-action
+up_portlet_ent fk_momja5hs0eruu7ke7naq542hn (portlet_def_id) -> up_portlet_def (portlet_def_id) on-update=no-action on-delete=no-action
+up_portlet_ent__states fk_78ol5mt3uvfgxikpnhm4gc8hr (stylesheet_descriptor_id) -> up_ss_desc (ss_desc_id) on-update=no-action on-delete=no-action
+up_portlet_ent__states fk_fdl45hs325hvdevocoynuufgd (portlet_ent_id) -> up_portlet_ent (portlet_ent_id) on-update=no-action on-delete=no-action
+up_portlet_exec_aggr fk_5dm3bkqehgn813y9m789w9lsj (aggr_group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_portlet_exec_aggr fk_88xcdt0n49vgpjhq45wsb615h (aggr_portlet_id) -> up_aggr_portlet_mapping (id) on-update=no-action on-delete=no-action
+up_portlet_exec_aggr fk_h2a84m5e2ofpr3ma9dbksojus (date_dimension_id) -> up_date_dimension (date_id) on-update=no-action on-delete=no-action
+up_portlet_exec_aggr fk_rs4dl1aufde7lei12ssq1ama9 (time_dimension_id) -> up_time_dimension (time_id) on-update=no-action on-delete=no-action
+up_portlet_layout_aggr fk_2ymw67vmy3w726tqmubl5vy7x (time_dimension_id) -> up_time_dimension (time_id) on-update=no-action on-delete=no-action
+up_portlet_layout_aggr fk_ccxeenr6yku33fgaj2sdr26vm (aggr_portlet_id) -> up_aggr_portlet_mapping (id) on-update=no-action on-delete=no-action
+up_portlet_layout_aggr fk_p4p3gpngs4fr6nxm9ot7kd4n (date_dimension_id) -> up_date_dimension (date_id) on-update=no-action on-delete=no-action
+up_portlet_layout_aggr fk_rnqay4ktmvb4tir3hbuxpdd3m (aggr_group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_portlet_lifecycle fk_h2ih95p990rtn5nu74udal0ab (portlet_def_id) -> up_portlet_def (portlet_def_id) on-update=no-action on-delete=no-action
+up_portlet_list_item fk_qsriu31b7uia45e0aj9odg368 (list_id) -> up_portlet_list (id) on-update=no-action on-delete=no-action
+up_portlet_pref fk_pgqclxrroe8ed8stf00pt2s93 (portlet_prefs_id) -> up_portlet_prefs (portlet_prefs_id) on-update=no-action on-delete=no-action
+up_portlet_pref_values fk_tqk3058y17ttobwa3l8pc4fwd (portlet_pref_id) -> up_portlet_pref (portlet_pref_id) on-update=no-action on-delete=no-action
+up_portlet_rating fk_m8902ol9lpgf17b081uvfobyl (portlet_id) -> up_portlet_def (portlet_def_id) on-update=no-action on-delete=no-action
+up_search_req_aggr fk_5qs16vldyls8s8l4wddduvwas (time_dimension_id) -> up_time_dimension (time_id) on-update=no-action on-delete=no-action
+up_search_req_aggr fk_fdsmb9vgbgr38u1y8nxp9d9pn (aggr_group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_search_req_aggr fk_ki95eyb5kx2way36sksiewt8m (date_dimension_id) -> up_date_dimension (date_id) on-update=no-action on-delete=no-action
+up_ss_desc_lay_attr fk_meru2advdfypwhfddn5gnjnvy (ss_desc_id) -> up_ss_desc (ss_desc_id) on-update=no-action on-delete=no-action
+up_ss_desc_lay_attr_elms fk_2qvk7f3048lo65b5wmmh430ck (attr_id) -> up_ss_desc_lay_attr (ss_desc_layout_attr_id) on-update=no-action on-delete=no-action
+up_ss_desc_output_prop fk_j4hmf1wlxtv514o6xqd9g1rkq (ss_desc_id) -> up_ss_desc (ss_desc_id) on-update=no-action on-delete=no-action
+up_ss_desc_param fk_9ckpxmguyriun7eq1l57pej79 (ss_desc_id) -> up_ss_desc (ss_desc_id) on-update=no-action on-delete=no-action
+up_ss_user_pref fk_ffsut1mr9t6sdtby7pm4brc3p (up_ss_descriptor_id) -> up_ss_desc (ss_desc_id) on-update=no-action on-delete=no-action
+up_ss_user_pref_lay_attr fk_959w0xa3yub0fua4joy6evaog (ss_user_pref_id) -> up_ss_user_pref (ss_user_pref_id) on-update=no-action on-delete=no-action
+up_ss_user_pref_lay_attr_val fk_esn4u5yf4875do543qas3u7b0 (up_ss_user_pref_lay_attr_id) -> up_ss_user_pref_lay_attr (up_ss_user_pref_lay_attr_id) on-update=no-action on-delete=no-action
+up_ss_user_pref_output_prop fk_jvv6wrfl6y7g4p0so63i4hujq (ss_user_pref_id) -> up_ss_user_pref (ss_user_pref_id) on-update=no-action on-delete=no-action
+up_ss_user_pref_param fk_532664n0k0c9ckj13e7gpya08 (ss_user_pref_id) -> up_ss_user_pref (ss_user_pref_id) on-update=no-action on-delete=no-action
+up_tab_render_aggr fk_8enpaf5sqybuiyyhcy5o1p2so (aggr_tab_id) -> up_aggr_tab_mapping (id) on-update=no-action on-delete=no-action
+up_tab_render_aggr fk_9vmi8jjue0tvdv18f8gxp061h (time_dimension_id) -> up_time_dimension (time_id) on-update=no-action on-delete=no-action
+up_tab_render_aggr fk_fg956a15thl835b0q60w24w3q (date_dimension_id) -> up_date_dimension (date_id) on-update=no-action on-delete=no-action
+up_tab_render_aggr fk_qi52trj4gl7a8p53yyl4scsy9 (aggr_group_id) -> up_aggr_group_mapping (id) on-update=no-action on-delete=no-action
+up_tenant_attributes fk_egnmdn482aeixi5ww8ieo41jk (tenant_id) -> up_tenant (tenant_id) on-update=no-action on-delete=no-action
+up_unique_str_segment fk_e3lqm10qhd0u7mu10assdfxx8 (unique_str_id) -> up_unique_str (unique_str_id) on-update=no-action on-delete=no-action
+up_unique_str_segment__uids fk_et6ttoxrppodvhd4gb3mm1ypt (unique_str_segment_id) -> up_unique_str_segment (unique_str_segment_id) on-update=no-action on-delete=no-action
+[check constraints]
+[indexes]
+jgroupsping jgroupsping_pkey unique (own_addr, cluster_name)
+up_academic_term_detail uk_h3gl6cihs58jmkw0p8rxctq6e unique (term_end, term_start)
+up_academic_term_detail up_academic_term_detail_pkey unique (term_id)
+up_aggr_group_mapping uk_nrmtcrt3gptt26te8fpbxbb4e unique (group_name, group_service)
+up_aggr_group_mapping up_aggr_group_mapping_pkey unique (id)
+up_aggr_portlet_mapping uk_q4ftp6nhgswiqanlg780qiwcu unique (portlet_fname)
+up_aggr_portlet_mapping up_aggr_portlet_mapping_pkey unique (id)
+up_aggr_tab_mapping uk_12yxp003diq8eq805d5m2csj6 unique (fragment_name, tab_name)
+up_aggr_tab_mapping up_aggr_tab_mapping_pkey unique (id)
+up_analytics_events idx_up_analytics_events_server_id (server_id)
+up_analytics_events idx_up_analytics_events_session_id (session_id)
+up_analytics_events idx_up_analytics_events_timestamp (timestamp)
+up_analytics_events idx_up_analytics_events_user_name (user_name)
+up_analytics_events up_analytics_events_pkey unique (event_id)
+up_concurrent_user_aggr idx_up_conc_user_aggr_dti (date_dimension_id, time_dimension_id, aggr_interval)
+up_concurrent_user_aggr idx_up_conc_user_grp (aggr_group_id)
+up_concurrent_user_aggr idx_up_conc_user_intrvl (aggr_interval)
+up_concurrent_user_aggr uk_m45t21vwp58e3wsj4gkweeorn unique (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id)
+up_concurrent_user_aggr up_concurrent_user_aggr_pkey unique (id)
+up_date_dimension idx_up_dd_day (dd_day)
+up_date_dimension idx_up_dd_month (dd_month)
+up_date_dimension idx_up_dd_quarter (dd_quarter)
+up_date_dimension idx_up_dd_term (dd_term)
+up_date_dimension idx_up_dd_week (dd_week)
+up_date_dimension idx_up_dd_year (dd_year)
+up_date_dimension uk_5kwskd18xjj0wlptbm8eo1x0c unique (dd_date)
+up_date_dimension up_date_dimension_pkey unique (date_id)
+up_dlm_evaluator up_dlm_evaluator_pkey unique (evaluator_id)
+up_dlm_evaluator_paren uk_b3rertpqnnjrvd257fge2sj75 unique (child_eval_id)
+up_dlm_evaluator_paren up_dlm_evaluator_paren_pkey unique (paren_eval_id, eval_index)
+up_entity_cache_invalidation up_entity_cache_invalidation_pkey unique (entity_type_id, entity_key)
+up_entity_lock up_entity_lock_pkey unique (entity_type_id, entity_key, lock_owner, expiration_time)
+up_entity_type up_entity_type_pkey unique (entity_type_id)
+up_entity_type upet_name_unq unique (entity_type_name)
+up_event_aggr_conf_groups uk_l5try4bca55a1p0wg6x6b44qh unique (aggregator_type)
+up_event_aggr_conf_groups up_event_aggr_conf_groups_pkey unique (id)
+up_event_aggr_conf_groups_exc uk_9jw0rlw4hvpybrd8usmwua0jm unique (group_id)
+up_event_aggr_conf_groups_exc up_event_aggr_conf_groups_exc_pkey unique (up_event_aggr_conf_groups_id, group_id)
+up_event_aggr_conf_groups_inc uk_943ene82efvoquc5lb9kj4s75 unique (group_id)
+up_event_aggr_conf_groups_inc up_event_aggr_conf_groups_inc_pkey unique (up_event_aggr_conf_groups_id, group_id)
+up_event_aggr_conf_intrvl uk_3u4sinvms4movbo7d84dy5kdh unique (aggregator_type)
+up_event_aggr_conf_intrvl up_event_aggr_conf_intrvl_pkey unique (id)
+up_event_aggr_status uk_mwta3uf64ob3h78rpg6gslo unique (processing_type)
+up_event_aggr_status up_event_aggr_status_pkey unique (id)
+up_event_session idx_up_event_session_date (last_accessed)
+up_event_session uk_giqfk378nexxed95q5ogmb0yj unique (session_id)
+up_event_session up_event_session_pkey unique (id)
+up_event_session_groups up_event_session_groups_pkey unique (up_event_session_id, group_id)
+up_group up_group_pkey unique (group_id)
+up_group upg_group_name_idx (group_name)
+up_group_membership up_group_membership_pkey unique (group_id, member_service, member_key, member_is_group)
+up_jgroups_auth up_jgroups_auth_pkey unique (service_name)
+up_layout_param up_layout_param_pkey unique (user_id, layout_id, struct_id, struct_parm_nm)
+up_layout_struct up_layout_struct_pkey unique (layout_id, user_id, struct_id)
+up_login_event_aggr idx_up_login_event_aggr_dti (date_dimension_id, time_dimension_id, aggr_interval)
+up_login_event_aggr idx_up_login_event_grp (aggr_group_id)
+up_login_event_aggr idx_up_login_event_intrvl (aggr_interval)
+up_login_event_aggr uk_8ib84bs8q3a7knrcvw8cmkljw unique (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id)
+up_login_event_aggr up_login_event_aggr_pkey unique (id)
+up_message idx_message__code (code)
+up_message idx_message__locale (locale)
+up_message uk_65m5c9buejonoq0ut61lvj3ic unique (code, locale)
+up_message up_message_pkey unique (id)
+up_mutex uk_qj79fotsiap16odx3dtad2she unique (mutex_name)
+up_mutex up_mutex_pkey unique (mutex_id)
+up_pags_group uk_oedpp3d5kyxoex9ge9ct35nw1 unique (name)
+up_pags_group up_pags_group_pkey unique (pags_group_id)
+up_pags_group_members up_pags_group_members_pkey unique (pags_group_id, pags_group_member_id)
+up_pags_test up_pags_test_pkey unique (pags_test_id)
+up_pags_test_group up_pags_test_group_pkey unique (pags_test_group_id)
+up_permission upperm_idx__activity (activity)
+up_permission upperm_idx__owner (owner)
+up_permission upperm_idx__petype (permission_type)
+up_permission upperm_idx__prkey (principal_key)
+up_permission upperm_idx__prtype (principal_type)
+up_permission upperm_idx__target (target)
+up_permission_activity uk_11q11jd5ueijrwnxdr33vb1dp unique (activity_fname)
+up_permission_activity uk_emvbet2cncdkxc1pdho9jwsjr unique (activity_name)
+up_permission_activity up_permission_activity_pkey unique (activity_id)
+up_permission_owner uk_mp27o5pynt9lms7yeuhkqk3rx unique (owner_fname)
+up_permission_owner up_permission_owner_pkey unique (owner_id)
+up_person_attr up_person_attr_pkey unique (id)
+up_person_attr_values up_person_attr_values_pkey unique (attr_id, value_order)
+up_person_dir uk_lx6h4h5oxdu3u1in1x5tuwmlb unique (user_name)
+up_person_dir up_person_dir_pkey unique (user_dir_id)
+up_portal_cookies idx_up_prtl_ck_exp (expires)
+up_portal_cookies uk_6mo5bic5mh18wmnsixay4lte8 unique (cookie_value)
+up_portal_cookies up_portal_cookies_pkey unique (portal_cookie_id)
+up_portlet_cookies idx_up_prtlt_cks_exp (expires)
+up_portlet_cookies uk_b0x095hghtkdlthyahnocecsn unique (portal_cookie_id, cookie_name)
+up_portlet_cookies up_portlet_cookies_pkey unique (portlet_cookie_id)
+up_portlet_def idx_portlet_def__title (portlet_title)
+up_portlet_def uk_3fkifhnxe461tuvfr9lf06jkh unique (portlet_fname)
+up_portlet_def uk_3lfnk29hf61sjrasap81gjimr unique (portlet_name)
+up_portlet_def up_portlet_def_pkey unique (portlet_def_id)
+up_portlet_def_mdata up_portlet_def_mdata_pkey unique (portlet_id, locale)
+up_portlet_def_param up_portlet_def_param_pkey unique (param_id)
+up_portlet_ent idx_up_portlet_ent__up_user (user_id)
+up_portlet_ent uk_p412wnejx7lpcmnk242fvi7g unique (layout_node_id, user_id)
+up_portlet_ent up_portlet_ent_pkey unique (portlet_ent_id)
+up_portlet_ent__states up_portlet_ent__states_pkey unique (portlet_ent_id, stylesheet_descriptor_id)
+up_portlet_exec_aggr idx_up_plt_exec_aggr_dti (date_dimension_id, time_dimension_id, aggr_interval)
+up_portlet_exec_aggr idx_up_plt_exec_aggr_dtic (date_dimension_id, time_dimension_id, aggr_interval, stats_complete)
+up_portlet_exec_aggr idx_up_plt_exec_grp (aggr_group_id)
+up_portlet_exec_aggr idx_up_plt_exec_intrvl (aggr_interval)
+up_portlet_exec_aggr uk_990hgx1f1hsp9ss5wcdvskyec unique (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, aggr_portlet_id, execution_type)
+up_portlet_exec_aggr up_portlet_exec_aggr_pkey unique (id)
+up_portlet_layout_aggr idx_up_portlet_layout_aggr_dti (date_dimension_id, time_dimension_id, aggr_interval)
+up_portlet_layout_aggr idx_up_portlet_layout_grp (aggr_group_id)
+up_portlet_layout_aggr idx_up_portlet_layout_intrvl (aggr_interval)
+up_portlet_layout_aggr uk_2hs7cvsd60i1x4cl4myq30f4f unique (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, aggr_portlet_id)
+up_portlet_layout_aggr up_portlet_layout_aggr_pkey unique (id)
+up_portlet_lifecycle up_portlet_lifecycle_pkey unique (entry_id)
+up_portlet_list uk_53sa73kbqlb0xe1dh2ekvoquc unique (owner_username, name)
+up_portlet_list up_portlet_list_pkey unique (id)
+up_portlet_list_item uk_9272fgiw76nqfefv2rt2hhy9u unique (list_id, list_order, entity_id)
+up_portlet_list_item uk_e52akww6cs9bgpjtvvf1xkoy1 unique (list_id, entity_id)
+up_portlet_list_item up_portlet_list_item_pkey unique (id)
+up_portlet_pref idx_upp_prefs_id (portlet_prefs_id)
+up_portlet_pref up_portlet_pref_pkey unique (portlet_pref_id)
+up_portlet_pref_values up_portlet_pref_values_pkey unique (portlet_pref_id, value_order)
+up_portlet_prefs up_portlet_prefs_pkey unique (portlet_prefs_id)
+up_portlet_rating up_portlet_rating_pkey unique (portlet_id, user_name)
+up_portlet_type uk_5pdec3and8u5oaoymoo404lba unique (type_name)
+up_portlet_type up_portlet_type_pkey unique (type_id)
+up_profile_selection uk_q17d2ct8ag13hwtwjsnci8pi3 unique (username)
+up_profile_selection up_profile_selection_pkey unique (selection_id)
+up_quarter_detail uk_a6f6djxsml79jyhlx2tyfy8gx unique (quarter_end, quarter_number, quarter_start)
+up_quarter_detail up_quarter_detail_pkey unique (quarter_id)
+up_raw_events idx_up_raw_events_aggregated (aggregated)
+up_raw_events idx_up_raw_events_err_aggr (error_aggr)
+up_raw_events idx_up_raw_events_server_id (server_id)
+up_raw_events idx_up_raw_events_session_id (session_id)
+up_raw_events idx_up_raw_events_timestamp (timestamp)
+up_raw_events idx_up_raw_events_user_name (user_name)
+up_raw_events up_raw_events_pkey unique (event_id)
+up_search_req_aggr idx_up_search_req_aggr_dti (date_dimension_id, time_dimension_id, aggr_interval)
+up_search_req_aggr idx_up_search_req_grp (aggr_group_id)
+up_search_req_aggr idx_up_search_req_intrvl (aggr_interval)
+up_search_req_aggr idx_up_search_req_trm (search_term)
+up_search_req_aggr uk_tbujmrks9rhe0ug5ddio6axaq unique (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, search_term)
+up_search_req_aggr up_search_req_aggr_pkey unique (id)
+up_sequence up_sequence_pkey unique (sequence_name)
+up_ss_desc uk_9ncctlknsd49yatplkxt6xohf unique (ss_name)
+up_ss_desc up_ss_desc_pkey unique (ss_desc_id)
+up_ss_desc_lay_attr up_ss_desc_lay_attr_pkey unique (ss_desc_layout_attr_id)
+up_ss_desc_output_prop up_ss_desc_output_prop_pkey unique (ss_desc_layout_attr_id)
+up_ss_desc_param up_ss_desc_param_pkey unique (ss_desc_param_id)
+up_ss_user_pref uk_5a45fvux2roc7iy9ct3fre0ff unique (profile_id, up_ss_descriptor_id, user_id)
+up_ss_user_pref up_ss_user_pref_pkey unique (ss_user_pref_id)
+up_ss_user_pref_lay_attr idx_ss_user_pref_id (ss_user_pref_id)
+up_ss_user_pref_lay_attr up_ss_user_pref_lay_attr_pkey unique (up_ss_user_pref_lay_attr_id)
+up_ss_user_pref_lay_attr_val up_ss_user_pref_lay_attr_val_pkey unique (up_ss_user_pref_lay_attr_id, attr_name)
+up_ss_user_pref_output_prop up_ss_user_pref_output_prop_pkey unique (ss_user_pref_id, prop_name)
+up_ss_user_pref_param up_ss_user_pref_param_pkey unique (ss_user_pref_id, param_name)
+up_tab_render_aggr idx_up_tab_rend_aggr_dti (date_dimension_id, time_dimension_id, aggr_interval)
+up_tab_render_aggr idx_up_tab_rend_aggr_dtic (date_dimension_id, time_dimension_id, aggr_interval, stats_complete)
+up_tab_render_aggr idx_up_tab_rend_grp (aggr_group_id)
+up_tab_render_aggr idx_up_tab_rend_intrvl (aggr_interval)
+up_tab_render_aggr uk_r3uvcgag0blkx26bn4i9mmatu unique (aggr_group_id, date_dimension_id, aggr_interval, time_dimension_id, aggr_tab_id)
+up_tab_render_aggr up_tab_render_aggr_pkey unique (id)
+up_tenant uk_ea8k2ourgxq1jigwh40k9fm1 unique (tenant_name)
+up_tenant uk_gw8o79thm9v8h89f75xf9wm0y unique (tenant_fname)
+up_tenant up_tenant_pkey unique (tenant_id)
+up_tenant_attributes up_tenant_attributes_pkey unique (tenant_id, attr_name)
+up_time_dimension idx_up_td_five_min_incr (td_five_minute_increment)
+up_time_dimension idx_up_td_hour (td_hour)
+up_time_dimension idx_up_td_minute (td_minute)
+up_time_dimension uk_5ug8chvtlslmrbriy407orck unique (td_time)
+up_time_dimension up_time_dimension_pkey unique (time_id)
+up_unique_str up_unique_str_pkey unique (unique_str_id)
+up_unique_str_segment up_unique_str_segment_pkey unique (unique_str_segment_id)
+up_unique_str_segment__uids up_unique_str_segment__uids_pkey unique (unique_str_segment_id, unique_str)
+up_user up_user_pkey unique (user_id)
+up_user upu_user_name unique (user_name)
+up_user_layout up_user_layout_pkey unique (layout_id, user_id)
+up_user_locale up_user_locale_pkey unique (user_id, locale)
+up_user_profile up_user_profile_pkey unique (user_id, profile_id)
+up_version uk_j3y9luccxamojumbsi0ksray8 unique (product)
+up_version up_version_pkey unique (version_id)
+[sequences]
+up_academic_term_detail_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_aggr_group_mapping_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=11
+up_aggr_portlet_mapping_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_aggr_tab_mapping_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_analytics_events_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_concurrent_user_aggr_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_date_dimension_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_dlm_evaluator_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=58
+up_event_aggr_conf_groups_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=1
+up_event_aggr_conf_intrvl_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=6
+up_event_aggr_status_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_event_session_seq start=1 increment=100 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_login_event_aggr_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_message_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_mutex_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_pags_group_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=6
+up_pags_test_group_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=6
+up_pags_test_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=6
+up_permission_activity_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=41
+up_permission_owner_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=8
+up_person_attr_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=61
+up_person_dir_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=21
+up_portal_cookies_seq start=1 increment=100 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_portlet_cookies_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_portlet_def_param_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=406
+up_portlet_def_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=96
+up_portlet_ent_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_portlet_exec_aggr_seq start=1 increment=10000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_portlet_layout_aggr_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_portlet_lifecycle_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=96
+up_portlet_pref_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=121
+up_portlet_prefs_seq start=1 increment=10 min=1 max=9223372036854775807 cycle=false cache=1 value=101
+up_portlet_type_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=9
+up_profile_selection_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_quarter_detail_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=4
+up_raw_events_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_search_req_aggr_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_ss_desc_lay_attr_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=11
+up_ss_desc_output_prop_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_ss_desc_param_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=11
+up_ss_desc_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=6
+up_ss_user_pref_lay_attr_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=36
+up_ss_user_pref_seq start=1 increment=5 min=1 max=9223372036854775807 cycle=false cache=1 value=11
+up_tab_render_aggr_seq start=1 increment=5000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_tenant_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_time_dimension_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_unique_str_segment_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_unique_str_seq start=1 increment=1000 min=1 max=9223372036854775807 cycle=false cache=1 value=null
+up_version_seq start=1 increment=1 min=1 max=9223372036854775807 cycle=false cache=1 value=3
+[row counts]
+jgroupsping 0
+up_academic_term_detail 0
+up_aggr_group_mapping 2
+up_aggr_portlet_mapping 0
+up_aggr_tab_mapping 0
+up_analytics_events 0
+up_concurrent_user_aggr 0
+up_date_dimension 0
+up_dlm_evaluator 58
+up_dlm_evaluator_paren 45
+up_entity_cache_invalidation 0
+up_entity_lock 0
+up_entity_type 6
+up_event_aggr_conf_groups 1
+up_event_aggr_conf_groups_exc 0
+up_event_aggr_conf_groups_inc 2
+up_event_aggr_conf_intrvl 6
+up_event_aggr_conf_intrvl_exc 0
+up_event_aggr_conf_intrvl_inc 16
+up_event_aggr_status 0
+up_event_session 0
+up_event_session_groups 0
+up_group 32
+up_group_membership 139
+up_jgroups_auth 0
+up_layout_param 11
+up_layout_struct 153
+up_login_event_aggr 0
+up_message 0
+up_mutex 0
+up_pags_group 5
+up_pags_group_members 4
+up_pags_test 4
+up_pags_test_group 4
+up_permission 186
+up_permission_activity 37
+up_permission_owner 8
+up_person_attr 52
+up_person_attr_values 53
+up_person_dir 18
+up_portal_cookies 0
+up_portlet_cookies 0
+up_portlet_def 93
+up_portlet_def_mdata 0
+up_portlet_def_param 403
+up_portlet_ent 0
+up_portlet_ent__states 0
+up_portlet_exec_aggr 0
+up_portlet_layout_aggr 0
+up_portlet_lifecycle 93
+up_portlet_list 0
+up_portlet_list_item 0
+up_portlet_pref 121
+up_portlet_pref_values 132
+up_portlet_prefs 93
+up_portlet_rating 0
+up_portlet_type 9
+up_profile_selection 0
+up_quarter_detail 4
+up_raw_events 0
+up_search_req_aggr 0
+up_sequence 5
+up_ss_desc 5
+up_ss_desc_lay_attr 10
+up_ss_desc_lay_attr_elms 10
+up_ss_desc_output_prop 0
+up_ss_desc_param 7
+up_ss_user_pref 10
+up_ss_user_pref_lay_attr 33
+up_ss_user_pref_lay_attr_val 33
+up_ss_user_pref_output_prop 0
+up_ss_user_pref_param 0
+up_tab_render_aggr 0
+up_tenant 0
+up_tenant_attributes 0
+up_time_dimension 0
+up_unique_str 0
+up_unique_str_segment 0
+up_unique_str_segment__uids 0
+up_user 20
+up_user_layout 14
+up_user_locale 0
+up_user_profile 15
+up_version 3
+[generator table rows]
+up_sequence sequence_name=UP_ENTITY_TYPE sequence_value=60
+up_sequence sequence_name=UP_GROUP sequence_value=60
+up_sequence sequence_name=UP_SS_THEME sequence_value=60
+up_sequence sequence_name=UP_USER sequence_value=60
+up_sequence sequence_name=UP_USER_PROFILE sequence_value=60
