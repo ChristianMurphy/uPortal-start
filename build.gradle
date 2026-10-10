@@ -49,6 +49,8 @@ ext {
 node {
     version = nodejsVersion
     download = true
+    // Install exactly what package-lock.json lists; `npm install` rewrites the lockfile (MOD-I106)
+    npmInstallCommand = 'ci'
 }
 
 /*
