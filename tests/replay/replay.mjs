@@ -1,7 +1,7 @@
 // HTTP differential replay and security matrix (docs/http-replay.md).
 //
 //   node tests/replay/replay.mjs record --origin http://localhost:8080 [--suite suite.json] [--out dir] [--label text]
-//   node tests/replay/replay.mjs replay --origin http://localhost:8080 [--fixtures dir] [--report file]
+//   node tests/replay/replay.mjs replay --origin http://localhost:8080 [--fixtures dir] [--report file] [--actual saved.json]
 //
 // record  runs the route crawl (routes.json) and the requests the Playwright suite made (from
 //         harvest.mjs) as every role against a freshly initialised portal, plus the security
@@ -62,7 +62,8 @@ function plan(routes, suite) {
 const itemKey = (item) => {
     const headers = item.headers ?? item.route?.headers;
     const token = item.csrfToken ?? item.route?.csrfToken ? ' with _csrf' : '';
-    return `${exchangeKey(item)}${token}${headers && Object.keys(headers).length > 0 ? ` ${JSON.stringify(headers)}` : ''}`;
+    const body = item.requestBody ?? item.route?.body;
+    return `${item.set} ${exchangeKey(item)}${token}${headers && Object.keys(headers).length > 0 ? ` ${JSON.stringify(headers)}` : ''}${body ? ` body ${body}` : ''}`;
 };
 
 async function execute(items) {
@@ -91,6 +92,7 @@ async function execute(items) {
         if (requestHeaders && Object.keys(requestHeaders).length > 0) exchange.headers = requestHeaders;
         if (item.probe) exchange.probe = item.probe;
         if (route.csrfToken) exchange.csrfToken = true;
+        if (route.body) exchange.requestBody = route.body;
         exchange.response = normaliseResponse(response, origin, item.path);
         exchanges.push(exchange);
         if (++done % 250 === 0) console.error(`  ${done}/${items.length} requests`);
@@ -261,6 +263,13 @@ function loadRegistry() {
             if (entry.field !== '*' && !globToRegExp(entry.field).test(difference.field)) return false;
             if ('from' in entry && JSON.stringify(entry.from) !== JSON.stringify(difference.from)) return false;
             if ('to' in entry && JSON.stringify(entry.to) !== JSON.stringify(difference.to)) return false;
+            if (entry.fromMatch && !new RegExp(entry.fromMatch).test(String(difference.from))) return false;
+            if (entry.toMatch && !new RegExp(entry.toMatch).test(String(difference.to))) return false;
+            // 'detail': a regular expression every changed line of a JSON or HTML body must match
+            if (entry.detail) {
+                const pattern = new RegExp(entry.detail);
+                if (!difference.detail || !difference.detail.every((line) => pattern.test(line))) return false;
+            }
             return true;
         },
     }));
@@ -284,7 +293,9 @@ async function replay() {
     const expectedByKey = new Map(expected.map((e) => [itemKey(e), e]));
     const items = plan(routes, suiteRequests);
     console.error(`replay: ${items.length} requests against ${origin}, compared with ${meta.label}`);
-    const actual = await execute(items);
+    // --actual re-evaluates a saved run (build/replay/actual.json), for example after editing the registry
+    const saved = options.actual ? readJson(options.actual) : null;
+    const actual = saved ? saved.exchanges : await execute(items);
     const registry = loadRegistry();
 
     const failures = [];
@@ -327,7 +338,7 @@ async function replay() {
 
     // Logins, CSRF and the header snapshot
     const recordedSecurity = readJson(join(fixtures, 'security.json'));
-    const security = await securityChecks(actual);
+    const security = saved ? saved.security : await securityChecks(actual);
     const securityChanges = [];
     const walk = (a, b, path) => {
         if (JSON.stringify(a) === JSON.stringify(b)) return;
@@ -374,7 +385,7 @@ async function replay() {
     if (failures.length > 0) {
         lines.push('', '### Unexplained differences', '');
         for (const { exchange, differences } of failures.slice(0, 150)) {
-            lines.push(`<details><summary><code>${escapeCell(itemKey(exchange))}</code> (${exchange.set}): ${differences.map((d) => d.field).join(', ')}</summary>`, '', '```');
+            lines.push(`<details><summary><code>${escapeCell(itemKey(exchange))}</code>: ${differences.map((d) => d.field).join(', ')}</summary>`, '', '```');
             for (const difference of differences) {
                 if (difference.detail) lines.push(`${difference.field}:`, ...difference.detail.map((d) => `  ${d}`));
                 else lines.push(`${difference.field}: ${show(difference.from)} -> ${show(difference.to)}`);
