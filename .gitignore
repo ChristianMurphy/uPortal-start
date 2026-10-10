@@ -433,3 +433,7 @@ modules.xml
 ### Playwright ###
 test-results/
 playwright-report/
+
+# Vale (MOD-D35): downloaded by .github/scripts/vale.sh
+.github/vale/bin/
+.github/vale/styles/
