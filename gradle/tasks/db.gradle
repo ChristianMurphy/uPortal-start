@@ -17,9 +17,21 @@ import org.apereo.portal.start.db.SnapshotComparison
  * (or set ORG_GRADLE_PROJECT_dbPassword etc. in the environment).
  */
 
+/*
+ * The baseline is tests/db/snapshots/<major.minor.patch of uPortalVersion> when one is recorded
+ * there (e.g. 5.17.9), else 5.17 (recorded from 5.17.10-SNAPSHOT); -PdbBaseline overrides it.
+ */
+String defaultDbBaseline() {
+    def version = (uPortalVersion =~ /^(\d+\.\d+\.\d+)/)
+    if (version.find() && file("tests/db/snapshots/${version.group(1)}").directory) {
+        return version.group(1)
+    }
+    return '5.17'
+}
+
 ext {
     dbVendor = findProperty('dbVendor')
-    dbBaseline = findProperty('dbBaseline') ?: '5.17'
+    dbBaseline = findProperty('dbBaseline') ?: defaultDbBaseline()
     dbHarness = null
 }
 
