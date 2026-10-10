@@ -50,6 +50,12 @@ PostgreSQL, SQL Server and Oracle run as GitHub Actions service containers (`--e
 and MariaDB need a server option (`lower_case_table_names=1`, see their vendor files) that a
 service container cannot be given, so the script starts those containers itself.
 
+`.github/workflows/integration.yml` does the same against uPortal built from source instead of
+the released `uPortalVersion`: it builds the uPortal branch of the same name (or `master`, or the
+repository and ref given to a manual run) and installs it into `~/.m2`. It then runs the whole
+Playwright suite on HSQLDB, the harness with `--portal` on every vendor, and the harness with
+`--full-suite` on PostgreSQL 16 and MariaDB 11.4.
+
 With `--full-suite` the snapshot is taken right after uPortal's `dataInit`, as with the other
 options, so it covers uPortal's schema only. The portlets' own `dataInit` tasks (Announcements,
 Calendar, News Reader, Simple Content) run afterwards, because the bundled portlets keep their
