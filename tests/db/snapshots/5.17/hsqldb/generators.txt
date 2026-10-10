@@ -3,7 +3,7 @@
 # vendor: hsqldb
 # uPortalVersion: 5.17.10-SNAPSHOT
 # dialect (resolved by the deployed uPortal): org.hibernate.dialect.HSQLDialect (chosen by Hibernate StandardDialectResolver)
-# database: HSQL Database Engine 2.5.1
+# database: HSQL Database Engine 2.7.4
 # entities scanned: 61; entities with a generated id: 51
 # backing: SEQUENCE = database sequence; TABLE = a one-row table emulating a sequence (dialect has no sequences);
 #          TABLE-ROW = a row in a @TableGenerator table; NONE = no database object (e.g. UUID generated in Java)

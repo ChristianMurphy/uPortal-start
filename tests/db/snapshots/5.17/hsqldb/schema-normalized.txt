@@ -3,8 +3,8 @@
 # vendor: hsqldb
 # uPortalVersion: 5.17.10-SNAPSHOT
 # dialect (resolved by the deployed uPortal): org.hibernate.dialect.HSQLDialect (chosen by Hibernate StandardDialectResolver)
-# database: HSQL Database Engine 2.5.1
-# jdbc driver: HSQL Database Engine Driver 2.5.1
+# database: HSQL Database Engine 2.7.4
+# jdbc driver: HSQL Database Engine Driver 2.7.4
 # catalog: PUBLIC  schema: PUBLIC
 # sequence value: last_value (PostgreSQL), next value (HSQLDB), LAST_NUMBER incl. cache (Oracle), current_value (SQL Server), next_not_cached_value (MariaDB)
 [tables]

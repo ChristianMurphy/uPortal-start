@@ -215,11 +215,6 @@ jobs:
     needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # Known drift, pending a decision (MOD-D16 CI report): the 5.17 hsqldb baseline was recorded
-    # on HSQLDB 2.5.1, which named the indexes behind UNIQUE and FK constraints itself (SYS_IDX_*);
-    # since uPortal-start's upgrade to HSQLDB 2.7.4 they carry the constraint's name, so NAMES
-    # shows 111 renames while STRUCTURE, DATA and GENERATORS match.
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
