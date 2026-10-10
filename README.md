@@ -166,6 +166,16 @@ deployments, you will want to choose a different RDBMS platform:  most likely Or
 Server, MySQL, or PostgreSQL.  The integrated HSQLDB instance, however, is recommended for local
 dev environments of uPortal.
 
+:warning:  CAS checks passwords in the portal database itself. When you move the portal off the
+bundled HSQLDB (the `hibernate.connection.*` settings in `global.properties`), point CAS at the
+same database: the `dataSource` bean in `overlays/cas/src/main/webapp/WEB-INF/deployerConfigContext.xml`
+has its own driver, URL, username and password. Its `@casDb*@` tokens are filled by
+`overlays/cas/build.gradle` with the bundled HSQLDB's values; replace them with yours. Add your
+JDBC driver to the `jdbc` configuration in `overlays/build.gradle`, which both webapps use. If
+CAS still points at HSQLDB, every login through the CAS form fails. The database upgrade harness
+(`-PdbVendor`, see [docs/db-upgrade-harness.md](docs/db-upgrade-harness.md)) fills the tokens from
+its vendor file, so CAS and the portal share one database there.
+
 Use the following command to start the embedded HSQLDB instance:
 
 ```console
