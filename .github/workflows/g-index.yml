@@ -162,6 +162,11 @@ jobs:
           else
             runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true}]'
           fi
+          # Temporary (fork only): the nightly set also on push, to prove it once where the workflow is
+          # not on the default branch and cannot be scheduled. Reverted next.
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true},{"vendor":"postgres-18","scale":"0.05","duration":"600","faults":false},{"vendor":"mariadb-12.3","scale":"0.05","duration":"600","faults":false}]'
+          fi
           if [ -n "$SCALE" ]; then
             runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
           fi
