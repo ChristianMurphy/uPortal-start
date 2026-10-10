@@ -114,6 +114,13 @@ migrate() {
     gradle dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget
 }
 
+copy_summary() {  # the copy tool's own summary of this pair (build/db-migrate/<pair>.txt), if any
+    local f="build/db-migrate/$PAIR.txt"
+    [ -f "$f" ] || return 0
+    head -n 5 "$f"
+    tail -n +6 "$f" | grep -iE 'mismatch|fail|error|missing' | head -n 20
+}
+
 cleanup() {
     if [ "$KEEP" = false ]; then
         stop_database "$SOURCE"
@@ -122,7 +129,7 @@ cleanup() {
 }
 
 echo "==== Copy migration $SOURCE ($(prop "$SOURCE" vendor.name)) -> $TARGET ($(prop "$TARGET" vendor.name))"
-rm -rf "build/db-migrate/$PAIR.json"
+rm -f "build/db-migrate/$PAIR.json" "build/db-migrate/$PAIR.txt"
 # Both databases start first: Oracle and SQL Server need a while before they accept connections
 if ! start_database "$SOURCE" || ! start_database "$TARGET"; then
     cleanup
@@ -147,8 +154,9 @@ printf '%s\n' "${TIMINGS[@]}"
 if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
     echo "FAILED: ${FAILED_STEP:-starting the databases} ${FAILED_LOG:+(see $FAILED_LOG)}"
     if [ -f "$FAILED_LOG" ]; then
-        case "$FAILED_LOG" in
+        case "$(basename "$FAILED_LOG")" in
             *playwright*|*specs*) text=$(failed_specs "$FAILED_LOG") ;;
+            *db-migrate*) text="$(copy_summary)"$'\n'"$(grep -v '^\s*at ' "$FAILED_LOG" | grep -iE 'error|exception|caused by' | tail -n 20)" ;;
             *) text=$(grep -v '^\s*at ' "$FAILED_LOG" | grep -iE 'error|exception|fail|mismatch|caused by' | tail -n 30) ;;
         esac
         github_annotation error "G-migrate $PAIR: $FAILED_STEP" "${text:-$(tail -n 30 "$FAILED_LOG")}"
@@ -156,3 +164,4 @@ if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
     exit 1
 fi
 echo "OK: $SOURCE copied to $TARGET and verified$([ "$PLAYWRIGHT" = true ] && echo ', Playwright suite passed on the target')"
+github_annotation notice "G-migrate $PAIR: OK" "$(copy_summary)"$'\n'"$(printf '%s\n' "${TIMINGS[@]}")"
