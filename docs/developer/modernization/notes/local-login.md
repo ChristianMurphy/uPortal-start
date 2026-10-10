@@ -14,6 +14,8 @@ that CI still exercises.
 | `9122724` ci: | CI `playwright-cas` job (auth + proxy specs against CAS, then a CAS-down seeded fault that must fail); Integration `playwright-cas` job on the uPortal build. |
 | `e273bbe` docs: | `docs/authentication.md`; README "How To Choose How Users Sign In". `[skip ci]` |
 | `9aa091c` fix: | Sign In URL `/uPortal/p/login?refUrl=` so guest deep links don't end in HTTP 400 (finding 1); deep-link spec; local wrong-password assertion (finding 2). |
+| `7d08d0e` merge | `ccr-43ba0785-hzlrj5` (light CI profile on workstream branches, commit-message check). CI.yml taken from the integration branch, which drops this branch's CI copy of the CAS job; README keeps the new SQL Server note and drops the CAS data source warning. |
+| `d79c291` ci(prototype): | Per the coordinator's CI capacity rule (MOD-D30): the CAS job, with the CAS-down seeded fault, runs once per push, in Integration only. |
 
 Nothing changed in uPortal: everything is configuration in uPortal-start. Proposed uPortal follow-ups
 are under findings, and the `UPGRADING-6.0.md` text is at the end of this note. (This session could
@@ -39,14 +41,15 @@ read uPortal but was not given push access to it.)
 
 ## Gate results
 
-Fill in when the runs on the head commit finish:
+The account's runners were saturated during this session; runs on later commits were still queued
+when it ended. Fill in when the runs on the head commit finish:
 
 | Run | Commit | Result |
 | --- | --- | --- |
 | CI 38088674821 | `9122724` | `Playwright E2E tests: CAS` (job 114320426287) **green on first attempt**, including the CAS-down seeded fault step. Local-login `Playwright E2E tests` failed: the wrong-password assertion that `9aa091c` corrects (same failure reproduced locally). Build matrix (ubuntu temurin/zulu/corretto, windows, macos) green. |
-| CI 38091969001 | `9aa091c` | _pending_ |
-| Integration 38088674826 | `9122724` | _superseded; queued behind runner capacity_ |
-| Integration 38091969031 | `9aa091c` | _pending_: Playwright hsqldb (local login), hsqldb + CAS, PostgreSQL 18, MariaDB 12.3, DB harness |
+| CI 38091969001 | `9aa091c` | _queued for over an hour, superseded_ |
+| Integration 38088674826, 38091969031 | `9122724`, `9aa091c` | _superseded; queued behind runner capacity_ |
+| CI and Integration on `d79c291` | `d79c291` | _pending_. Light profile: Playwright hsqldb (local login), `Playwright: hsqldb, CAS` with the CAS-down seeded fault, DB harness and Playwright on PostgreSQL 18, one G-migrate pair. MariaDB 12.3 and the other harness vendors run once merged into the integration branch. |
 
 Local runs in the sandbox (Tomcat 9.0.122, JDK 11, uPortal 5.17.9, HSQLDB, Chromium 1194):
 
@@ -75,7 +78,7 @@ All with `--retries=0` against a running portal.
 | cas | test user's password wrong | `login, logout, login as different user` **failed** (same assertion) |
 | cas | broken service URL: registry `serviceId` changed to `^https?://localhost:9999/.*` (CAS reloads it live; "Application Not Authorized to Use CAS") | all 4 auth tests and the proxy-ticket test **failed** (`toBeVisible` on the CAS form) |
 | cas | CAS service down (`casStop`) | all 4 auth tests and the proxy-ticket test **failed** (`toHaveURL` on the CAS login URL) |
-| cas, in CI | CAS service down, after the green run | step "Seeded fault: the auth spec fails with CAS stopped" passed, i.e. the spec failed, in CI run 38088674821 job 114320426287; it runs on every push |
+| cas, in CI | CAS service down, after the green run | step "Seeded fault: the auth spec fails with CAS stopped" passed, i.e. the spec failed, in CI run 38088674821 job 114320426287. It now runs in Integration's `playwright-cas` job on every push |
 
 The specs also have negative tests of their own that run in both modes: a wrong password is
 refused, and a guest following a link that needs a login gets the login form.

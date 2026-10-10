@@ -125,5 +125,6 @@ The Playwright specs read `AUTH_MODE` (`local` unless it is `cas`) and `CAS_BASE
           tests/ux/auth tests/ux/portlets/cas-proxy-test.spec.ts                   # against CAS
 ```
 
-`playwrightRun` passes `authMode` on as `AUTH_MODE`. CI runs the whole suite with local login, and
-the auth and proxy ticket specs against the CAS container.
+`playwrightRun` passes `authMode` on as `AUTH_MODE`. CI runs the whole suite with local login. The
+Integration workflow also runs the auth and proxy ticket specs against the CAS container, then
+stops CAS and requires the auth spec to fail.
