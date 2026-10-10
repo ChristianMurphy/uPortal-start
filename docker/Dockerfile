@@ -3,7 +3,7 @@
 # image.
 
 # This image aims for maximum slimness
-FROM adoptopenjdk:8-jdk-hotspot
+FROM eclipse-temurin:11-jdk
 
 RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y wget && \
     apt-get clean -y && rm -rf /var/lib/apt/lists/*
