@@ -46,7 +46,7 @@ entity files with `dataImport`.
 * one service definition (`docker/cas/services/uPortal-1001.json`) that lets any URL on
   `localhost` use CAS and ask for proxy tickets.
 
-It needs Docker with Compose v2. The container shares the host's network, so that CAS can reach the
+It needs Docker with Compose v2. The container shares the host's network, so that CAS can call the
 portal's proxy-granting ticket callback on `localhost`; on Docker Desktop (macOS, Windows) turn on
 host networking in its settings.
 
@@ -66,18 +66,18 @@ With `authMode=cas`, `tomcatConfig` appends two files to the copies in `portal.h
 * `etc/cas/global.properties`: `cas.protocol`, `cas.server` and `cas.context`, split from
   `casServerUrl`. uPortal builds `cas.protocol.server.context` from them, and portlets such as
   esup-filemanager read them too;
-* `etc/cas/uPortal.properties`: turns the CAS security context on, points Sign In at
-  `<casServerUrl>/login?service=<portal>/Login`, signs out of CAS as well
-  (`<casServerUrl>/logout?service=<portal>/`), and asks CAS for a proxy-granting ticket at
-  `/uPortal/CasProxyServlet`.
+* `etc/cas/uPortal.properties`: turns on the CAS security context and the proxy-granting ticket
+  callback at `/uPortal/CasProxyServlet`. Sign In goes to
+  `<casServerUrl>/login?service=<portal>/Login`, and logout goes through
+  `<casServerUrl>/logout?service=<portal>/`.
 
-Later lines of a properties file win, so these settings override the local-login defaults above
+Later lines of a properties file win. These settings override the local-login defaults above
 them.
 
 ### Proxy tickets
 
 `overlays/uPortal/src/main/resources/properties/contextOverrides/overridesContext.xml` turns on
-uPortal's `casTicketUserInfoService`, which uPortal itself ships commented out. It gives portlets
+uPortal's `casTicketUserInfoService`, which uPortal itself leaves commented out. It gives portlets
 that request the `casProxyTicket` user attribute a proxy ticket for their own URL. The *Portlet CAS
 Test* portlet (`/uPortal/p/portlet-cas-test`, from `cas-proxy-test-portlet`) shows the result:
 "Proxy ticket validated" in CAS mode; with local login, "No proxy ticket in UserInfo map", since
@@ -85,8 +85,8 @@ there is no CAS session to get one from. Each render of such a portlet costs a r
 
 ## CAS with your own server
 
-Adopters who already run CAS keep using it: set `authMode=cas` and point `casServerUrl` at it in
-`gradle.properties`, then run `tomcatConfig` (or `tomcatInstall`, or `portalInit`):
+Adopters who already run CAS keep using it. Put `authMode=cas` and your `casServerUrl` in
+`gradle.properties` and run `tomcatConfig` (`tomcatInstall` and `portalInit` include it):
 
 ```properties
 authMode=cas
@@ -95,8 +95,8 @@ casServerUrl=https://cas.example.edu/cas
 
 Do not run `casStart`. On the CAS side:
 
-* register the portal as a service that may use CAS, matching `https://portal.example.edu/uPortal/Login`
-  (the `service` the portal sends) and, if you use proxy tickets, the portlets' URLs;
+* register the portal as a CAS service matching `https://portal.example.edu/uPortal/Login`, the
+  `service` the portal sends. With proxy tickets, the service must match the portlets' URLs too;
 * for proxy tickets, allow proxying with a callback on `https://portal.example.edu/uPortal/CasProxyServlet`.
   CAS must be able to reach that URL, and production CAS servers call back only over HTTPS;
 * for the logout redirect back to the portal, set `cas.logout.follow-service-redirects=true`.
@@ -108,7 +108,7 @@ Its quirks no longer apply:
   encoded service URLs. Leave it at uPortal's default (`true`).
 * The CAS data source in `deployerConfigContext.xml` (MOD-I85) is gone: the portal and its
   database no longer depend on a CAS that reads the portal's tables.
-* CAS 3.6 accepted `logout?url=`; CAS 5 and later use `logout?service=` and follow it only with
+* CAS 3.6 accepted `logout?url=`. CAS 5 and later use `logout?service=` and follow it only with
   `cas.logout.follow-service-redirects=true`.
 
 To change one of the CAS settings, edit `etc/cas/uPortal.properties` (or `etc/cas/global.properties`)
