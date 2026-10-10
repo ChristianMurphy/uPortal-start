@@ -1,6 +1,26 @@
 import { test, expect, Page, Locator } from "@playwright/test";
 import { config } from "../../general-config";
-import { loginViaUrl, logout, openDropdown } from "../utils/ux-general-utils";
+import {
+  loginViaUrl,
+  logout,
+  openDropdown,
+  waitForPortalRequestsToSettle,
+} from "../utils/ux-general-utils";
+
+/*
+ * Favorites has two halves: the "Add to my Favorites" item of every portlet's
+ * Options menu (rendered by the theme) and the Favorites channel at
+ * /p/favorites, which is the <up-favorites> web component (a "Web Component"
+ * channel, uPortal MOD-D18) backed by /api/v6-0/favorites.
+ */
+const FAVORITES_URL = `${config.url}p/favorites`;
+const FAVORITES_API = `${config.url}api/v6-0/favorites`;
+
+interface FavoritePortlet {
+  nodeId: string;
+  fname: string;
+  name: string;
+}
 
 async function openCalendarOptionsMenu(page: Page): Promise<Locator> {
   const calendarWrapper = page.locator(
@@ -97,9 +117,7 @@ test.describe("Favorites", () => {
     );
   });
 
-  test("remove a portlet from favorites via Options menu", async ({
-    page,
-  }) => {
+  test("remove a portlet from favorites via Options menu", async ({ page }) => {
     await ensureCalendarFavoriteState(page, true);
 
     const calendarWrapper = await openCalendarOptionsMenu(page);
@@ -153,5 +171,208 @@ test.describe("Favorites", () => {
     const expected = await wrappersWithMenu.count();
     expect(expected).toBeGreaterThanOrEqual(3);
     await expect(favItems).toHaveCount(expected);
+  });
+});
+
+/**
+ * Open the Favorites channel, maximized at /p/favorites, and wait until its
+ * <up-favorites> element has loaded the favorites. Playwright's CSS and role
+ * locators reach into the element's (open) shadow root.
+ */
+async function openFavoritesChannel(page: Page): Promise<Locator> {
+  // /p/favorites is a transient (focused) portlet: no portal request of the
+  // previous page may still be running when it renders
+  await waitForPortalRequestsToSettle(page);
+  await page.goto(FAVORITES_URL);
+  const favorites = page.locator("up-favorites");
+  await expect(favorites).toHaveAttribute("window-state", "maximized");
+  await expect(favorites.locator(".favorites")).toBeVisible();
+  return favorites;
+}
+
+/** The names of the favorite portlets, in the order the component lists them. */
+async function listedPortlets(favorites: Locator): Promise<string[]> {
+  return favorites
+    .locator("li.favorite[data-kind='portlet'] .favorite-name")
+    .allTextContents();
+}
+
+/**
+ * The CSRF header and token the portal gave the element, for REST calls made
+ * the way the component makes them.
+ */
+async function csrfHeaders(
+  favorites: Locator
+): Promise<Record<string, string>> {
+  await expect(favorites).toHaveAttribute("csrf-header", /\S/);
+  await expect(favorites).toHaveAttribute("csrf-token", /\S/);
+  const header = (await favorites.getAttribute("csrf-header")) ?? "";
+  const token = (await favorites.getAttribute("csrf-token")) ?? "";
+  return { [header]: token };
+}
+
+/**
+ * Make sure the student has the portlet as a favorite, through the REST API.
+ * Returns its node ID when this call created it (so the test removes it
+ * again), or undefined when it was a favorite already.
+ */
+async function addFavorite(
+  page: Page,
+  headers: Record<string, string>,
+  fname: string
+): Promise<string | undefined> {
+  const response = await page.request.post<FavoritePortlet>(FAVORITES_API, {
+    data: { fname },
+    headers,
+  });
+  expect([200, 201]).toContain(response.status());
+  const favorite = await response.json();
+  expect(favorite.fname).toBe(fname);
+  return response.status() === 201 ? favorite.nodeId : undefined;
+}
+
+async function removeFavorites(
+  page: Page,
+  headers: Record<string, string>,
+  nodeIds: string[]
+): Promise<void> {
+  for (const nodeId of nodeIds) {
+    const response = await page.request.delete<unknown>(
+      `${FAVORITES_API}/${encodeURIComponent(nodeId)}`,
+      { headers }
+    );
+    expect(response.status()).toBe(204);
+  }
+}
+
+/** The order after moving the named entry one place up, or down if it is first. */
+function orderAfterMove(order: string[], name: string): string[] {
+  const index = order.indexOf(name);
+  const target = index === 0 ? 1 : index - 1;
+  const moved = [...order];
+  moved[index] = order[target] ?? name;
+  moved[target] = name;
+  return moved;
+}
+
+/** Which way orderAfterMove() moves the named entry. */
+function moveDirection(order: string[], name: string): "up" | "down" {
+  return order.indexOf(name) === 0 ? "down" : "up";
+}
+
+test.describe("Favorites web component", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, config.users.student);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await logout(page);
+  });
+
+  test("lists a portlet favorited via the Options menu", async ({ page }) => {
+    await ensureCalendarFavoriteState(page, true);
+
+    const favorites = await openFavoritesChannel(page);
+
+    const calendar = favorites.getByRole("link", {
+      name: "Calendar",
+      exact: true,
+    });
+    await expect(calendar).toBeVisible();
+    await expect(calendar).toHaveAttribute("href", /\/p\/calendar\//);
+    await expect(
+      favorites.getByRole("list", { name: "Favorites" })
+    ).toBeVisible();
+  });
+
+  test("unfavorites a portlet, and the Options menu follows", async ({
+    page,
+  }) => {
+    await ensureCalendarFavoriteState(page, true);
+    const favorites = await openFavoritesChannel(page);
+
+    await favorites
+      .getByRole("button", { name: "Remove Calendar from my favorites" })
+      .click();
+
+    await expect(favorites.locator(".notice")).toContainText(
+      "You have unfavorited Calendar."
+    );
+    await expect(
+      favorites.getByRole("link", { name: "Calendar", exact: true })
+    ).toHaveCount(0);
+
+    // The layout changed on the server, not just on the page
+    const reloaded = await openFavoritesChannel(page);
+    await expect(
+      reloaded.getByRole("link", { name: "Calendar", exact: true })
+    ).toHaveCount(0);
+    await page.goto(config.url);
+    await expectFavoriteLinkText(page, "Add to my Favorites");
+  });
+
+  test("reorders favorites and keeps the new order", async ({ page }) => {
+    let favorites = await openFavoritesChannel(page);
+    const headers = await csrfHeaders(favorites);
+    const created = [
+      await addFavorite(page, headers, "calendar"),
+      await addFavorite(page, headers, "bookmarks"),
+    ].filter((nodeId): nodeId is string => nodeId !== undefined);
+
+    try {
+      favorites = await openFavoritesChannel(page);
+      const before = await listedPortlets(favorites);
+      expect(before).toContain("Calendar");
+      const after = orderAfterMove(before, "Calendar");
+      const direction = moveDirection(before, "Calendar");
+
+      await favorites
+        .getByRole("button", { name: "Reorder favorites" })
+        .click();
+      await favorites
+        .getByRole("button", { name: `Move Calendar ${direction}` })
+        .click();
+
+      await expect(favorites.getByRole("status")).toContainText(
+        `Moved Calendar to position ${after.indexOf("Calendar") + 1} of ${after.length}.`
+      );
+      expect(await listedPortlets(favorites)).toEqual(after);
+
+      // The move is saved in the layout
+      await expect(async () => {
+        favorites = await openFavoritesChannel(page);
+        expect(await listedPortlets(favorites)).toEqual(after);
+      }).toPass({ timeout: 15_000 });
+
+      // Put Calendar back where it was
+      await favorites
+        .getByRole("button", { name: "Reorder favorites" })
+        .click();
+      await favorites
+        .getByRole("button", {
+          name: `Move Calendar ${direction === "up" ? "down" : "up"}`,
+        })
+        .click();
+      await expect(favorites.getByRole("status")).toContainText(
+        `Moved Calendar to position ${before.indexOf("Calendar") + 1}`
+      );
+    } finally {
+      await removeFavorites(page, headers, created);
+    }
+  });
+
+  test("refuses a REST change without the page's CSRF token", async ({
+    page,
+  }) => {
+    const favorites = await openFavoritesChannel(page);
+    const before = await listedPortlets(favorites);
+
+    const response = await page.request.post<unknown>(FAVORITES_API, {
+      data: { fname: "calendar" },
+    });
+
+    expect(response.status()).toBe(403);
+    const after = await openFavoritesChannel(page);
+    expect(await listedPortlets(after)).toEqual(before);
   });
 });
