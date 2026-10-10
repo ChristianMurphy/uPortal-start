@@ -24,6 +24,20 @@ ext {
      * significantly different things on different operating systems.
      */
     isWindows = OperatingSystem.current().isWindows()
+    /*
+     * TCP ports of the integrated Tomcat and HSQLDB.  Set any of them in gradle.properties or
+     * with -P (e.g. -PtomcatHttpPort=8180) to run more than one portal on the same machine.
+     * They replace the matching @tokens@ in etc/tomcat, etc/portal, etc/hsql, and the cas
+     * overlay as those files are deployed.
+     */
+    tomcatHttpPort = findProperty('tomcatHttpPort') ?: '8080'
+    tomcatShutdownPort = findProperty('tomcatShutdownPort') ?: '8005'
+    hsqlPort = findProperty('hsqlPort') ?: '8887'
+    portTokens = [
+        tomcatHttpPort: tomcatHttpPort,
+        tomcatShutdownPort: tomcatShutdownPort,
+        hsqlPort: hsqlPort,
+    ]
 }
 
 node {

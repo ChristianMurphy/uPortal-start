@@ -78,6 +78,7 @@ running the following command:
   - [How To Deploy uPortal Technology to Tomcat](#how-to-deploy-uportal-technology-to-tomcat)
   - [How To Create and Initialize the Database Schema](#how-to-create-and-initialize-the-database-schema)
   - [How To Start Tomcat](#how-to-start-tomcat)
+  - [Running more than one portal](#running-more-than-one-portal)
   - [How To Create a Custom Skin](#how-to-create-a-custom-skin)
   - [How To Configure Your Deployment](#how-to-configure-your-deployment)
   - [How To Customize Text](#how-to-customize-text)
@@ -249,6 +250,31 @@ Assuming all the defaults were left untouched:
   * guest <http://localhost:8080/uPortal/render.userLayoutRootNode.uP>
 * The default tomcat install is:  _uPortal-start/.gradle/tomcat_
 * The logs to watch for issues are located in:  _uPortal-start/.gradle/tomcat/logs_
+
+### Running more than one portal
+
+Each uPortal-start checkout runs its own Tomcat and HSQLDB.  To run several of them on one machine
+(e.g. in CI, or in separate `git worktree`s), give each checkout its own ports with these Gradle
+properties:
+
+| Property             | Default | Used for                                         |
+| -------------------- | ------- | ------------------------------------------------ |
+| `tomcatHttpPort`     | `8080`  | Tomcat HTTP connector, portal and CAS URLs       |
+| `tomcatShutdownPort` | `8005`  | Tomcat shutdown port                             |
+| `hsqlPort`           | `8887`  | Embedded HSQLDB and the JDBC URLs that use it    |
+
+Set them in that checkout's `gradle.properties`, or pass them with `-P`:
+
+```console
+    $ ./gradlew -PtomcatHttpPort=8180 -PtomcatShutdownPort=8105 -PhsqlPort=8987 portalInit tomcatStart
+```
+
+The values are written into Tomcat's `server.xml`, `global.properties` in `portal.home`, and the CAS
+web application when they are deployed, so run `tomcatInstall` and `tomcatDeploy` (or
+`portalInit`) again after changing them.  Use the same values for every Gradle command in that
+checkout (keeping them in `gradle.properties` is easiest):  a command run without them uses the
+default ports, so `hsqlStop`, for example, would stop the HSQLDB on port 8887.  `playwrightRun`
+tests `http://localhost:{tomcatHttpPort}/uPortal/`;  set `PORTAL_BASE_URL` to test another URL.
 
 ### How To Create a Custom Skin
 

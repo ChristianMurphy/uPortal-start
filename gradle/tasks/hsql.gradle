@@ -1,3 +1,4 @@
+import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.Project
 
 repositories {
@@ -20,7 +21,7 @@ dependencies {
 private boolean verifyHsqlState(Project project, boolean verifyRunning) {
     project.ant {
         condition(property: 'hsqlIsRunning', value: true, else: false) {
-            socket(server: 'localhost', port: 8887)
+            socket(server: 'localhost', port: project.hsqlPort)
         }
         if (Boolean.valueOf(hsqlIsRunning) != verifyRunning) {
             logger.lifecycle("The embedded HSQLDB uPortal database ${verifyRunning ? 'is not currently' : 'is already'} running; nothing to do")
@@ -59,11 +60,11 @@ task hsqlStart {
             arg(value: '--address')
             arg(value: 'localhost')
             arg(value: '--port')
-            arg(value: '8887')
+            arg(value: hsqlPort)
         }
 
         ant.waitfor() {
-            socket(server: 'localhost', port: 8887)
+            socket(server: 'localhost', port: hsqlPort)
         }
     }
 }
@@ -87,12 +88,20 @@ task hsqlStop {
             classpath += it.getAbsolutePath()
         }
 
+        // SqlTool needs a copy of the rc file that points at this build's hsqlPort
+        File rcDir = file("${buildDir}/tmp/hsql")
+        copy {
+            from 'etc/hsql/hsqldb.sqltool.rc'
+            into rcDir
+            filter(ReplaceTokens, tokens: portTokens)
+        }
+
         ant.exec(executable: 'java', spawn: true) {
             arg(value: '-cp')
             arg(value: classpath)
             arg(value: 'org.hsqldb.cmdline.SqlTool')
             arg(value: '--rcFile')
-            arg(value: 'etc/hsql/hsqldb.sqltool.rc')
+            arg(value: "${rcDir}/hsqldb.sqltool.rc")
             arg(value: '--sql')
             arg(value: 'shutdown compact;')
             arg(value: 'uPortalDb')
@@ -100,7 +109,7 @@ task hsqlStop {
 
         ant.waitfor() {
             not() {
-                socket(server: 'localhost', port: 8887)
+                socket(server: 'localhost', port: hsqlPort)
             }
         }
     }
@@ -129,7 +138,7 @@ task hsqlOpen {
             arg(value: classpath)
             arg(value: 'org.hsqldb.util.DatabaseManagerSwing')
             arg(value: '--url')
-            arg(value: 'jdbc:hsqldb:hsql://localhost:8887/uPortal')
+            arg(value: "jdbc:hsqldb:hsql://localhost:${hsqlPort}/uPortal")
             arg(value: '--user')
             arg(value: 'SA')
         }

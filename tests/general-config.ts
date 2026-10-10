@@ -1,5 +1,9 @@
+// Provided by Node at run time; declared here so tsc does not need @types/node.
+declare const process: { env: Record<string, string | undefined> };
+
 export const config = {
-  url: "http://localhost:8080/uPortal/",
+  // Set PORTAL_BASE_URL (with a trailing slash) to test a portal on another port or host.
+  url: process.env.PORTAL_BASE_URL ?? "http://localhost:8080/uPortal/",
   users: {
     admin: {
       id: "13",
