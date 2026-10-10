@@ -47,6 +47,7 @@ plutoVersion=2.1.0-M3
 portletApiDependency=org.apache.portals:portlet-api_2.1.0_spec:1.0
 
 # Gradle Task Dependencies
+asmVersion=9.11
 gradleDockerPluginVersion=10.0.0
 hsqldbVersion=2.7.4
 jasyptVersion=1.9.3
