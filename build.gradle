@@ -5,8 +5,7 @@ plugins {
     // dot file can be converted to an image using graphviz. `dot -Tsvg -O -v visteg.dot`
     // id 'cz.malohlava' version '1.0.3'
 
-    id 'net.foragerr.jmeter' version '1.1.0-4.0'
-    id 'com.github.node-gradle.node' version '7.0.2'
+    id 'com.github.node-gradle.node' version '7.1.0'
 }
 
 // support integration with intellij and eclipse
@@ -78,13 +77,4 @@ if(customTasks.isFile()) {
 apply plugin: 'java'
 compileJava {
     dependsOn javaVersionCheck
-}
-
-/*
- * Enable JMeter testing
- * TODO - enable:  jmSystemPropertiesFiles= [file("buildSrc/src/test/perf/smoke/smokeTest.properties")] 
- */
-jmeter {
-  jmTestFiles = [file("buildSrc/src/test/perf/smoke/smokeTest.jmx")]
-  enableExtendedReports = true
 }

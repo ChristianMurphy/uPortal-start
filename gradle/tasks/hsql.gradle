@@ -31,8 +31,8 @@ private boolean verifyHsqlState(Project project, boolean verifyRunning) {
 }
 
 task hsqlStart {
-    group 'HSQL'
-    description 'Start the embedded hsql server'
+    group = 'HSQL'
+    description = 'Start the embedded hsql server'
     dependsOn project.tasks.portalProperties
 
     doLast {
@@ -70,8 +70,8 @@ task hsqlStart {
 }
 
 task hsqlStop {
-    group 'HSQL'
-    description 'Stop the embedded hsql server'
+    group = 'HSQL'
+    description = 'Stop the embedded hsql server'
     dependsOn project.tasks.portalProperties
 
     doLast {
@@ -116,8 +116,8 @@ task hsqlStop {
 }
 
 task hsqlOpen {
-    group 'HSQL'
-    description 'Launch the HSQL Database Manager connected to the default HSQL database'
+    group = 'HSQL'
+    description = 'Launch the HSQL Database Manager connected to the default HSQL database'
     dependsOn project.tasks.portalProperties
     dependsOn hsqlStart
 

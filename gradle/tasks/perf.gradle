@@ -13,8 +13,8 @@ buildscript {
 }
 
 task perfGenTestData() {
-    group 'Perf'
-    description 'Generates test data to prepare a uPortal install for performance testing'
+    group = 'Perf'
+    description = 'Generates test data to prepare a uPortal install for performance testing'
     dependsOn ':portalProperties'
 
     doLast {

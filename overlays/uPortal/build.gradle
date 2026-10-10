@@ -45,8 +45,8 @@ war {
 import java.util.regex.Pattern
 File skinsDir = rootProject.file("${projectDir}/src/main/webapp/media/skins/respondr")
 task skinGenerate() {
-    group 'Skin'
-    description 'Generate a new SCSS-based uPortal skin for Respondr;  pass -DskinName={name} (required) to specify a name'
+    group = 'Skin'
+    description = 'Generate a new SCSS-based uPortal skin for Respondr;  pass -DskinName={name} (required) to specify a name'
 
     doLast {
         String skinName = System.getProperty('skinName');
@@ -103,8 +103,8 @@ task skinGenerate() {
 }
 
 task skinGenerateLess() {
-    group 'Skin'
-    description 'Generate a new LESS-based uPortal skin for Respondr (legacy);  pass -DskinName={name} (required) to specify a name'
+    group = 'Skin'
+    description = 'Generate a new LESS-based uPortal skin for Respondr (legacy);  pass -DskinName={name} (required) to specify a name'
 
     doLast {
         String skinName = System.getProperty('skinName');
@@ -166,8 +166,8 @@ task skinGenerateLess() {
 // this task overwrites them at execution time so any drift in the etc/skin/
 // templates fails the regression test rather than silently passing.
 task playwrightSkinFixture() {
-    group 'Testing'
-    description 'Regenerate the playwrightSkin scaffold consumed by tests/ux/skin/custom-skin.spec.ts'
+    group = 'Testing'
+    description = 'Regenerate the playwrightSkin scaffold consumed by tests/ux/skin/custom-skin.spec.ts'
 
     String skinName = 'playwrightSkin'
     File skinFile = rootProject.file("${projectDir}/src/main/webapp/media/skins/respondr/${skinName}.less")
@@ -318,7 +318,7 @@ ext {
 }
 
 dataInit {
-    description 'Drop and recreate uPortal tables and reimport data'
+    description = 'Drop and recreate uPortal tables and reimport data'
 
     /*
      * Add to the scriptFile commands that drop then create then load the legacy database
@@ -407,7 +407,7 @@ portalShellBuildHelper.dataImport('data-import',
 }
 
 dataImport {
-    description 'Adds to or updates the portal database for the entities defined in the specified XML file(s). Requires -Dfile={path-to-file} or -Ddir={path-to-directory}'
+    description = 'Adds to or updates the portal database for the entities defined in the specified XML file(s). Requires -Dfile={path-to-file} or -Ddir={path-to-directory}'
 
     doLast {
         // Validate inputs
@@ -456,7 +456,7 @@ portalShellBuildHelper.dataImport("data-import",
 }
 
 dataExport {
-    description 'Creates XML files representing the requested entities and writes them to the specified file system location. Parameters: -Ddir={path-to-directory} -Dtype={entity-type} [-Dsysid={entity-identifier}]'
+    description = 'Creates XML files representing the requested entities and writes them to the specified file system location. Parameters: -Ddir={path-to-directory} -Dtype={entity-type} [-Dsysid={entity-identifier}]'
 
     doLast {
         // Three -D arguments may be passed;  all are optional
@@ -487,7 +487,7 @@ portalShellBuildHelper.dataExport('data-export',
 }
 
 dataDelete {
-    description 'Deletes the specified entity. Requires -Dtype={entity-type} and -Dsysid={id}'
+    description = 'Deletes the specified entity. Requires -Dtype={entity-type} and -Dsysid={id}'
 
     doLast {
         // Validate inputs
@@ -524,7 +524,7 @@ portalShellBuildHelper.dataDelete('data-delete',
 }
 
 dataList {
-    description 'With no arguments (-Dtype={entity-type}) lists all supported portal data types and the operations (export, delete) supported for each. '
+    description = 'With no arguments (-Dtype={entity-type}) lists all supported portal data types and the operations (export, delete) supported for each. '
 
     doLast {
         // Is there a -Dtype= argument passed?
