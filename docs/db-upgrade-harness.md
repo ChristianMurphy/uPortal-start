@@ -180,7 +180,9 @@ on GitHub Actions instead of locally:
    zero drift on every vendor before the baseline counts as reproduced.
 
 Never re-record `5.17`; a new uPortal version or an intentional schema change gets a new
-directory.
+directory. The one exception is a database server that uPortal-start itself ships, when the
+upgrade changes nothing but names. `hsqldb` was re-recorded with `--record --baseline 5.17` when
+uPortal-start moved from HSQLDB 2.5.1 to 2.7.4 (see "5.17 reference results").
 
 ## How later phases use it
 
@@ -208,6 +210,13 @@ directory.
 Recorded with uPortal 5.17.10-SNAPSHOT (Hibernate 4.3.11) and the quickstart data, then
 reproduced with zero drift by a second fresh run on every vendor.
 
+The `hsqldb` baseline was first recorded on HSQLDB 2.5.1 and re-recorded on 2.7.4, the version
+uPortal-start now bundles. Compared with the 2.5.1 recording, `STRUCTURE`, `DATA` and `GENERATORS`
+show no drift, and `NAMES` shows 111 renames, all of them indexes that back a constraint: 2.5.1
+named them itself (`SYS_IDX_*`, shown as `<db-generated>`), while 2.7.4 gives them the name of
+their constraint (67 foreign keys, 42 Hibernate `UK_*` unique keys, `UPET_NAME_UNQ` and
+`UPU_USER_NAME`).
+
 uPortal never sets `hibernate.dialect`. It picks its dialect from the JDBC metadata, first with
 `PortalDialectResolver` and then with Hibernate's `StandardDialectResolver`. The
 `hibernate.dialect` in the vendor files is used only by the bundled portlets. The dialect therefore
@@ -215,7 +224,7 @@ depends on the server version that the driver reports, and so on the driver:
 
 | Vendor | JDBC driver | Dialect uPortal uses | Generated IDs (49 + 2 UUID) are backed by |
 | --- | --- | --- | --- |
-| `hsqldb` 2.5.1 | hsqldb 2.5.1 | `HSQLDialect` (standard) | 49 sequences |
+| `hsqldb` 2.7.4 | hsqldb 2.7.4 | `HSQLDialect` (standard) | 49 sequences |
 | `postgres-16` | pgjdbc 42.7.11 | `PostgreSQL81Dialect` (standard: Hibernate 4.3 only knows PostgreSQL 8 and 9, so 10+ falls through to 8.1) | 49 sequences |
 | `mysql-8.4` | MySQL Connector/J 8.4.0 | `MySQL5Dialect` (standard; `PortalDialectResolver` only handles MySQL 5) | 49 one-row tables `up_*_seq (next_val)` |
 | `mariadb-10.6` | MySQL Connector/J 8.4.0 | `MySQL5InnoDBCompressedDialect` (`PortalDialectResolver`: MariaDB 10 announces itself as `5.5.5-10.6`); every entity and legacy table is `ROW_FORMAT=COMPRESSED` | 49 one-row tables |
