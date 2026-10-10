@@ -1,5 +1,7 @@
 package org.apereo.portal.start.db
 
+import java.util.regex.Pattern
+
 /**
  * Compares a freshly taken snapshot directory with a recorded baseline directory.
  *
@@ -15,8 +17,23 @@ package org.apereo.portal.start.db
  *   <li>generator drift: generators.txt differs (an ID is backed by a different object or value)</li>
  * </ul>
  * Zero drift means all four are empty.
+ *
+ * Sequence values are compared exactly unless the vendor asks for {@link SequenceValues#INVARIANT}.
  */
 class SnapshotComparison {
+
+    /** How the current value of a database sequence is compared. */
+    enum SequenceValues {
+        /** The value must equal the baseline's. */
+        EXACT,
+        /**
+         * For databases where the value read from the catalog depends on timing (Oracle reports
+         * LAST_NUMBER, the high-water mark of a sequence cache it sizes by the rate of use). The
+         * value is left out of the comparison; instead every sequence that backs an ID must be
+         * above max(id) of each table it serves, and step by the mapping's allocationSize.
+         */
+        INVARIANT
+    }
 
     static final String SCHEMA = 'schema.txt'
     static final String NORMALIZED = 'schema-normalized.txt'
@@ -27,9 +44,12 @@ class SnapshotComparison {
     final Map<String, List<String>> added = [:]
     final List<String> missing = []
     final List<String> renames = []
+    /** With {@link SequenceValues#INVARIANT}: the generators.txt lines that break the invariant. */
+    final List<String> invariantViolations = []
+    SequenceValues sequenceValues = SequenceValues.EXACT
 
-    static SnapshotComparison compare(File baselineDir, File currentDir) {
-        SnapshotComparison r = new SnapshotComparison()
+    static SnapshotComparison compare(File baselineDir, File currentDir, SequenceValues sequenceValues = SequenceValues.EXACT) {
+        SnapshotComparison r = new SnapshotComparison(sequenceValues: sequenceValues)
         FILES.each { String name ->
             File b = new File(baselineDir, name)
             File c = new File(currentDir, name)
@@ -41,6 +61,13 @@ class SnapshotComparison {
             }
             Map<String, List<String>> bs = sections(b.readLines('UTF-8'))
             Map<String, List<String>> cs = sections(c.readLines('UTF-8'))
+            if (sequenceValues == SequenceValues.INVARIANT) {
+                if (name == GENERATORS) {
+                    r.invariantViolations.addAll(sequenceInvariantViolations(cs['[entities]'] ?: []))
+                }
+                bs = withoutSequenceValues(bs)
+                cs = withoutSequenceValues(cs)
+            }
             r.removed[name] = minus(bs, cs)
             r.added[name] = minus(cs, bs)
         }
@@ -78,10 +105,13 @@ class SnapshotComparison {
 
     boolean isNameDrift() { return !renames.isEmpty() }
 
-    boolean isGeneratorDrift() { return !removed[GENERATORS].isEmpty() || !added[GENERATORS].isEmpty() }
+    boolean isGeneratorDrift() {
+        return !removed[GENERATORS].isEmpty() || !added[GENERATORS].isEmpty() || !invariantViolations.isEmpty()
+    }
 
     boolean isZeroDrift() {
-        return missing.isEmpty() && FILES.every { removed[it].isEmpty() && added[it].isEmpty() } && renames.isEmpty()
+        return missing.isEmpty() && FILES.every { removed[it].isEmpty() && added[it].isEmpty() } && renames.isEmpty() &&
+                invariantViolations.isEmpty()
     }
 
     List<String> report(String title) {
@@ -93,7 +123,15 @@ class SnapshotComparison {
         out << "DATA (row counts, sequence values, generator table rows): ${dataDrift ? 'DRIFT' : 'no drift'}".toString()
         out << "NAMES (constraint and index names): ${nameDrift ? "DRIFT, ${renames.size()} renamed" : 'no drift'}".toString()
         out << "GENERATORS (generators.txt): ${generatorDrift ? 'DRIFT' : 'no drift'}".toString()
+        if (sequenceValues == SequenceValues.INVARIANT) {
+            out << 'SEQUENCE VALUES: not compared with the baseline; checked instead: value > max(id) of every table served, increment = allocationSize'
+        }
         out << "RESULT: ${zeroDrift ? 'ZERO DRIFT' : 'DRIFT'}".toString()
+        if (invariantViolations) {
+            out << ''
+            out << '--- generators.txt: sequences that break the invariant'
+            invariantViolations.each { out << "! ${it}".toString() }
+        }
         [NORMALIZED, GENERATORS, SCHEMA].each { String f ->
             if (removed[f] || added[f] || (f == SCHEMA && renames)) {
                 out << ''
@@ -105,6 +143,48 @@ class SnapshotComparison {
                 }
                 removed[f].each { out << "- ${it}".toString() }
                 added[f].each { out << "+ ${it}".toString() }
+            }
+        }
+        return out
+    }
+
+    private static final Pattern SEQUENCE_BACKING = ~/SEQUENCE (\S+) increment=(\S+) value=(\S+)/
+    private static final Pattern DECLARED_SEQUENCE = ~/sequence\(([^,]+),alloc=([^)]+)\)/
+
+    /** Drops the current value from [sequences] lines and from the SEQUENCE backing of generators.txt lines. */
+    private static Map<String, List<String>> withoutSequenceValues(Map<String, List<String>> sections) {
+        Map<String, List<String>> m = new LinkedHashMap<>()
+        sections.each { String section, List<String> lines ->
+            m[section] = lines.collect { String l ->
+                if (section == '[sequences]') return sequenceDefinition(l)
+                if (section == '[entities]') return l.replaceAll(SEQUENCE_BACKING) { all, seq, inc, value -> "SEQUENCE ${seq} increment=${inc}" }
+                return l
+            }
+        }
+        return m
+    }
+
+    /**
+     * Checks every generators.txt entity line backed by a sequence: the sequence's value must be
+     * above the table's max(id), so the next ID it hands out is free, and its increment must equal
+     * the allocationSize of the mapping that names it.
+     */
+    private static List<String> sequenceInvariantViolations(List<String> entityLines) {
+        List<String> out = []
+        entityLines.each { String line ->
+            Map<String, String> allocationSizes = [:]
+            line.findAll(DECLARED_SEQUENCE) { all, seq, alloc -> allocationSizes[seq] = alloc }
+            String table = line.find(/ table=(\S+)/) { all, t -> t }
+            String maxId = line.find(/ max-id=(\S+)/) { all, id -> id }
+            line.findAll(SEQUENCE_BACKING) { all, seq, inc, value ->
+                if (inc != allocationSizes[seq]) {
+                    out << "${seq} increment=${inc}, but ${table}'s mapping has allocationSize=${allocationSizes[seq]}".toString()
+                }
+                if (!(value ==~ /-?\d+/)) {
+                    out << "${seq} value=${value} is not a number (${table})".toString()
+                } else if (maxId ==~ /-?\d+/ && new BigInteger(value) <= new BigInteger(maxId)) {
+                    out << "${seq} value=${value} is not above max(id)=${maxId} of ${table}".toString()
+                }
             }
         }
         return out

@@ -71,6 +71,8 @@ if (dbVendor) {
         setupPassword: findProperty('dbSetupPassword') ?: v.getProperty('setup.password'),
         setupSql: v.stringPropertyNames().findAll { it.startsWith('setup.sql.') }
                 .sort { it.substring('setup.sql.'.length()) as int }.collect { fill(v.getProperty(it)) },
+        sequenceValues: SnapshotComparison.SequenceValues.valueOf(
+                v.getProperty('verify.sequenceValues', 'exact').trim().toUpperCase(Locale.ROOT)),
     ]
     dependencies {
         dbHarnessDriver dbHarness.driver
@@ -223,7 +225,7 @@ task dbVerify {
         Map h = requireHarness()
         File baseline = harnessBaselineDir()
         File current = harnessOutputDir()
-        SnapshotComparison result = SnapshotComparison.compare(baseline, current)
+        SnapshotComparison result = SnapshotComparison.compare(baseline, current, h.sequenceValues)
         List<String> report = result.report("Database harness: ${h.vendor} (${current}) compared with ${baseline}")
         File reportFile = new File(current, 'drift-report.txt')
         reportFile.setText(report.join('\n') + '\n', 'UTF-8')
