@@ -2,12 +2,14 @@
 # Helpers for the HTTP differential replay (docs/http-replay.md).
 #
 #   tests/replay/portal.sh wait  [base url]                    wait until the portal answers
-#   tests/replay/portal.sh reset <checkout> [gradle args...]   stop Tomcat, dataInit, start Tomcat, wait
+#   tests/replay/portal.sh reset <checkout> [gradle args...]   stop Tomcat, empty HSQLDB, dataInit, start Tomcat, wait
 #
-# The replay compares a portal in the state dataInit leaves it in, so the recorder and the
-# replayer both start from a reset portal. <checkout> is the uPortal-start checkout that runs
-# the portal (the oracle's own checkout when recording). Gradle arguments such as
-# -PtomcatHttpPort=8180 go to every Gradle call; PORTAL_BASE_URL selects the portal to wait for.
+# The replay compares a portal in the state a fresh portalInit leaves it in, so the recorder
+# and the replayer both start from a reset portal. dataInit also redeploys every overlay, so
+# anything changed by hand in .gradle/tomcat/webapps is gone after a reset. <checkout> is the
+# uPortal-start checkout that runs the portal (the oracle's own checkout when recording). Gradle
+# arguments such as -PtomcatHttpPort=8180 go to every Gradle call; PORTAL_BASE_URL selects the
+# portal to wait for.
 set -euo pipefail
 
 base="${PORTAL_BASE_URL:-http://localhost:8080/uPortal/}"
@@ -36,6 +38,12 @@ case "${1:-}" in
         (
             cd "$checkout"
             ./gradlew -S "$@" tomcatStop
+            # A fresh database, as on a new CI runner: dataInit recreates uPortal's tables, but the
+            # portlets that create their own tables when they start (NotificationPortlet) fail on
+            # the ones left from the previous run.
+            ./gradlew -S "$@" hsqlStop
+            rm -rf .gradle/hsqldb
+            ./gradlew -S "$@" hsqlStart
             ./gradlew -S "$@" dataInit
             ./gradlew -S "$@" tomcatStart
         )
