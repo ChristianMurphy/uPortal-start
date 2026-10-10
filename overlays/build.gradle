@@ -2,7 +2,6 @@ import scaldingspoon.gradle.WarOverlayPlugin
 
 subprojects {
 
-    apply plugin: 'maven'
     apply plugin: WarOverlayPlugin
     apply plugin: org.apereo.portal.start.gradle.plugins.GradleTomcatDeployPlugin
 
@@ -14,7 +13,7 @@ subprojects {
 
     warOverlay {
         // Include the jar files in the WAR (default is false).
-        includeWarJars true
+        includeWarJars = true
     }
 
     configurations {
