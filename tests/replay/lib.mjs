@@ -164,7 +164,11 @@ const shape = (text) => text.replaceAll(/\d/g, '9');
 export function maskString(text) {
     let masked = text;
     for (const [pattern, replacement] of STRING_MASKS) masked = masked.replace(pattern, replacement);
-    masked = masked.replace(DATE_TIME, shape).replace(HTTP_DATE, '{http-date}');
+    // JAXB writes no fraction when the milliseconds are zero, so whether there is one depends on
+    // the time. In ISO timestamps with a T (xsd:dateTime) the fraction's presence is therefore not
+    // compared; other formats, such as the portlet-list audit dates, keep it strict.
+    masked = masked.replace(DATE_TIME, (match) => (match.includes('T') ? shape(match).replace(/(99:99:99)(?!\.)/, '$1.999') : shape(match)));
+    masked = masked.replace(HTTP_DATE, '{http-date}');
     return masked;
 }
 
