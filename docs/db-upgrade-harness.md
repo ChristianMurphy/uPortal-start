@@ -133,3 +133,56 @@ A rerun on unchanged code must show zero drift.
   `STRUCTURE` and `NAMES` must show no drift. `DATA` and `GENERATORS` move, because the portal
   wrote rows. The harness does not insert one row per entity yet. Add that when the generator
   mappings change (P2-3, P6-1).
+
+## 5.17 reference results
+
+Recorded with uPortal 5.17.10-SNAPSHOT (Hibernate 4.3.11) and the quickstart data, then
+reproduced with zero drift by a second fresh run on every vendor.
+
+uPortal never sets `hibernate.dialect`. It picks its dialect from the JDBC metadata, first with
+`PortalDialectResolver` and then with Hibernate's `StandardDialectResolver`. The
+`hibernate.dialect` in the vendor files is used only by the bundled portlets. The dialect therefore
+depends on the server version that the driver reports, and so on the driver:
+
+| Vendor | JDBC driver | Dialect uPortal uses | Generated IDs (49 + 2 UUID) are backed by |
+| --- | --- | --- | --- |
+| `hsqldb` 2.5.1 | hsqldb 2.5.1 | `HSQLDialect` (standard) | 49 sequences |
+| `postgres-16` | pgjdbc 42.7.11 | `PostgreSQL81Dialect` (standard: Hibernate 4.3 only knows PostgreSQL 8 and 9, so 10+ falls through to 8.1) | 49 sequences |
+| `mysql-8.4` | MySQL Connector/J 8.4.0 | `MySQL5Dialect` (standard; `PortalDialectResolver` only handles MySQL 5) | 49 one-row tables `up_*_seq (next_val)` |
+| `mariadb-10.6` | MySQL Connector/J 8.4.0 | `MySQL5InnoDBCompressedDialect` (`PortalDialectResolver`: MariaDB 10 announces itself as `5.5.5-10.6`); every entity and legacy table is `ROW_FORMAT=COMPRESSED` | 49 one-row tables |
+| `mariadb-11.4` | MariaDB Connector/J 3.5.6, `useMysqlMetadata=true` | `MySQL5Dialect` (standard) | 49 one-row tables |
+| `sqlserver-2022` | mssql-jdbc 13.4.0 | `SQLServer2005Dialect` (`PortalDialectResolver`) | 49 one-row tables `UP_*_SEQ (next_val)` |
+| `oracle-23` (Free 23.26) | ojdbc11 23.9 | `Oracle12ForceClobDialect` (`PortalDialectResolver`); `varchar` columns longer than 4000 become `CLOB` | 49 sequences |
+
+Released uPortal 5.17.9 (Hibernate 4.2.21) compared with this baseline on PostgreSQL shows
+`STRUCTURE`, `NAMES`: no drift, and `DATA`, `GENERATORS`: drift. Every table, column, constraint
+and constraint name is the same. Only generator values differ: the `UP_SEQUENCE` counters stand at
+110 instead of 60 (the counter store moved from `POOLED` to `POOLED_LO` with Hibernate 4.3), and
+`UP_PORTLET_PREF_SEQ` at 131 instead of 121. 5.17.9 also picks `PostgreSQL82Dialect` where
+5.17.10-SNAPSHOT picks `PostgreSQL81Dialect`. Until uPortal-start's `uPortalVersion` moves to a release with
+Hibernate 4.3, the CI workflow, which builds `gradle.properties.example`, reports this drift.
+
+On every vendor the sequence definition wins over the `@TableGenerator` that 49 entities also
+declare: no `hibernate_sequences` table exists anywhere, so those `@TableGenerator`s are dead.
+Where the dialect has no sequences (MySQL, MariaDB, SQL Server), Hibernate emulates each sequence
+with a table of the sequence's name. Where real sequences exist, every sequence increment equals
+the mapping's `allocationSize`. The two UUID ids (`PortletList`, `PortletListItem`) have no database object.
+
+Setup requirements the harness found, which existing adopters must already meet:
+
+* MySQL and MariaDB on Linux need `lower_case_table_names=1`. uPortal's import scripts use
+  `up_group` while the tables are created as `UP_GROUP`, and with case-sensitive names the base
+  data import fails ("Table 'uportal.up_group' doesn't exist"). Table names are then stored in
+  lower case.
+* MariaDB Connector/J needs `useMysqlMetadata=true`. Without it the driver reports the product
+  `MariaDB`, Hibernate 4.3 cannot pick a dialect ("Unable to determine Dialect to use
+  [name=MariaDB, majorVersion=11]"), and `dataInit` fails.
+
+PostgreSQL large objects (MOD-I24): `UP_RAW_EVENTS.EVENT_DATA` and `UP_ANALYTICS_EVENTS.EVENT_DATA`
+are `@Lob String` fields mapped to `text` columns, and Hibernate 4.3 writes their values as large
+objects whose OIDs it stores in the `text` column. Right after `dataInit` both are empty
+(`lob-report.txt`). After one portal start plus the API specs (`--portal`), `UP_RAW_EVENTS` held
+720 such OIDs (670 in a second run), no `oid` or `lo` column referenced them, and `vacuumlo -n`
+reported "Would remove 720 large objects": every stored raw event would lose its data. `PREF_VALUE` and
+`PREF_NAME` are `varchar(100000)` on PostgreSQL, because of their `@Type(StringType)` override,
+and so are not affected today.
