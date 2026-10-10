@@ -147,6 +147,11 @@ step "source: deploy, dataInit" source-init.log deploy_and_init "$SOURCE" &&
             run_specs "$TARGET" "$OUT/target-playwright"
     fi
 status=$?
+if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
+    # Before the containers go: did a database die (e.g. out of memory)?
+    CONTAINERS=$(container_report "$SOURCE"; container_report "$TARGET")
+    echo "$CONTAINERS"
+fi
 cleanup
 
 echo "==== Copy migration $PAIR summary"
@@ -163,6 +168,7 @@ if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
         text=$(tomcat_errors)
         if [ -n "$text" ]; then github_annotation warning "G-migrate $PAIR: Tomcat log errors" "$text"; fi
     fi
+    if [ -n "${CONTAINERS:-}" ]; then github_annotation warning "G-migrate $PAIR: database containers" "$CONTAINERS"; fi
     exit 1
 fi
 echo "OK: $SOURCE copied to $TARGET and verified$([ "$PLAYWRIGHT" = true ] && echo ', Playwright suite passed on the target')"

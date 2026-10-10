@@ -162,10 +162,7 @@ jobs:
       - name: Choose the push or the nightly set
         id: set
         env:
-          # Temporary (MOD-D25): the nightly sets also on push, to prove them once on the fork,
-          # where the workflow is not on the default branch and cannot be scheduled or
-          # dispatched. Reverted next.
-          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true || github.event_name == 'push' }}
+          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
         run: echo "nightly=$NIGHTLY" >> "$GITHUB_OUTPUT"
       # Checks the coverage rules too, so a pair list that misses a source or target fails here
       - name: G-migrate pairs
