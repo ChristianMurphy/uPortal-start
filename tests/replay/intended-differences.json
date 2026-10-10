@@ -1,0 +1,9 @@
+{
+    "$comment": [
+        "Reviewed differences between uPortal 5.17 (tests/replay/fixtures/5.17) and the current build that are intended (docs/http-replay.md, 'Intended differences').",
+        "An entry matches an exchange by 'path' (glob, * matches anything), and optionally 'roles', 'method' and 'set' (crawl or suite), and one difference by 'field' (status, location, header:<name>, cookie:<name>, body, or a glob) and optionally its exact 'from' and 'to' values.",
+        "An entry with 'security' instead matches a change in the security checks by its path (e.g. logins.admin.cas.password).",
+        "Every entry needs a 'reason' and a 'log' reference. Entries that match nothing are listed in the report so they can be removed."
+    ],
+    "differences": []
+}
