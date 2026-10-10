@@ -62,5 +62,21 @@ war {
     ]) {
         filter(ReplaceTokens, tokens: rootProject.ext.portTokens)
     }
+    // CAS checks passwords in the portal database: the bundled HSQLDB, or with -PdbVendor the
+    // database upgrade harness's database (docs/db-upgrade-harness.md)
+    Map harness = rootProject.ext.dbHarness
+    Map<String, String> casDbTokens = [
+        casDbDriver: harness ? harness.driverClass : 'org.hsqldb.jdbc.JDBCDriver',
+        casDbUrl: harness ? harness.url : "jdbc:hsqldb:hsql://localhost:${rootProject.ext.hsqlPort}/uPortal".toString(),
+        casDbUsername: harness ? harness.username : 'sa',
+        casDbPassword: harness ? harness.password : '',
+    ].collectEntries { k, v ->
+        // The values land in XML attributes (a MySQL URL has '&')
+        [k, ((String) v ?: '').replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;')]
+    }
+    inputs.properties(casDbTokens)
+    filesMatching('WEB-INF/deployerConfigContext.xml') {
+        filter(ReplaceTokens, tokens: casDbTokens)
+    }
     filteringCharset = 'ISO-8859-1'  // Leaves every byte other than the tokens as-is
 }
