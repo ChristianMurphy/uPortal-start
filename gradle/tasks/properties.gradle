@@ -1,7 +1,9 @@
 import java.nio.file.Paths
 
 /*
- * Allows a collection of Java versions to be supported.
+ * Allows a collection of Java versions to be supported:  the long-term-support releases 11, 17,
+ * 21 and 25.
+ * (uPortal 5 is compiled for Java 11, so Java 8 can no longer run it.)
  * If the currect Java version is unsupported, it will stop the current task execution.
  */
 task javaVersionCheck() {
@@ -9,7 +11,7 @@ task javaVersionCheck() {
     description = 'Ensures the current Java version is supported'
 
     doLast {
-        def supportedJavaVersions = [ JavaVersion.VERSION_1_8, JavaVersion.VERSION_11 ];
+        def supportedJavaVersions = [ 11, 17, 21, 25 ].collect { JavaVersion.toVersion(it) };
         def currentJavaVersion = JavaVersion.current();
         if (!supportedJavaVersions.contains(currentJavaVersion)) {
             throw new GradleException("Incorrect Java version; found ${currentJavaVersion} but supported versions are:  ${supportedJavaVersions}");
