@@ -59,6 +59,15 @@ start_database() {  # start_database <vendor>: a fresh, empty database
     echo "Started $image as $container on port $hostport"
 }
 
+container_report() {  # container_report <vendor>: state and last log lines of its container
+    local container
+    [ -n "$(prop "$1" container.image)" ] || return 0
+    container=$(container_name "$1")
+    docker inspect -f "$container: {{.State.Status}}, exit code {{.State.ExitCode}}, OOM killed {{.State.OOMKilled}}" \
+        "$container" 2>/dev/null || { echo "$container: no such container"; return 0; }
+    docker logs --tail 15 "$container" 2>&1 | cut -c1-200
+}
+
 stop_database() {  # stop_database <vendor>
     local vendor="$1"
     use_vendor "$vendor"
