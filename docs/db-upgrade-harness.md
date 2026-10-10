@@ -205,6 +205,78 @@ uPortal-start moved from HSQLDB 2.5.1 to 2.7.4 (see "5.17 reference results").
   wrote rows. The harness does not insert one row per entity yet. Add that when the generator
   mappings change (P2-3, P6-1).
 
+## Copy migration (`dbMigrate`)
+
+uPortal 6.0 upgrades by copying (MOD-D11, MOD-D25): uPortal's copy tool reads a whole uPortal
+database, typically on an old server, and writes it into an empty uPortal schema on a current
+server of the same or another vendor, positions every ID generator and verifies every table. The
+source is only read. Version 0 copies 5.17 to 5.17; the 6.0 schema changes plug in as mapping rules.
+
+The tool is a standalone Spring Boot 4 / Spring Batch 6 command-line application built by uPortal
+(`org.jasig.portal:uPortal-db-migrate:<version>:exec`, Java 21). `dbMigrate` runs that executable
+jar on the JDK 21 that Gradle itself uses, with the two vendors' JDBC drivers on its
+`loader.path`; outside uPortal-start it runs the same way:
+`java -Dloader.path=postgresql.jar,mariadb-java-client.jar -jar uPortal-db-migrate-<version>-exec.jar --help`.
+
+```bash
+# The target schema: deploy for the target vendor, dataInit, and start the portal once, because
+# Bookmarks, Feedback and Notification create their tables on first start, not in dataInit
+./gradlew -PdbVendor=mariadb-12.3 tomcatInstall tomcatDeploy dbWait dataInit tomcatStart
+./gradlew -PdbVendor=mariadb-12.3 tomcatStop
+# Copy (dataInit's rows are deleted first), then verify; the report is in build/db-migrate/
+./gradlew dbMigrate -PsourceDbVendor=postgres-16 -PtargetDbVendor=mariadb-12.3 -PdbMigrateClearTarget
+```
+
+`-PsourceDbVendor` and `-PtargetDbVendor` name files in `tests/db/vendors`, and `-PsourceDbHost`,
+`-PsourceDbPort`, `-PsourceDbUrl`, `-PsourceDbUser`, `-PsourceDbPassword` (and the same for
+`targetDb`) override their settings, like `-PdbHost` and so on do for `-PdbVendor`. The task passes
+the credentials to the tool in files under `build/db-migrate/`, never on the command line.
+
+| Property | Tool option | Effect |
+| --- | --- | --- |
+| `-PdbMigrateClearTarget` | `--clear-target` | Delete the rows of every target table the copy loads (needed after `dataInit`) |
+| `-PskipRawEvents` | `--skip-raw-events` | Do not copy `UP_RAW_EVENTS` (raw event history) |
+| `-PdbMigrateDryRun` | `--dry-run` | Plan, check and count rows only; write nothing |
+| `-PdbMigrateVerifyOnly` | `--verify-only` | Compare a copied target with its source again |
+| `-PdbMigrateArgs='...'` | anything | e.g. `--include`, `--exclude`, `--batch-size`, `--threads`, `--missing-lob skip-row` |
+| `-PdbMigrateHeap`, `-PdbMigrateVersion` | | JVM heap (default `512m`); tool version (default `uPortalVersion`) |
+
+What the tool does, in order (exit status 0 only when everything matched):
+
+1. **Plan.** Tables and columns are matched by name, case-insensitively, within the configured
+   schema. A source table or column without a target fails the plan (exit status 2, nothing
+   written) unless a rule excludes, skips or renames it; so does a NOT NULL target column that
+   nothing fills. The PostgreSQL checks run here too: `text` columns that hold large-object OIDs
+   must be declared (`lob-oid`), and OIDs whose large object is gone (`vacuumlo`, MOD-I24) fail the
+   plan unless `--missing-lob skip-row`.
+2. **Copy** as a Spring Batch job: one chunk-oriented step per table (a JDBC cursor reader with a
+   fetch size, a batched JDBC writer, one target transaction per chunk), the tables of one
+   foreign-key level in parallel (`--threads`), level after level, with constraints left on.
+   Self-references and cycles are broken at nullable foreign keys, loaded in a second pass. Timestamps are read and written as wall-clock values, so the JVM
+   time zone cannot shift them; a lower-precision target column (MySQL/MariaDB `DATETIME`, SQL
+   Server `datetime`) gets truncated values, and the report lists those columns. PostgreSQL large
+   objects are resolved on the server (`lo_get`) and, on a PostgreSQL target, created again with
+   their OID in the `text` column, as 5.17 expects.
+3. **Generators.** Every sequence or one-row `*_SEQ` table ends up at or above
+   `max(id) + allocationSize` of the columns it serves (safe under Hibernate's pooled optimizers),
+   and never below the source generator's own position. uPortal's mapping comes from its entity
+   annotations; the bundled portlets' from `tests/db/migrate/uportal-start-portlets.rules`.
+   `UP_SEQUENCE` is copied as data. MySQL has no sequences, so on MySQL (and on MariaDB, SQL
+   Server under 5.17) the generators are the one-row `*_SEQ` tables, positioned the same way.
+4. **Verify.** Per table, both databases are read again and compared by row count and an
+   order-independent hash of normalized values (numbers without scale, booleans, timestamps as
+   instants at the lower precision, LOB contents, CHAR without padding).
+
+Reference runs (uPortal 5.17.10-SNAPSHOT, 2026-10-10; each target created by `dataInit` plus one
+portal start, then copied with `-PdbMigrateClearTarget`; every table and generator verified):
+
+| Source (old server) | Target (current server) | Tables / rows | Copy + verify | Full Playwright suite on the target |
+| --- | --- | --- | --- | --- |
+| PostgreSQL 16, after a full Playwright run | MariaDB 12.3 | 114 / 14,619 (7,712 raw events in large objects) | 10.8 s + 1.6 s | 120 passed, 2 failed (web proxy, offline sandbox) |
+| MariaDB 11.4, after a full Playwright run | PostgreSQL 18 | 114 / 24,853 | 10.0 s + 2.9 s | 120 passed, 2 failed (web proxy) |
+| HSQLDB 2.7.4, after the API and smoke specs | PostgreSQL 18 (schema-only copy) | 114 / 9,765 | 7.7 s + 3.5 s | not run |
+| PostgreSQL 16, 1,000,000 synthetic raw events | MariaDB 12.3 | 1 / 1,000,000 | 148.5 s + 108.6 s, at most 94 MiB heap | not run |
+
 ## 5.17 reference results
 
 Recorded with uPortal 5.17.10-SNAPSHOT (Hibernate 4.3.11) and the quickstart data, then
