@@ -50,7 +50,9 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
+  # cancels the older run.
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
 jobs:
   plan:
@@ -60,7 +62,17 @@ jobs:
     outputs:
       record: ${{ steps.mode.outputs.record }}
       commit: ${{ steps.mode.outputs.commit }}
+      replay: ${{ steps.mode.outputs.replay }}
     steps:
+      # Prototype only (MOD-D30): on a workstream branch (ccr-43ba0785-hzlrj5-<topic>) the replay
+      # runs only when the push changes the replay itself; the integration branch replays on every
+      # push. A new branch (no previous commit to compare with) replays.
+      - name: Checkout
+        if: startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name == 'push'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Choose the mode
         id: mode
         env:
@@ -68,9 +80,19 @@ jobs:
           INPUT_RECORD: ${{ inputs.record }}
           INPUT_COMMIT: ${{ inputs.commit }}
           MESSAGE: ${{ github.event.head_commit.message }}
+          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
         run: |
           record=false
           commit=false
+          replay=true
+          if [ "$WORKSTREAM" = true ] && [ "$EVENT" = push ] && git cat-file -e "$BEFORE^{commit}" 2> /dev/null; then
+            if ! git diff --name-only "$BEFORE" "$AFTER" | grep -qE '^(tests/replay/|\.github/workflows/replay\.yml$)'; then
+              replay=false
+            fi
+          fi
+          echo "replay=$replay" >> "$GITHUB_OUTPUT"
           if [ "$EVENT" = workflow_dispatch ]; then
             [ "$INPUT_RECORD" = true ] && record=true
             [ "$INPUT_RECORD" = true ] && [ "$INPUT_COMMIT" = true ] && commit=true
@@ -87,7 +109,7 @@ jobs:
   uportal:
     name: "Build uPortal"
     needs: plan
-    if: needs.plan.outputs.record != 'true'
+    if: needs.plan.outputs.record != 'true' && needs.plan.outputs.replay == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
