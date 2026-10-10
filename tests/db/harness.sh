@@ -17,6 +17,9 @@
 #   --skip-init     do not run dataInit; snapshot the database as it is (e.g. after an upgrade)
 #   --portal        also deploy CAS, start Tomcat against the database and run the Playwright
 #                   API specs (needs `npm ci`); on PostgreSQL the LOB report is taken again after
+#   --full-suite    like --portal, but deploy every overlay, create the portlets' tables after the
+#                   snapshot and run the whole Playwright suite (needs `npm ci` and
+#                   `npx playwright install chromium`)
 #
 # Environment:
 #   HARNESS_DB_CONTAINER  with --external: the container to `docker exec` into for vacuumlo
@@ -35,6 +38,7 @@ KEEP=false
 DEPLOY=true
 INIT=true
 PORTAL=false
+FULL_SUITE=false
 VENDORS=()
 GRADLE_EXTRA=()
 
@@ -47,8 +51,9 @@ while [ $# -gt 0 ]; do
         --no-deploy) DEPLOY=false ;;
         --skip-init) INIT=false ;;
         --portal) PORTAL=true ;;
+        --full-suite) PORTAL=true; FULL_SUITE=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,27p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
         *) VENDORS+=("$1") ;;
     esac
@@ -127,7 +132,10 @@ run_vendor() {
     fi
 
     local tasks=()
-    if [ "$DEPLOY" = true ]; then
+    if [ "$DEPLOY" = true ] && [ "$FULL_SUITE" = true ]; then
+        # The whole suite also exercises the bundled portlets
+        tasks+=(tomcatInstall tomcatDeploy)
+    elif [ "$DEPLOY" = true ]; then
         tasks+=(tomcatInstall :overlays:uPortal:tomcatDeploy)
         # The API specs log out through CAS (logout.redirect)
         if [ "$PORTAL" = true ]; then tasks+=(:overlays:cas:tomcatDeploy); fi
@@ -177,6 +185,12 @@ run_portal() {
     local vendor="$1" out="$2" container="$3" reachable="$4"
     local status=0
     local url="http://localhost:$HTTP_PORT/uPortal/"
+    if [ "$FULL_SUITE" = true ] && [ "$INIT" = true ]; then
+        # The portlets keep their tables in the portal database (the snapshot covers uPortal's
+        # own schema only, so it was taken first); create them like portalInit does
+        gradle -PdbVendor="$vendor" dataInit -x :overlays:uPortal:dataInit 2>&1 | tee "$out/portlet-data-init.log"
+        [ "${PIPESTATUS[0]}" -eq 0 ] || return 1
+    fi
     gradle -PdbVendor="$vendor" tomcatStart || return 1
     for _ in $(seq 1 60); do
         if curl -s -o /dev/null -w "%{http_code}" "$url" | grep -qE "200|302"; then break; fi
@@ -188,8 +202,10 @@ run_portal() {
         return 1
     fi
     echo "uPortal is up at $url against $vendor"
-    PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts tests/api \
-        --reporter=list --output="$out/playwright" 2>&1 | tee "$out/playwright-api.log"
+    local specs=(tests/api) log="$out/playwright-api.log"
+    if [ "$FULL_SUITE" = true ]; then specs=(); log="$out/playwright.log"; fi
+    PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts \
+        "${specs[@]+"${specs[@]}"}" --reporter=list --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
     stop_own_tomcat "$vendor"
     if [ "${vendor#postgres}" != "$vendor" ]; then
