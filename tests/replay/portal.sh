@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Helpers for the HTTP differential replay (docs/http-replay.md).
+#
+#   tests/replay/portal.sh wait  [base url]                    wait until the portal answers
+#   tests/replay/portal.sh reset <checkout> [gradle args...]   stop Tomcat, dataInit, start Tomcat, wait
+#
+# The replay compares a portal in the state dataInit leaves it in, so the recorder and the
+# replayer both start from a reset portal. <checkout> is the uPortal-start checkout that runs
+# the portal (the oracle's own checkout when recording). Gradle arguments such as
+# -PtomcatHttpPort=8180 go to every Gradle call; PORTAL_BASE_URL selects the portal to wait for.
+set -euo pipefail
+
+base="${PORTAL_BASE_URL:-http://localhost:8080/uPortal/}"
+
+wait_for_portal() {
+    local url="${1:-$base}"
+    for i in $(seq 1 90); do
+        if curl -s -o /dev/null -w '%{http_code}' "$url" | grep -qE '200|302'; then
+            echo "Portal is ready at $url"
+            return 0
+        fi
+        echo "Waiting for $url ($i/90)"
+        sleep 2
+    done
+    echo "Portal at $url did not become ready" >&2
+    return 1
+}
+
+case "${1:-}" in
+    wait)
+        wait_for_portal "${2:-}"
+        ;;
+    reset)
+        checkout="$2"
+        shift 2
+        (
+            cd "$checkout"
+            ./gradlew -S "$@" tomcatStop
+            ./gradlew -S "$@" dataInit
+            ./gradlew -S "$@" tomcatStart
+        )
+        wait_for_portal
+        ;;
+    *)
+        echo "usage: $0 wait [url] | reset <checkout> [gradle args...]" >&2
+        exit 2
+        ;;
+esac
