@@ -1,6 +1,7 @@
 {
   "type": "module",
   "devDependencies": {
+    "@axe-core/playwright": "~4.13.0",
     "@playwright/test": "^1.64.0",
     "@typescript-eslint/eslint-plugin": "~8.6.0",
     "@typescript-eslint/parser": "~8.6.0",
