@@ -241,9 +241,20 @@ EOF
         fi
     else
         if [ "$1" = on ]; then
-            dbsql <<'EOF'
+            dbsql <<'EOF' || return 1
 TRUNCATE TABLE performance_schema.events_statements_summary_by_digest;
 TRUNCATE TABLE performance_schema.table_io_waits_summary_by_index_usage;
+EOF
+        else
+            # Freeze the workload's digests and index use in a database of their own
+            dbsql <<'EOF'
+CREATE DATABASE IF NOT EXISTS gindex;
+DROP TABLE IF EXISTS gindex.workload_digests;
+CREATE TABLE gindex.workload_digests AS
+  SELECT * FROM performance_schema.events_statements_summary_by_digest WHERE schema_name = 'uportal';
+DROP TABLE IF EXISTS gindex.workload_index_usage;
+CREATE TABLE gindex.workload_index_usage AS
+  SELECT * FROM performance_schema.table_io_waits_summary_by_index_usage WHERE object_schema = 'uportal';
 EOF
         fi
     fi
@@ -270,8 +281,7 @@ job_report() {
             SELECT 'event-session purge', '%from \`up_event_session\` %\`last_accessed\` <%' UNION ALL
             SELECT 'portal-cookie purge', 'delete from \`up_portal_cookies\`%' UNION ALL
             SELECT 'login', '%from \`up_person_dir\` %') j
-          LEFT JOIN performance_schema.events_statements_summary_by_digest s
-            ON s.schema_name = 'uportal' AND LOWER(s.digest_text) LIKE j.pattern
+          LEFT JOIN gindex.workload_digests s ON LOWER(s.digest_text) LIKE j.pattern
           GROUP BY j.job ORDER BY j.job;"
     fi
     echo "$q" | dbsql | tr '|\t' '  '

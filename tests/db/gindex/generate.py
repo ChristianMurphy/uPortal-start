@@ -932,7 +932,7 @@ def copy_target(vendor, name, columns):
         else:
             cols.append(c)
     text = (f"LOAD DATA LOCAL INFILE '/dev/stdin' INTO TABLE {target} CHARACTER SET utf8mb4 "
-            f"FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' LINES TERMINATED BY '\\n' "
+            f"FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '\\\\' LINES TERMINATED BY '\\n' "
             f"({', '.join(cols)})" + (f" SET {', '.join(sets)}" if sets else ""))
     return text, target
 
