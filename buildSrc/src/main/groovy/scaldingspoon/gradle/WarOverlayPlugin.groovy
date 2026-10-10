@@ -14,19 +14,19 @@ class WarOverlayPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.plugins.apply(WarPlugin)
-        project.convention.plugins.warOverlay = new WarOverlayPluginConvention()
+        WarOverlayExtension extension = project.extensions.create('warOverlay', WarOverlayExtension)
 
-        project.tasks.withType(War, new Action<War>() {
+        project.tasks.withType(War).configureEach(new Action<War>() {
             @Override
             void execute(War war) {
                 war.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 war.doFirst {
                     war.classpath = war.classpath.filter { !it.name.endsWith(".war") }
 
-                    war.project.configurations.runtime.each {
+                    war.project.configurations.runtimeClasspath.each {
                         if (it.name.endsWith(".war")) {
                             def fileList = war.project.zipTree(it)
-                            if (project.convention.plugins.warOverlay.includeWarJars) {
+                            if (extension.includeWarJars) {
                                 war.from fileList
                             } else {
                                 war.from fileList.matching { exclude "**/*.jar" }
@@ -40,17 +40,8 @@ class WarOverlayPlugin implements Plugin<Project> {
 }
 
 /**
- * Plugin convention to configure war overlay specific parameters
+ * Extension to configure war overlay specific parameters
  */
-class WarOverlayPluginConvention {
+class WarOverlayExtension {
     boolean includeWarJars = false
-
-    def warOverlay(Closure c) {
-        c.delegate = this
-        c()
-    }
-
-    def methodMissing(String name, args) {
-        this."${name}" = args[0]
-    }
 }
