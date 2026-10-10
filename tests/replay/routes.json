@@ -128,7 +128,7 @@
         { "path": "/uPortal/api/assignments/target/local.0.json" },
         { "path": "/uPortal/api/permissionAssignmentMap?principals[]=local.0&owner=UP_PORTLET_SUBSCRIBE&activity=BROWSE&target=local.0" },
         { "path": "/uPortal/api/permissionAssignments?owner=UP_PORTLET_SUBSCRIBE" },
-        { "method": "POST", "path": "/uPortal/api/portlet-list/", "roles": ["student", "admin"], "contentType": "application/json", "body": "{\"name\":\"Replay list\",\"items\":[{\"entityId\":\"portal-greeting\"},{\"entityId\":\"calendar\"}]}", "note": "setup: a list, so the GETs below show its fields and its audit dates (createdOn, updatedOn)" },
+        { "method": "POST", "path": "/uPortal/api/portlet-list/", "roles": ["student", "admin"], "contentType": "application/json", "body": "{\"name\":\"replay-list\",\"items\":[{\"entityId\":\"portal-greeting\"},{\"entityId\":\"calendar\"}]}", "note": "setup: a list, so the GETs below show its fields and its audit dates (createdOn, updatedOn)" },
         { "path": "/uPortal/api/portlet-list/" },
         { "path": "/uPortal/api/portlet-list", "note": "the mapping needs the trailing slash" },
         { "path": "/uPortal/api/portlet-list/00000000-0000-0000-0000-000000000000" },
