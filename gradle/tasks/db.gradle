@@ -1,0 +1,280 @@
+import java.sql.Connection
+import org.apereo.portal.start.db.DbConnector
+import org.apereo.portal.start.db.GeneratorInventory
+import org.apereo.portal.start.db.PostgresLobReport
+import org.apereo.portal.start.db.SchemaSnapshot
+import org.apereo.portal.start.db.SnapshotComparison
+
+/*
+ * Database upgrade harness (see docs/db-upgrade-harness.md).
+ *
+ * -PdbVendor=<name> selects tests/db/vendors/<name>.properties. With it set:
+ *   - the vendor's JDBC driver is added to the overlays' 'jdbc' configuration (overlays/build.gradle);
+ *   - tomcatConfig (run by tomcatInstall) appends the vendor's connection settings to
+ *     ${server.home}/portal/global.properties, so dataInit and Tomcat use that database;
+ *   - the db* tasks below can wait for, snapshot and verify that database.
+ * -PdbHost, -PdbPort, -PdbUrl, -PdbUser and -PdbPassword override the vendor defaults
+ * (or set ORG_GRADLE_PROJECT_dbPassword etc. in the environment).
+ */
+
+ext {
+    dbVendor = findProperty('dbVendor')
+    dbBaseline = findProperty('dbBaseline') ?: '5.17'
+    dbHarness = null
+}
+
+configurations {
+    dbHarnessDriver
+}
+
+if (dbVendor) {
+    File vendorFile = file("tests/db/vendors/${dbVendor}.properties")
+    if (!vendorFile.file) {
+        String known = file('tests/db/vendors').list()?.findAll { it.endsWith('.properties') }?.collect { it - '.properties' }?.sort()?.join(', ')
+        throw new GradleException("Unknown dbVendor '${dbVendor}'; expected one of: ${known}")
+    }
+    Properties v = new Properties()
+    vendorFile.withInputStream { v.load(it) }
+    Map<String, String> tokens = [
+        dbHost: findProperty('dbHost') ?: 'localhost',
+        dbPort: findProperty('dbPort') ?: v.getProperty('host.port', ''),
+        hsqlPort: hsqlPort,
+        hsqldbVersion: hsqldbVersion,
+    ]
+    Closure<String> fill = { String s ->
+        s == null ? null : tokens.inject(s) { String acc, String k, String val -> acc.replace("@${k}@", val) }
+    }
+    project.ext.dbHarness = [
+        vendor: dbVendor,
+        driver: fill(v.getProperty('jdbc.driver')),
+        driverClass: v.getProperty('hibernate.connection.driver_class'),
+        url: findProperty('dbUrl') ?: fill(v.getProperty('hibernate.connection.url')),
+        username: findProperty('dbUser') ?: v.getProperty('hibernate.connection.username'),
+        password: findProperty('dbPassword') ?: v.getProperty('hibernate.connection.password', ''),
+        validationQuery: v.getProperty('hibernate.connection.validationQuery'),
+        // Used by the bundled portlets only; uPortal resolves its dialect from the JDBC metadata
+        dialect: v.getProperty('hibernate.dialect'),
+        setupUrl: fill(v.getProperty('setup.url')),
+        setupUser: findProperty('dbSetupUser') ?: v.getProperty('setup.username'),
+        setupPassword: findProperty('dbSetupPassword') ?: v.getProperty('setup.password'),
+        setupSql: v.stringPropertyNames().findAll { it.startsWith('setup.sql.') }
+                .sort { it.substring('setup.sql.'.length()) as int }.collect { fill(v.getProperty(it)) },
+    ]
+    dependencies {
+        dbHarnessDriver dbHarness.driver
+    }
+
+    /*
+     * Point ${portal.home}/global.properties at the harness database. Later lines of a properties
+     * file win, so the appended block overrides the HSQLDB defaults copied from etc/portal.
+     */
+    tomcatConfig.doLast {
+        String serverHome = rootProject.ext['buildProperties'].getProperty('server.home')
+        File global = file("${serverHome}/portal/global.properties")
+        Closure<String> esc = { String s -> (s ?: '').replace('\\', '\\\\') }
+        global.append("""
+
+##
+## Database upgrade harness (-PdbVendor=${dbVendor}); overrides the settings above.
+##
+hibernate.connection.driver_class=${esc(dbHarness.driverClass)}
+hibernate.connection.url=${esc(dbHarness.url)}
+hibernate.connection.username=${esc(dbHarness.username)}
+hibernate.connection.password=${esc(dbHarness.password)}
+hibernate.connection.validationQuery=${esc(dbHarness.validationQuery)}
+hibernate.dialect=${esc(dbHarness.dialect)}
+""", 'ISO-8859-1')
+        logger.lifecycle("Pointed ${global} at the ${dbVendor} database ${dbHarness.url}")
+    }
+}
+
+Map requireHarness() {
+    if (!dbHarness) {
+        throw new GradleException('This task needs -PdbVendor=<name>; see tests/db/vendors and docs/db-upgrade-harness.md')
+    }
+    return dbHarness
+}
+
+DbConnector harnessConnector() {
+    Map h = requireHarness()
+    return new DbConnector(configurations.dbHarnessDriver.files, h.driverClass, h.url, h.username, h.password)
+}
+
+File harnessOutputDir() {
+    return file("build/db-harness/${requireHarness().vendor}")
+}
+
+File harnessBaselineDir() {
+    return file("tests/db/snapshots/${dbBaseline}/${requireHarness().vendor}")
+}
+
+DbConnector setupConnector() {
+    Map h = requireHarness()
+    return new DbConnector(configurations.dbHarnessDriver.files, h.driverClass, h.setupUrl, h.setupUser, h.setupPassword)
+}
+
+task dbWait {
+    group 'Database harness'
+    description 'Waits until the -PdbVendor database server accepts JDBC connections (-PdbWaitSeconds, default 300)'
+
+    doLast {
+        int seconds = (findProperty('dbWaitSeconds') ?: '300') as int
+        // A vendor with setup statements has no application database yet; wait for the server
+        DbConnector connector = requireHarness().setupSql ? setupConnector() : harnessConnector()
+        connector.waitUntilAvailable(seconds) { logger.lifecycle(it) }
+    }
+}
+
+task dbSetup {
+    group 'Database harness'
+    description 'Runs the vendor\'s one-time setup statements (setup.sql.N), e.g. CREATE DATABASE on SQL Server'
+    mustRunAfter dbWait
+
+    doLast {
+        Map h = requireHarness()
+        if (!h.setupSql) {
+            logger.lifecycle("No setup statements for ${h.vendor}")
+            return
+        }
+        int seconds = (findProperty('dbWaitSeconds') ?: '300') as int
+        DbConnector admin = setupConnector()
+        admin.waitUntilAvailable(seconds) { logger.lifecycle(it) }
+        Connection c = admin.connect()
+        try {
+            h.setupSql.each { String sql ->
+                logger.lifecycle("Setup: ${sql}")
+                c.createStatement().withCloseable { it.execute(sql) }
+            }
+        } finally {
+            c.close()
+        }
+        harnessConnector().waitUntilAvailable(seconds) { logger.lifecycle(it) }
+    }
+}
+
+task dbSnapshot {
+    group 'Database harness'
+    description 'Writes schema.txt, schema-normalized.txt and generators.txt for -PdbVendor to build/db-harness/<vendor>'
+    dependsOn portalProperties
+
+    doLast {
+        Map h = requireHarness()
+        String serverHome = rootProject.ext['buildProperties'].getProperty('server.home')
+        String serverBase = rootProject.ext['buildProperties'].getProperty('server.base')
+        File webapp = file("${serverBase}/webapps/uPortal")
+        File webLib = new File(webapp, 'WEB-INF/lib')
+        if (!webLib.directory) {
+            throw new GradleException("${webLib} not found; deploy uPortal first (:overlays:uPortal:tomcatDeploy). " +
+                    'The generator inventory reads the entity classes of the deployed uPortal.')
+        }
+        // Without logback, uPortal's logback.xml (which logs under ${catalina.base}) stays inactive
+        List<File> jars = (webLib.listFiles() as List).findAll { it.name.endsWith('.jar') && !it.name.startsWith('logback-') }.sort()
+        List<File> classpath = [new File(webapp, 'WEB-INF/classes')] + jars +
+                (file("${serverHome}/lib").listFiles() ?: []).findAll { it.name.endsWith('.jar') } +
+                (file("${serverHome}/shared/lib").listFiles() ?: []).findAll { it.name.endsWith('.jar') }
+        List<File> scanned = jars.findAll { it.name.startsWith('uPortal-') } + [new File(webapp, 'WEB-INF/classes')]
+
+        File out = harnessOutputDir()
+        out.mkdirs()
+        Connection c = harnessConnector().connect()
+        try {
+            GeneratorInventory inventory = GeneratorInventory.scan(classpath, scanned, c)
+            Set<String> generatorObjects = new TreeSet<>(String.CASE_INSENSITIVE_ORDER)
+            inventory.generatorsByName.values().flatten().each { GeneratorInventory.GeneratorDef d ->
+                if (d.kind == 'sequence' && d.attrs.sequenceName) generatorObjects << (String) d.attrs.sequenceName
+                if (d.kind == 'table') generatorObjects << ((String) d.attrs.table ?: 'hibernate_sequences')
+            }
+            SchemaSnapshot snapshot = SchemaSnapshot.read(c, generatorObjects)
+            Map<String, String> header = [
+                'vendor': h.vendor,
+                'uPortalVersion': uPortalVersion,
+                'dialect (resolved by the deployed uPortal)': inventory.dialect,
+            ]
+            new File(out, SnapshotComparison.SCHEMA).setText(snapshot.render(false, header).join('\n') + '\n', 'UTF-8')
+            new File(out, SnapshotComparison.NORMALIZED).setText(snapshot.render(true, header).join('\n') + '\n', 'UTF-8')
+            new File(out, SnapshotComparison.GENERATORS).setText(inventory.render(snapshot, c, header).join('\n') + '\n', 'UTF-8')
+            logger.lifecycle("Snapshot of ${h.vendor} (${snapshot.productName} ${snapshot.productVersion}) written to ${out}")
+            logger.lifecycle("  ${snapshot.tableNames.size()} tables, ${snapshot.sequenceInfo.size()} sequences, " +
+                    "${inventory.ids.size()} generated ids; uPortal dialect: ${inventory.dialect}")
+        } finally {
+            c.close()
+        }
+    }
+}
+
+task dbVerify {
+    group 'Database harness'
+    description 'Compares build/db-harness/<vendor> with tests/db/snapshots/<dbBaseline>/<vendor> (-PdbBaseline, default 5.17); fails on any drift'
+    mustRunAfter dbSnapshot
+
+    doLast {
+        Map h = requireHarness()
+        File baseline = harnessBaselineDir()
+        File current = harnessOutputDir()
+        SnapshotComparison result = SnapshotComparison.compare(baseline, current)
+        List<String> report = result.report("Database harness: ${h.vendor} (${current}) compared with ${baseline}")
+        File reportFile = new File(current, 'drift-report.txt')
+        reportFile.setText(report.join('\n') + '\n', 'UTF-8')
+        report.take(200).each { logger.lifecycle(it) }
+        if (report.size() > 200) {
+            logger.lifecycle("... ${report.size() - 200} more lines in ${reportFile}")
+        }
+        if (!result.zeroDrift) {
+            throw new GradleException("Database drift for ${h.vendor}; see ${reportFile}")
+        }
+    }
+}
+
+task dbRecord {
+    group 'Database harness'
+    description 'Records build/db-harness/<vendor> as the baseline tests/db/snapshots/<dbBaseline>/<vendor>'
+    mustRunAfter dbSnapshot
+
+    doLast {
+        File from = harnessOutputDir()
+        File to = harnessBaselineDir()
+        to.mkdirs()
+        (SnapshotComparison.FILES + ['lob-report.txt']).each { String name ->
+            File f = new File(from, name)
+            if (f.file) {
+                new File(to, name).bytes = f.bytes
+                logger.lifecycle("Recorded ${new File(to, name)}")
+            }
+        }
+    }
+}
+
+task dbLobReport {
+    group 'Database harness'
+    description 'PostgreSQL only: lists the columns that hold large-object OIDs and what vacuumlo would delete (MOD-I24)'
+    mustRunAfter dbSnapshot
+
+    doLast {
+        Connection c = harnessConnector().connect()
+        try {
+            if (SchemaSnapshot.familyOf(c.metaData.databaseProductName, c.metaData.databaseProductVersion) != SchemaSnapshot.Family.POSTGRESQL) {
+                logger.lifecycle("dbLobReport only applies to PostgreSQL; skipping ${dbVendor}")
+                return
+            }
+            List<String> report = PostgresLobReport.run(c)
+            File out = harnessOutputDir()
+            out.mkdirs()
+            String name = findProperty('dbLobReportName') ?: 'lob-report.txt'
+            new File(out, name).setText(report.join('\n') + '\n', 'UTF-8')
+            report.each { logger.lifecycle(it) }
+        } finally {
+            c.close()
+        }
+    }
+}
+
+/*
+ * Ordering when the tasks share one command line: database ready -> dataInit -> snapshot.
+ */
+subprojects {
+    tasks.matching { it.name == 'dataInit' }.all { Task t ->
+        t.mustRunAfter rootProject.tasks.dbWait, rootProject.tasks.dbSetup
+        rootProject.tasks.dbSnapshot.mustRunAfter t
+        rootProject.tasks.dbLobReport.mustRunAfter t
+    }
+}

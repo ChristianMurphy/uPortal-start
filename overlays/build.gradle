@@ -30,6 +30,10 @@ subprojects {
          * do not remove the hsqldb driver jar that is already listed.
          */
         jdbc "org.hsqldb:hsqldb:${hsqldbVersion}"
+        // The database upgrade harness (-PdbVendor=..., see docs/db-upgrade-harness.md) adds its driver
+        if (rootProject.ext.dbHarness) {
+            jdbc rootProject.ext.dbHarness.driver
+        }
 
         /*
          * These are nearly the same uPortal dependencies declared by uPortal-webapp;
