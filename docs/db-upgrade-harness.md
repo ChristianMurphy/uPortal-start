@@ -33,10 +33,10 @@ below) reads them and writes a current server. Each column below names files in
 * The copy-migration gate (`G-migrate`, see "Copy migration in CI") copies used 5.17 databases on
   the migration sources into the runtime databases.
 * uPortal's own `db-integration.yml` runs its JPA/DAO tests on the five runtime servers on every
-  push, and nightly on the next releases (PostgreSQL 19 beta, MySQL 26 innovation, MariaDB 13) as
+  push, and nightly on the next releases (PostgreSQL 19 beta, MySQL 26 Innovation, MariaDB 13) as
   canaries that are allowed to fail.
 
-Every image is pinned as `name:tag@sha256:digest` in the vendor file. Renovate moves digests and
+The vendor file pins each image as `name:tag@sha256:digest`. Renovate moves digests and
 patch versions; a new release series is a change to this table, with its own baseline.
 
 ## Running it
@@ -59,7 +59,7 @@ its own ports there. Options:
 | --- | --- |
 | `--record` | Write the snapshots as the baseline instead of comparing with it (needs `--baseline`) |
 | `--baseline X` | Use `tests/db/snapshots/X` (default: see "Choosing the baseline") |
-| `--external` | The database is already running (CI service container); start no container |
+| `--external` | The database is already running (CI service container); don't start a container |
 | `--keep` | Leave the container running afterwards |
 | `--skip-init` | Do not run `dataInit`; snapshot the database as it is |
 | `--no-deploy` | Reuse the Tomcat and uPortal already deployed for this vendor |
@@ -81,8 +81,8 @@ scripts start every database themselves from its vendor file; MySQL and MariaDB 
 option (`lower_case_table_names=1`) that a service container cannot be given. On GitHub Actions
 the harness also shows a failed vendor's drift report and failed specs as annotations on the run.
 In the prototype, a workstream branch (`ccr-43ba0785-hzlrj5-<topic>`, MOD-D30) runs a light profile
-instead: the uPortal build, Playwright on HSQLDB, the harness and Playwright on PostgreSQL 18, and
-one G-migrate pair.
+instead, with the uPortal build, Playwright on HSQLDB, the harness and Playwright on PostgreSQL 18,
+and one G-migrate pair.
 
 `.github/workflows/db-harness.yml` checks the released `uPortalVersion` on master, on the servers
 the 5.17 baselines were first recorded on (PostgreSQL 16, MySQL 8.4, MariaDB 10.6 and 11.4, SQL
@@ -100,7 +100,7 @@ tables in the same database.
 driver is added to the overlays' `jdbc` configuration, and `tomcatConfig` (run by `tomcatInstall`)
 appends the vendor's connection settings to `.gradle/tomcat/portal/global.properties`. The CAS
 overlay, which checks passwords against `UP_PERSON_DIR` itself (`deployerConfigContext.xml`), is
-built against the same database; without `-PdbVendor` it keeps using the bundled HSQLDB. A portal
+built against the same database. Without `-PdbVendor` it still uses the bundled HSQLDB. A portal
 that is moved off HSQLDB without the harness needs the CAS data source changed by hand (see "How
 To Start the Embedded Database" in `README.md`).
 `-PdbHost`, `-PdbPort`, `-PdbUrl`, `-PdbUser` and `-PdbPassword` override the defaults, also as
@@ -124,12 +124,12 @@ docker run -d --name pg -p 15418:5432 -e POSTGRES_DB=uportal -e POSTGRES_USER=up
 | `dbLobReport` | PostgreSQL only: which columns hold large-object OIDs, and what `vacuumlo` would delete |
 
 `dbSnapshot` reads the entity classes of the deployed uPortal (`.gradle/tomcat/webapps/uPortal`),
-so deploy uPortal before taking a snapshot. The code lives in
+so deploy uPortal before taking a snapshot. The code is in
 `buildSrc/src/main/groovy/org/apereo/portal/start/db/`.
 
 ## The snapshot files
 
-Every file has one complete fact per line, sorted, in `[section]` blocks. Lines starting with `#`
+Each file has one complete fact per line, sorted, in `[section]` blocks. Lines starting with `#`
 (database and driver versions, the dialect) are informational and are not compared.
 
 * `schema.txt` lists tables, columns (type, size, nullability, default, auto-increment), primary
@@ -139,7 +139,7 @@ Every file has one complete fact per line, sorted, in `[section]` blocks. Lines 
   column). Names that the database invents for itself, such as `SYS_C0012345` on Oracle,
   `SYS_IDX_10093` on HSQLDB or `PK__UP_USER__1234ABCD` on SQL Server, are shown as
   `<db-generated>`. They are not chosen by uPortal and would otherwise change on every run.
-* `schema-normalized.txt` holds the same facts, with identifiers upper-cased and constraint and
+* `schema-normalized.txt` has the same facts, with identifiers upper-cased and constraint and
   index names removed. A foreign key is then identified by its table, columns and target.
 * `generators.txt` has one line for each of the 51 entities with a generated ID. Each line gives
   the generator definitions the entity declares (49 declare both a `@SequenceGenerator` and a
@@ -160,9 +160,9 @@ Every file has one complete fact per line, sorted, in `[section]` blocks. Lines 
 | `NAMES` | `schema.txt` | The same constraint or index exists under another name; each rename is listed |
 | `GENERATORS` | `generators.txt` | An ID is backed by a different object, increment or value |
 
-Zero drift means all four match the baseline. Column order is not compared: Hibernate 6.2+
-orders columns differently in new tables, and the order does not matter to an existing database.
-A rerun on unchanged code must show zero drift.
+Zero drift means all four match the baseline. Column order is not compared, because Hibernate 6.2+
+orders columns differently in new tables and the order does not matter to an existing database.
+A rerun on unchanged code must not show any drift.
 
 ### Sequence values
 
@@ -171,9 +171,9 @@ IDs are allocated: the `UP_SEQUENCE` counters of 5.17.9 and 5.17.10-SNAPSHOT dif
 "5.17 reference results").
 
 Oracle is the exception. The snapshot reads `LAST_NUMBER`, the high-water mark of the sequence's
-cache, and Oracle sizes that cache by how fast the sequence is used, so the value changes from run
+cache. Because Oracle sizes that cache by how fast the sequence is used, the value changes from run
 to run of the same build: `UP_PORTLET_DEF_PARAM_SEQ` read 1201, 546 and 931 in three runs, with
-403 rows and a `max(id)` of 403 each time. `oracle-23.properties` therefore sets
+403 rows and a `max(id)` of 403 each time. So `oracle-23.properties` sets
 `verify.sequenceValues=invariant`. `dbVerify` then leaves sequence values out of the comparison
 and checks two rules on this run's `generators.txt` instead:
 
@@ -189,7 +189,7 @@ file without the key uses `verify.sequenceValues=exact`.
 
 Without `--baseline` (or `-PdbBaseline` for the Gradle tasks), the harness compares with
 `tests/db/snapshots/<major.minor.patch of uPortalVersion>` when that directory exists, and with
-`5.17` otherwise. `uPortalVersion=5.17.9` therefore uses `tests/db/snapshots/5.17.9` once it is
+`5.17` otherwise. So `uPortalVersion=5.17.9` uses `tests/db/snapshots/5.17.9` once it is
 recorded, while `5.17.10-SNAPSHOT` (no `5.17.10` directory) still uses `5.17`. The
 `HARNESS_BASELINE` environment variable sets the default for `--baseline`; `db-harness.yml` fills
 it from its `baseline` input, which is empty unless a manual run sets it.
@@ -199,8 +199,8 @@ it from its `baseline` input, which is empty unless a manual run sets it.
 SQL Server and Oracle do not fit next to a portal in a small container, so record new baselines
 on GitHub Actions instead of locally. On GitHub Actions the harness attaches the snapshot files
 (as a base64 `tar.gz`) to the job as notice annotations titled `snapshot of <vendor>` whenever it
-records (`--record`) or finds no baseline to compare with, and annotations can be read wherever
-the GitHub API can, even where artifacts cannot be downloaded:
+records (`--record`) or doesn't find a baseline to compare with, and annotations can be read
+wherever the GitHub API can, even where artifacts cannot be downloaded:
 
 1. Point the run at the uPortal to record: `uPortalVersion` in `gradle.properties.example` for
    `db-harness.yml`, or the uPortal branch for `integration.yml`.
@@ -217,15 +217,15 @@ the GitHub API can, even where artifacts cannot be downloaded:
 Never re-record a baseline; a new uPortal version or an intentional schema change gets a new
 directory, and a new database server a new vendor directory. `dbRecord` refuses to overwrite a
 recorded baseline unless `-PdbRecordReplace` is given. The one exception so far is a database
-server that uPortal-start itself ships, when the upgrade changes nothing but names: `hsqldb` was
+server that uPortal-start itself bundles, when the upgrade changes nothing but names: `hsqldb` was
 re-recorded when uPortal-start moved from HSQLDB 2.5.1 to 2.7.4 (MOD-I83, see "5.17 reference
 results").
 
 ## How later phases use it
 
 * **Fresh-install check, every persistence change (P1 to P7).** Point `uPortalVersion` at the
-  new build, run the harness for every vendor, and require zero drift against `5.17`. A change
-  that is meant to change the schema records a new baseline in its own directory (for example
+  new build, run the harness for every vendor, and treat any drift against `5.17` as a failure. A
+  change that is meant to change the schema records a new baseline in its own directory (e.g.
   `--record --baseline 6.0-p2`) in the same PR, with the drift report in the PR description.
   Never re-record `5.17`.
 * **Expected name drift.** Hibernate 5 names foreign keys and unique keys differently from 4.3.
@@ -238,7 +238,7 @@ results").
   `tests/db/harness.sh --external --skip-init --keep --portal postgres-18 -- -PuPortalVersion=<new>`.
   Then snapshot the database the new code has run against:
   `tests/db/harness.sh --external --skip-init postgres-18 -- -PuPortalVersion=<new>`.
-  `STRUCTURE` and `NAMES` must show no drift. `DATA` and `GENERATORS` move, because the portal
+  `STRUCTURE` and `NAMES` must not drift. `DATA` and `GENERATORS` move, because the portal
   wrote rows. The harness does not insert one row per entity yet. Add that when the generator
   mappings change (P2-3, P6-1).
 
@@ -247,12 +247,12 @@ results").
 uPortal 6.0 upgrades by copying (MOD-D11, MOD-D25): uPortal's copy tool reads a whole uPortal
 database, typically on an old server, and writes it into an empty uPortal schema on a current
 server of the same or another vendor, positions every ID generator and verifies every table. The
-source is only read. Version 0 copies 5.17 to 5.17; the 6.0 schema changes plug in as mapping rules.
+source is only read. Version 0 copies 5.17 to 5.17. The 6.0 schema changes plug in as mapping rules.
 
 The tool is a standalone Spring Boot 4 / Spring Batch 6 command-line application built by uPortal
 (`org.jasig.portal:uPortal-db-migrate:<version>:exec`, Java 21). `dbMigrate` runs that executable
 jar on the JDK 21 that Gradle itself uses, with the two vendors' JDBC drivers on its
-`loader.path`; outside uPortal-start it runs the same way:
+`loader.path`. Outside uPortal-start it runs the same way:
 `java -Dloader.path=postgresql.jar,mariadb-java-client.jar -jar uPortal-db-migrate-<version>-exec.jar --help`.
 
 ```bash
@@ -273,7 +273,7 @@ the credentials to the tool in files under `build/db-migrate/`, never on the com
 | --- | --- | --- |
 | `-PdbMigrateClearTarget` | `--clear-target` | Delete the rows of every target table the copy loads (needed after `dataInit`) |
 | `-PskipRawEvents` | `--skip-raw-events` | Do not copy `UP_RAW_EVENTS` (raw event history) |
-| `-PdbMigrateDryRun` | `--dry-run` | Plan, check and count rows only; write nothing |
+| `-PdbMigrateDryRun` | `--dry-run` | Plan, check and count rows only; don't write anything |
 | `-PdbMigrateVerifyOnly` | `--verify-only` | Compare a copied target with its source again |
 | `-PdbMigrateArgs='...'` | anything | e.g. `--include`, `--exclude`, `--batch-size`, `--threads`, `--missing-lob skip-row` |
 | `-PdbMigrateHeap`, `-PdbMigrateVersion` | | JVM heap (default `512m`); tool version (default `uPortalVersion`) |
@@ -340,7 +340,7 @@ the `integration.yml` job matrix, failing when a set misses its rules:
 * **Workstream branches** (prototype only, MOD-D30): the one cross-vendor pair listed under
   `workstream` (MariaDB 11.4 → PostgreSQL 18).
 * **Nightly** (the schedule, or a manual run with `nightly`): every (source vendor, target vendor)
-  pair once, 36 in all. The versions of each source vendor take turns, so every source version is
+  pair once, 36 in all. The versions of each source vendor alternate, so every source version is
   read at least once, and every target is written six times. The whole Playwright suite runs on
   each target once, after a copy from another vendor.
 
@@ -352,12 +352,12 @@ MySQL 9.7, MariaDB 12.3, SQL Server 2025, Oracle Free 23.26 and HSQLDB portals. 
 three bugs, all fixed:
 
 * Parallel data tasks deadlocked on SQL Server (MOD-I107).
-* The Feedback portlet had no usable SQL Server dialect (MOD-I108; see `portlet.<file>.<key>` in
+* The Feedback portlet had no usable SQL Server dialect (MOD-I108, see `portlet.<file>.<key>` in
   `hsqldb.properties`).
 * Verification of SQL Server `datetime` values copied into whole seconds (MOD-I109).
 
 `hsqldb-2.5.1` reads a database that HSQLDB 2.5.1, which uPortal-start bundled before 2.7.4,
-created. HSQLDB 2.7.4 can open such files, but converts them as it does, and a migration source
+created. HSQLDB 2.7.4 can open such files but converts them when it does so. A migration source
 should only be read. So the vendor file runs uPortal-start's own HSQLDB server at 2.5.1, on its own
 port and in its own directory. An adopter serves an existing 2.5.1 database the same way:
 
@@ -378,22 +378,22 @@ creates the same schema, names and generators on the newer servers, with the sam
 
 The `hsqldb` baseline was first recorded on HSQLDB 2.5.1 and re-recorded on 2.7.4, the version
 uPortal-start now bundles. Compared with the 2.5.1 recording, `STRUCTURE`, `DATA` and `GENERATORS`
-show no drift, and `NAMES` shows 111 renames, all of them indexes that back a constraint: 2.5.1
+do not drift, and `NAMES` shows 111 renames, all of them indexes that back a constraint: 2.5.1
 named them itself (`SYS_IDX_*`, shown as `<db-generated>`), while 2.7.4 gives them the name of
 their constraint (67 foreign keys, 42 Hibernate `UK_*` unique keys, `UPET_NAME_UNQ` and
 `UPU_USER_NAME`).
 
 uPortal never sets `hibernate.dialect`. It picks its dialect from the JDBC metadata, first with
 `PortalDialectResolver` and then with Hibernate's `StandardDialectResolver`. The
-`hibernate.dialect` in the vendor files is used only by the bundled portlets. The dialect therefore
+`hibernate.dialect` in the vendor files is used only by the bundled portlets. The dialect
 depends on the server version that the driver reports, and so on the driver:
 
 | Vendor | JDBC driver | Dialect uPortal uses | Generated IDs (49 + 2 UUID) are backed by |
 | --- | --- | --- | --- |
 | `hsqldb` 2.7.4 | hsqldb 2.7.4 | `HSQLDialect` (standard) | 49 sequences |
-| `postgres-16`, `postgres-18` | pgjdbc 42.7.11 | `PostgreSQL81Dialect` (standard: Hibernate 4.3 only knows PostgreSQL 8 and 9, so 10+ falls through to 8.1) | 49 sequences |
+| `postgres-16`, `postgres-18` | pgjdbc 42.7.11 | `PostgreSQL81Dialect` (standard, since Hibernate 4.3 only knows PostgreSQL 8 and 9 and resolves 10+ to 8.1) | 49 sequences |
 | `mysql-8.4`, `mysql-9.7` | MySQL Connector/J 8.4.0 | `MySQL5Dialect` (standard; `PortalDialectResolver` only handles MySQL 5) | 49 one-row tables `up_*_seq (next_val)` |
-| `mariadb-10.6` | MySQL Connector/J 8.4.0 | `MySQL5InnoDBCompressedDialect` (`PortalDialectResolver`: MariaDB 10 announces itself as `5.5.5-10.6`); every entity and legacy table is `ROW_FORMAT=COMPRESSED` | 49 one-row tables |
+| `mariadb-10.6` | MySQL Connector/J 8.4.0 | `MySQL5InnoDBCompressedDialect` (`PortalDialectResolver`, because MariaDB 10 reports its version as `5.5.5-10.6`); every entity and legacy table is `ROW_FORMAT=COMPRESSED` | 49 one-row tables |
 | `mariadb-11.4`, `mariadb-12.3` | MariaDB Connector/J 3.5.6, `useMysqlMetadata=true` | `MySQL5Dialect` (standard) | 49 one-row tables |
 | `sqlserver-2022`, `sqlserver-2025` | mssql-jdbc 13.4.0 | `SQLServer2005Dialect` (`PortalDialectResolver`) | 49 one-row tables `UP_*_SEQ (next_val)` |
 | `oracle-23` (Free 23.26) | ojdbc11 23.9 | `Oracle12ForceClobDialect` (`PortalDialectResolver`); `varchar` columns longer than 4000 become `CLOB` | 49 sequences |
@@ -406,8 +406,8 @@ and constraint name is the same. Only generator values differ: the `UP_SEQUENCE`
 5.17.10-SNAPSHOT picks `PostgreSQL81Dialect`. Until uPortal-start's `uPortalVersion` moves to a release with
 Hibernate 4.3, the CI workflow, which builds `gradle.properties.example`, reports this drift.
 
-On every vendor the sequence definition wins over the `@TableGenerator` that 49 entities also
-declare: no `hibernate_sequences` table exists anywhere, so those `@TableGenerator`s are dead.
+On every vendor the sequence definition takes precedence over the `@TableGenerator` that 49
+entities also declare: no `hibernate_sequences` table exists anywhere, so those `@TableGenerator`s are dead.
 Where the dialect has no sequences (MySQL, MariaDB, SQL Server), Hibernate emulates each sequence
 with a table of the sequence's name. Where real sequences exist, every sequence increment equals
 the mapping's `allocationSize`. The two UUID ids (`PortletList`, `PortletListItem`) have no database object.
@@ -415,8 +415,8 @@ the mapping's `allocationSize`. The two UUID ids (`PortletList`, `PortletListIte
 Setup requirements the harness found, which existing adopters must already meet:
 
 * MySQL and MariaDB on Linux need `lower_case_table_names=1`. uPortal's import scripts use
-  `up_group` while the tables are created as `UP_GROUP`, and with case-sensitive names the base
-  data import fails ("Table 'uportal.up_group' doesn't exist"). Table names are then stored in
+  `up_group` while the tables are created as `UP_GROUP`, and with case-sensitive names the import of
+  the base data fails ("Table 'uportal.up_group' doesn't exist"). Table names are then stored in
   lower case.
 * MariaDB Connector/J needs `useMysqlMetadata=true`. Without it the driver reports the product
   `MariaDB`, Hibernate 4.3 cannot pick a dialect ("Unable to determine Dialect to use
