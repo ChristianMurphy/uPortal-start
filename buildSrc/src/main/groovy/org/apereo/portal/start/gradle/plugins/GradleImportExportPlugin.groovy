@@ -7,7 +7,7 @@ import org.gradle.api.provider.Provider
 class GradleImportExportPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
-        // One data task at a time against the portal database, across all overlays (MOD-I100)
+        // One data task at a time against the portal database, across all overlays (MOD-I107)
         Provider<PortalDatabaseService> portalDatabase = project.gradle.sharedServices.registerIfAbsent(
                 'portalDatabase', PortalDatabaseService) { spec -> spec.maxParallelUsages.set(1) }
         project.task('dataInit') {
