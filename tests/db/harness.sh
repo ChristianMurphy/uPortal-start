@@ -219,8 +219,9 @@ run_portal() {
     status=${PIPESTATUS[0]}
     if [ "$status" -ne 0 ] && [ "${GITHUB_ACTIONS:-}" = true ]; then
         # Temporary diagnostic: the exceptions the portal logged (the artifacts are out of reach)
-        grep -h -E "^(WARN|ERROR) |^Caused by:|^[A-Za-z_.$]+(Exception|Error)\b" \
-            .gradle/tomcat/logs/portal/portal.log | grep -v "^WARN .*Ehcache" | tail -n 120 || true
+        grep -h -A80 "PortletListRESTController" .gradle/tomcat/logs/portal/portal.log |
+            grep -E "PortletListRESTController|^[A-Za-z_.$]+(Exception|Error)\b|^Caused by:|ORA-[0-9]" |
+            head -n 80 || true
     fi
     stop_own_tomcat "$vendor"
     if [ "${vendor#postgres}" != "$vendor" ]; then
