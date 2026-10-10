@@ -32,8 +32,20 @@ api() {
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-# Each job's snapshot annotations, joined in part order: $tmp/<job>/<vendor>.b64
-for job in $(api "actions/runs/$run/jobs?per_page=100" | jq -r '.jobs[].id'); do
+# Every job of every attempt (a re-run copies the jobs it does not repeat, without their
+# annotations)
+jobs=()
+page=1
+while :; do
+    ids=$(api "actions/runs/$run/jobs?filter=all&per_page=100&page=$page" | jq -r '.jobs[].id')
+    [ -n "$ids" ] || break
+    read -r -d '' -a more <<< "$ids" || true
+    jobs+=("${more[@]}")
+    page=$((page + 1))
+done
+
+# Each job's snapshot annotations, one file per part: $tmp/<job>/<vendor>.<part>-of-<parts>
+for job in "${jobs[@]}"; do
     page=1
     while :; do
         api "check-runs/$job/annotations?per_page=50&page=$page" > "$tmp/page.json"
