@@ -107,7 +107,7 @@ test.describe("Import/Export portlet", () => {
   test.afterEach(async ({ page }) => {
     // Removes the copy if the test failed before its own delete step. A
     // missing entity is not an error.
-    await page.request.delete(
+    await page.request.delete<unknown>(
       `${config.url}api/entity/${PORTLET_DEFINITION}/${fname}`
     );
   });
@@ -131,7 +131,7 @@ test.describe("Import/Export portlet", () => {
       )
     );
     const href = await exportLink.getAttribute("href");
-    const exported = await page.request.get(
+    const exported = await page.request.get<unknown>(
       new URL(href ?? "", page.url()).href
     );
     expect(exported.status()).toEqual(200);
@@ -172,7 +172,7 @@ test.describe("Import/Export portlet", () => {
       page.locator(`.up-portlet-wrapper.${fname} .up-portlet-titlebar`)
     ).toContainText(updatedTitle);
     await expect(rendered).toContainText(updatedMarker);
-    const reExported = await page.request.get(
+    const reExported = await page.request.get<unknown>(
       `${config.url}api/entity/${PORTLET_DEFINITION}/${fname}`
     );
     expect(await reExported.text()).toContain(`<title>${updatedTitle}</title>`);
@@ -201,7 +201,7 @@ test.describe("Import/Export portlet", () => {
       idInput.press("Enter"),
     ]);
     expect(deleted.status()).toEqual(204);
-    const afterDelete = await page.request.get(
+    const afterDelete = await page.request.get<unknown>(
       `${config.url}api/entity/${PORTLET_DEFINITION}/${fname}`
     );
     expect(await afterDelete.text()).not.toContain(`<fname>${fname}</fname>`);

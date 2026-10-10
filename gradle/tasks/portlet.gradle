@@ -4,8 +4,8 @@ import org.apache.pluto.util.assemble.AssemblerFactory
 import org.apache.commons.io.FilenameUtils
 
 task deployPortletApp() {
-    group 'Tomcat'
-    description 'Deploys a portlet application war file to Tomcat. Requires -Dwarpath=/path/to/warfile.war'
+    group = 'Tomcat'
+    description = 'Deploys a portlet application war file to Tomcat. Requires -Dwarpath=/path/to/warfile.war'
     dependsOn project.tasks.portalProperties
 
     doLast {
@@ -19,11 +19,11 @@ task deployPortletApp() {
             throw new GradleException("The specified portlet application does not exist: ${warfile}")
         }
 
-        File destinationDir = file(new File(buildDir, 'pluto'))
+        File destinationDir = layout.buildDirectory.dir('pluto').get().asFile
         destinationDir.mkdir()
         File archiveOutput = file(new File(destinationDir, warfile.getName()))
 
-        File serverBase = file(project.rootProject.ext['buildProperties'].getProperty('server.base'))
+        File serverBase = file(rootProject.ext['buildProperties'].getProperty('server.base'))
         File deployDir = file(new File(serverBase, "webapps/${FilenameUtils.removeExtension(warfile.getName())}"))
         logger.lifecycle("Deploying portlet application ${warfile} to location ${deployDir}")
 
@@ -33,9 +33,9 @@ task deployPortletApp() {
         Assembler assembler = AssemblerFactory.getFactory().createAssembler(config)
         assembler.assemble(config)
 
-        project.copy {
-            with project.copySpec {
-                from project.zipTree(archiveOutput)
+        copy {
+            with copySpec {
+                from zipTree(archiveOutput)
             }
             into deployDir
         }

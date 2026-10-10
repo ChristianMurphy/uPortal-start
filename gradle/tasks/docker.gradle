@@ -1,7 +1,8 @@
 buildscript {
     repositories {
         mavenLocal()
-        mavenCentral()
+        // gradle-docker-plugin releases after 6.7.0 are published only to the Gradle Plugin Portal
+        gradlePluginPortal()
     }
     dependencies {
         classpath "com.bmuschko:gradle-docker-plugin:${gradleDockerPluginVersion}"
@@ -13,46 +14,46 @@ apply plugin: com.bmuschko.gradle.docker.DockerRemoteApiPlugin
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 
 task dockerBuildImageWeb(type: DockerBuildImage) {
-    group 'Docker'
-    description 'Builds the basic web server-only Docker image'
+    group = 'Docker'
+    description = 'Builds the basic web server-only Docker image'
     // Change to 'dependsOn' when we get our up-to-date sorted
     mustRunAfter allprojects.collect { it.tasks.matching { it.name.equals('tomcatDeploy') } }
 
-    dockerFile file('docker/Dockerfile')
-    inputDir rootProject.projectDir
-    tag "${dockerImageBaseName}:${dockerImageVersion}"
+    dockerFile = file('docker/Dockerfile')
+    inputDir = rootProject.projectDir
+    images.add("${dockerImageBaseName}:${dockerImageVersion}")
 
 }
 
 task dockerBuildImageCli(type: DockerBuildImage) {
-    group 'Docker'
-    description 'Builds the Docker image used to invoke Import/Export tasks from within a container'
+    group = 'Docker'
+    description = 'Builds the Docker image used to invoke Import/Export tasks from within a container'
     // Change to 'dependsOn' when we get our up-to-date sorted
     mustRunAfter allprojects.collect { it.tasks.matching { it.name.equals('tomcatDeploy') } }
 
-    dockerFile file('docker/Dockerfile-cli')
-    inputDir rootProject.projectDir
-    tag "${dockerImageBaseName}-cli:${dockerImageVersion}"
+    dockerFile = file('docker/Dockerfile-cli')
+    inputDir = rootProject.projectDir
+    images.add("${dockerImageBaseName}-cli:${dockerImageVersion}")
 
 }
 
 task dockerBuildImageDemo(type: DockerBuildImage) {
-    group 'Docker'
-    description 'Builds the uPortal Demo Docker image'
+    group = 'Docker'
+    description = 'Builds the uPortal Demo Docker image'
     // Change to 'dependsOn' when we get our up-to-date sorted
     mustRunAfter allprojects.collect { it.tasks.matching { it.name.equals('tomcatDeploy') } }
     mustRunAfter dockerBuildImageCli
 
-    dockerFile file('docker/Dockerfile-demo')
+    dockerFile = file('docker/Dockerfile-demo')
     buildArgs = [ 'uPortalCliTag': dockerImageVersion ]
-    inputDir rootProject.projectDir
-    tag "${dockerImageBaseName}-demo:${dockerImageVersion}"
+    inputDir = rootProject.projectDir
+    images.add("${dockerImageBaseName}-demo:${dockerImageVersion}")
 
 }
 
 task dockerBuildImages {
-    group 'Docker'
-    description 'All-in-one Gradle task for building all the Docker images:  uportal, uportal-cli, and uportal-demo'
+    group = 'Docker'
+    description = 'All-in-one Gradle task for building all the Docker images:  uportal, uportal-cli, and uportal-demo'
     dependsOn dockerBuildImageWeb
     dependsOn dockerBuildImageCli
     dependsOn dockerBuildImageDemo

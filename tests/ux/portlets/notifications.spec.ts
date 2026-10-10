@@ -69,11 +69,11 @@ test.describe("Notification API + portlets", () => {
       // No Authorization header at all → 403. This is the negative
       // half of the regression guard: confirms Spring Security is
       // still in front of the API even when the happy path works.
-      const noAuth = await request.get(NOTIFICATION_API_URL);
+      const noAuth = await request.get<unknown>(NOTIFICATION_API_URL);
       expect(noAuth.status()).toBe(403);
 
       // Garbage bearer token → 403 (token unparseable).
-      const badAuth = await request.get(NOTIFICATION_API_URL, {
+      const badAuth = await request.get<unknown>(NOTIFICATION_API_URL, {
         headers: { Authorization: "Bearer not.a.valid.jwt" },
       });
       expect(badAuth.status()).toBe(403);

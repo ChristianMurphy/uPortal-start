@@ -4,7 +4,7 @@ import { loginViaApi } from "../ux/utils/ux-general-utils";
 
 test("post valid link", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
-  const response = await request.post(
+  const response = await request.post<unknown>(
     `${config.url}api/analytics`, {
         data: {
             url:'https://yahoo.com',
@@ -18,7 +18,7 @@ test("post valid link", async ({ request }) => {
 
 test("post invalid link", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
-  const response = await request.post(
+  const response = await request.post<unknown>(
     `${config.url}api/analytics`, {
         data: {
             url:'https://yahoo.com',
@@ -34,7 +34,7 @@ test("post invalid link", async ({ request }) => {
 
 test("get logging level", async({ request}) => {
   await loginViaApi(request, config.users.admin);
-    const response = await request.get(
+    const response = await request.get<unknown>(
          `${config.url}api/analytics/level`
   );
   expect(response.status()).toEqual(200);

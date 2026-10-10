@@ -2,8 +2,12 @@ import org.apereo.portal.start.gradle.plugins.GradleImportExportPlugin
 import org.apereo.portal.start.gradle.plugins.GradlePlutoPlugin
 
 dependencies {
-    runtime "org.jasig.portal:uPortal-webapp:${uPortalVersion}@war"
-    compile configurations.jdbc
+    runtimeOnly "org.jasig.portal:uPortal-webapp:${uPortalVersion}@war"
+}
+
+configurations {
+    // Package the JDBC drivers declared in overlays/build.gradle into WEB-INF/lib
+    implementation.extendsFrom jdbc
 }
 
 apply plugin: GradleImportExportPlugin
@@ -16,7 +20,7 @@ node {
 }
 
 war {
-    archiveName 'uPortal.war'
+    archiveFileName = 'uPortal.war'
     /*
      * For uPortal 5 (and beyond), the Community Best Practice for WAR files published to Maven
      * Central is that they should *not* contain JDBC driver jars;  all such WAR files are
@@ -41,8 +45,8 @@ war {
 import java.util.regex.Pattern
 File skinsDir = rootProject.file("${projectDir}/src/main/webapp/media/skins/respondr")
 task skinGenerate() {
-    group 'Skin'
-    description 'Generate a new SCSS-based uPortal skin for Respondr;  pass -DskinName={name} (required) to specify a name'
+    group = 'Skin'
+    description = 'Generate a new SCSS-based uPortal skin for Respondr;  pass -DskinName={name} (required) to specify a name'
 
     doLast {
         String skinName = System.getProperty('skinName');
@@ -99,8 +103,8 @@ task skinGenerate() {
 }
 
 task skinGenerateLess() {
-    group 'Skin'
-    description 'Generate a new LESS-based uPortal skin for Respondr (legacy);  pass -DskinName={name} (required) to specify a name'
+    group = 'Skin'
+    description = 'Generate a new LESS-based uPortal skin for Respondr (legacy);  pass -DskinName={name} (required) to specify a name'
 
     doLast {
         String skinName = System.getProperty('skinName');
@@ -162,8 +166,8 @@ task skinGenerateLess() {
 // this task overwrites them at execution time so any drift in the etc/skin/
 // templates fails the regression test rather than silently passing.
 task playwrightSkinFixture() {
-    group 'Testing'
-    description 'Regenerate the playwrightSkin scaffold consumed by tests/ux/skin/custom-skin.spec.ts'
+    group = 'Testing'
+    description = 'Regenerate the playwrightSkin scaffold consumed by tests/ux/skin/custom-skin.spec.ts'
 
     String skinName = 'playwrightSkin'
     File skinFile = rootProject.file("${projectDir}/src/main/webapp/media/skins/respondr/${skinName}.less")
@@ -224,11 +228,10 @@ else if (!skinsDir.exists()) {
 else {
     // Step 1:  Unpack the upstream uPortal.war into a work directory
     task prepareSkinResources(dependsOn: npmInstall) {
-        String workDir = "${buildDir}/tmp/skin/uPortal"
+        String workDir = "${layout.buildDirectory.get().asFile}/tmp/skin/uPortal"
         doLast {
             // Locate the uPortal.war dependency
-            Dependency d = configurations.runtime.dependencies.matching { it.name == 'uPortal-webapp' }.getAt(0)
-            File uPortalWar = configurations.runtime.files(d).getAt(0)
+            File uPortalWar = configurations.runtimeClasspath.find { it.name ==~ /uPortal-webapp-.+\.war/ }
             copy {
                 from zipTree(uPortalWar)
                 into workDir
@@ -249,7 +252,7 @@ else {
         }
     }
 
-    String skinTmpDir = "${buildDir}/tmp/skin/uPortal/media/skins/respondr/"
+    String skinTmpDir = "${layout.buildDirectory.get().asFile}/tmp/skin/uPortal/media/skins/respondr/"
     // Identify custom skins located in skinsDir
     logger.lifecycle "Preparing Gradle tasks to compile the following custom skin files defined in ${skinsDir}"
     FileTree skinFiles = fileTree(dir: skinsDir, include: "*.less")
@@ -268,7 +271,7 @@ else {
     // Step 4:  Use NodeJS & sass to compile custom skin(s) (SCSS)
     // Bootstrap SCSS source is included in the upstream uPortal WAR's webjars;
     // --load-path tells sass where to find bare @import "bootstrap" references.
-    String bootstrapScssLoadPath = "${buildDir}/tmp/skin/uPortal/webjars/bootstrap/scss"
+    String bootstrapScssLoadPath = "${layout.buildDirectory.get().asFile}/tmp/skin/uPortal/webjars/bootstrap/scss"
     FileTree scssFiles = fileTree(dir: skinsDir, include: "*.scss")
     scssFiles.eachWithIndex { f, index ->
         String it = f.toString()
@@ -299,9 +302,7 @@ else {
         into deployDir
     }
 
-    war.dependsOn {
-        tasks.findAll { task -> task.name.startsWith('compileLess') || task.name.startsWith('compileScss') }
-    }
+    war.dependsOn tasks.matching { task -> task.name.startsWith('compileLess') || task.name.startsWith('compileScss') }
 }
 
 /*
@@ -310,12 +311,15 @@ else {
 
 import org.apereo.portal.start.shell.PortalShellInvoker
 
+// The task actions below pass this to PortalShellInvoker (Task.project is off limits at execution time)
+Project uPortalProject = project
+
 ext {
-    shellDir = rootProject.file("${buildDir}/shell")
+    shellDir = layout.buildDirectory.dir('shell').get().asFile
 }
 
 dataInit {
-    description 'Drop and recreate uPortal tables and reimport data'
+    description = 'Drop and recreate uPortal tables and reimport data'
 
     /*
      * Add to the scriptFile commands that drop then create then load the legacy database
@@ -377,7 +381,7 @@ portalShellBuildHelper.hibernateCreate('db-hibernate',
         String archive = ' '
         String files = ' '
         String filesListFile = ' '
-        String logDir = PortalShellInvoker.createGroovySafePath(buildDir.getPath())
+        String logDir = PortalShellInvoker.createGroovySafePath(layout.buildDirectory.get().asFile.path)
 
         File scriptFile = rootProject.file(new File(shellDir, 'dataInit.groovy'))
         [ baseEntitiesLocation, implementationEntitiesLocation ].each { entitiesLocation ->
@@ -399,12 +403,12 @@ portalShellBuildHelper.dataImport('data-import',
     doLast {
         File scriptFile = rootProject.file(new File(shellDir, 'dataInit.groovy'))
         PortalShellInvoker psi = new PortalShellInvoker()
-        psi.invoke(project, scriptFile.getAbsolutePath())
+        psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
     }
 }
 
 dataImport {
-    description 'Adds to or updates the portal database for the entities defined in the specified XML file(s). Requires -Dfile={path-to-file} or -Ddir={path-to-directory}'
+    description = 'Adds to or updates the portal database for the entities defined in the specified XML file(s). Requires -Dfile={path-to-file} or -Ddir={path-to-directory}'
 
     doLast {
         // Validate inputs
@@ -429,7 +433,7 @@ dataImport {
             String filesEscaped = ' ' // Not currently in use
             String manifestEscaped = args.containsKey('manifest') ? PortalShellInvoker.createGroovySafePath(args['manifest']) : ' '
             String archiveEscaped = args.containsKey('archive') ? PortalShellInvoker.createGroovySafePath(args['archive']) : ' '
-            String logDirEscaped = PortalShellInvoker.createGroovySafePath(buildDir.getPath())
+            String logDirEscaped = PortalShellInvoker.createGroovySafePath(layout.buildDirectory.get().asFile.path)
 
             // Prepare the scriptFile
             shellDir.mkdirs()
@@ -447,22 +451,22 @@ portalShellBuildHelper.dataImport("data-import",
 """         )
 
             PortalShellInvoker psi = new PortalShellInvoker()
-            psi.invoke(project, scriptFile.getAbsolutePath())
+            psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
         }
     }
 }
 
 dataExport {
-    description 'Creates XML files representing the requested entities and writes them to the specified file system location. Parameters: -Ddir={path-to-directory} -Dtype={entity-type} [-Dsysid={entity-identifier}]'
+    description = 'Creates XML files representing the requested entities and writes them to the specified file system location. Parameters: -Ddir={path-to-directory} -Dtype={entity-type} [-Dsysid={entity-identifier}]'
 
     doLast {
         // Three -D arguments may be passed;  all are optional
-        String dir = System.getProperty('dir') ?: "${buildDir}/export"
+        String dir = System.getProperty('dir') ?: "${layout.buildDirectory.get().asFile}/export"
         String type = System.getProperty('type') ?: ' '
         String sysid = System.getProperty('sysid') ?: ' '
 
         String dirEscaped = PortalShellInvoker.createGroovySafePath(dir)
-        String logDirEscaped = PortalShellInvoker.createGroovySafePath(buildDir.getPath())
+        String logDirEscaped = PortalShellInvoker.createGroovySafePath(layout.buildDirectory.get().asFile.path)
 
         // Prepare the scriptFile
         shellDir.mkdirs()
@@ -479,12 +483,12 @@ portalShellBuildHelper.dataExport('data-export',
 """         )
 
         PortalShellInvoker psi = new PortalShellInvoker()
-        psi.invoke(project, scriptFile.getAbsolutePath())
+        psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
     }
 }
 
 dataDelete {
-    description 'Deletes the specified entity. Requires -Dtype={entity-type} and -Dsysid={id}'
+    description = 'Deletes the specified entity. Requires -Dtype={entity-type} and -Dsysid={id}'
 
     doLast {
         // Validate inputs
@@ -514,14 +518,14 @@ portalShellBuildHelper.dataDelete('data-delete',
 """         )
 
             PortalShellInvoker psi = new PortalShellInvoker()
-            psi.invoke(project, scriptFile.getAbsolutePath())
+            psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
         }
 
     }
 }
 
 dataList {
-    description 'With no arguments (-Dtype={entity-type}) lists all supported portal data types and the operations (export, delete) supported for each. '
+    description = 'With no arguments (-Dtype={entity-type}) lists all supported portal data types and the operations (export, delete) supported for each. '
 
     doLast {
         // Is there a -Dtype= argument passed?
@@ -538,6 +542,6 @@ portalShellBuildHelper.dataList('data-list', '${type}');
 """     )
 
         PortalShellInvoker psi = new PortalShellInvoker()
-        psi.invoke(project, scriptFile.getAbsolutePath())
+        psi.invoke(uPortalProject, scriptFile.getAbsolutePath())
     }
 }

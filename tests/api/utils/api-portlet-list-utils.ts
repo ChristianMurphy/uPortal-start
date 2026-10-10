@@ -9,7 +9,7 @@ export async function createPortletList(
   portletListName: string,
   items: Array<Record<string, string>>
 ): Promise<string> {
-  const response = await request.post(`${config.url}api/portlet-list/`, {
+  const response = await request.post<unknown>(`${config.url}api/portlet-list/`, {
     data: {
       name: portletListName,
       items: items,
@@ -31,7 +31,7 @@ export async function createPortletListWithOwner(
   ownerUsername: string,
   items: Array<Record<string, string>>
 ): Promise<string> {
-  const response = await request.post(`${config.url}api/portlet-list/`, {
+  const response = await request.post<unknown>(`${config.url}api/portlet-list/`, {
     data: {
       name: portletListName,
       ownerUsername: ownerUsername,
@@ -59,7 +59,7 @@ export async function updatePortletList(
     items: items,
   };
 
-  const response = await request.put(
+  const response = await request.put<unknown>(
     `${config.url}api/portlet-list/${portletListUuid}`,
     {
       data: payload,
@@ -75,7 +75,7 @@ export async function removePortletList(
   request: APIRequestContext,
   portletListUuid: string
 ): Promise<void> {
-  const response = await request.delete(
+  const response = await request.delete<unknown>(
     `${config.url}api/portlet-list/${portletListUuid}`
   );
   expect(response.status()).toEqual(200);
@@ -87,10 +87,12 @@ export async function removePortletList(
 export async function getAllPortletLists(
   request: APIRequestContext
 ): Promise<Array<Record<string, unknown>>> {
-  const response = await request.get(`${config.url}api/portlet-list/`);
-  expect(response.status()).toEqual(200);
   // Future improvement - instead of 'unknown', leverage interfaces with a tool like https://zod.dev/
-  const json = (await response.json()) as Array<Record<string, unknown>>;
+  const response = await request.get<Array<Record<string, unknown>>>(
+    `${config.url}api/portlet-list/`
+  );
+  expect(response.status()).toEqual(200);
+  const json = await response.json();
   return json;
 }
 
@@ -101,10 +103,12 @@ export async function getPortletList(
   request: APIRequestContext,
   id: string
 ): Promise<Record<string, unknown>> {
-  const response = await request.get(`${config.url}api/portlet-list/${id}`);
-  expect(response.status()).toEqual(200);
   // Future improvement - instead of 'unknown', leverage interfaces with a tool like https://zod.dev/
-  const json = (await response.json()) as Record<string, unknown>;
+  const response = await request.get<Record<string, unknown>>(
+    `${config.url}api/portlet-list/${id}`
+  );
+  expect(response.status()).toEqual(200);
+  const json = await response.json();
   return json;
 }
 
@@ -115,7 +119,7 @@ export async function createPortletListFailsWith409(
   portletListName: string,
   items: Array<Record<string, string>>
 ): Promise<void> {
-  const responseCreation = await request.post(
+  const responseCreation = await request.post<unknown>(
     `${config.url}api/portlet-list/`,
     {
       data: {
@@ -139,7 +143,7 @@ export async function updatePortletListFailsWith409(
   portletListName: string,
   items: Array<Record<string, string>>
 ): Promise<void> {
-  const responseCreation = await request.put(
+  const responseCreation = await request.put<unknown>(
     `${config.url}api/portlet-list/${portletListUuid}`,
     {
       data: {

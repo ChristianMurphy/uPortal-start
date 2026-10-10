@@ -32,7 +32,7 @@ test.describe("Portlet Administration", () => {
     // If the test failed before its own delete step, remove the portlet
     // through the import/export REST API so later runs start clean. A
     // missing entity is not an error.
-    await page.request.delete(
+    await page.request.delete<unknown>(
       `${config.url}api/entity/portlet-definition/${fname}`
     );
   });
@@ -137,7 +137,7 @@ test.describe("Portlet Administration", () => {
     await expect(listRow).toContainText("PUBLISHED");
 
     // The saved definition carries what the flow collected
-    const exported = await page.request.get(
+    const exported = await page.request.get<unknown>(
       `${config.url}api/entity/portlet-definition/${fname}`
     );
     const exportedXml = await exported.text();
@@ -175,7 +175,7 @@ test.describe("Portlet Administration", () => {
     );
 
     // It is gone from the registry
-    const afterDelete = await page.request.get(
+    const afterDelete = await page.request.get<unknown>(
       `${config.url}api/entity/portlet-definition/${fname}`
     );
     expect(await afterDelete.text()).not.toContain(`<fname>${fname}</fname>`);

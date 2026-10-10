@@ -8,8 +8,8 @@ class GradleTomcatDeployPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.task('tomcatClean', type: Delete) {
-            group 'Tomcat'
-            description 'Removes this project from the integrated Tomcat servlet container'
+            group = 'Tomcat'
+            description = 'Removes this project from the integrated Tomcat servlet container'
             dependsOn project.rootProject.tasks.portalProperties
             mustRunAfter project.rootProject.tasks.tomcatInstall
 
@@ -21,8 +21,8 @@ class GradleTomcatDeployPlugin implements Plugin<Project> {
             }
         }
         project.task('tomcatDeploy') {
-            group 'Tomcat'
-            description 'Deploys this project to the integrated Tomcat servlet container'
+            group = 'Tomcat'
+            description = 'Deploys this project to the integrated Tomcat servlet container'
             dependsOn 'tomcatClean'
             dependsOn 'assemble'
 
@@ -32,7 +32,7 @@ class GradleTomcatDeployPlugin implements Plugin<Project> {
                 logger.lifecycle("Deploying assembled application to servlet container at location:  ${deployDir}")
 
                 String artifactDir = project.plugins.hasPlugin(GradlePlutoPlugin) ? 'pluto' : 'libs'
-                File warFile = new File("${project.buildDir}/${artifactDir}/${project.name}.war")
+                File warFile = new File("${project.layout.buildDirectory.get().asFile}/${artifactDir}/${project.name}.war")
 
                 project.copy {
                     with project.copySpec {
