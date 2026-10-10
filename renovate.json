@@ -10,6 +10,35 @@
   },
   "major": { "masterIssueApproval": true },
   "renovateFork": true,
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/__fixtures__/**"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Database images in the workflow matrices, pinned as name:tag@digest (MOD-D25). The github-actions manager reads only literal service and container images, not matrix values.",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "image: (?<depName>[a-z0-9][a-z0-9./_-]*):(?<currentValue>[A-Za-z0-9][A-Za-z0-9._-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Database images of the harness and copy-migration vendors (tests/db/vendors), pinned as name:tag@digest. ignorePaths repeats the preset's list without **/tests/**, so these files are read; no other package file lives under tests/.",
+      "managerFilePatterns": ["/^tests/db/vendors/[^/]+\\.properties$/"],
+      "matchStrings": [
+        "container\\.image=(?<depName>[a-z0-9][a-z0-9./_-]*):(?<currentValue>[A-Za-z0-9][A-Za-z0-9._-]*)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
       "groupName": "uPortal",
@@ -70,6 +99,18 @@
         "^com.amazonaws"
       ],
       "schedule": "on Monday"
+    },
+    {
+      "groupName": "database images",
+      "matchManagers": ["custom.regex"],
+      "matchDatasources": ["docker"]
+    },
+    {
+      "description": "A database server's release series (PostgreSQL 18, MySQL 8.4, MariaDB 10.11) is part of the supported matrix (MOD-D25): a new runtime series needs a new vendor file and baseline, and a migration source stays on its series. Only digests and patch versions are updated automatically.",
+      "matchManagers": ["custom.regex"],
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
     }
   ]
 }

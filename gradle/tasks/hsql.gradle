@@ -10,6 +10,13 @@ configurations {
     hsqldb
 }
 
+/*
+ * Where the embedded server keeps the uPortal database. -PhsqlDatabaseDir (with -PhsqlPort and
+ * -PhsqldbVersion) serves another database next to the default one, e.g. a 5.17 database that
+ * HSQLDB 2.5.1 created, for dbMigrate to read (tests/db/vendors/hsqldb-2.5.1.properties).
+ */
+String hsqlDatabaseDir = findProperty('hsqlDatabaseDir') ?: '.gradle/hsqldb'
+
 dependencies {
     hsqldb "org.hsqldb:hsqldb:${hsqldbVersion}"
     hsqldb "org.hsqldb:sqltool:${hsqldbVersion}"  // Needed for stopping the embedded HSQLDB
@@ -54,7 +61,7 @@ task hsqlStart {
             arg(value: classpath)
             arg(value: 'org.hsqldb.server.Server')
             arg(value: '--database.0')
-            arg(value: 'file:./.gradle/hsqldb/uPortal;hsqldb.tx=mvcc')
+            arg(value: "file:./${hsqlDatabaseDir}/uPortal;hsqldb.tx=mvcc")
             arg(value: '--dbname.0')
             arg(value: 'uPortal')
             arg(value: '--address')
