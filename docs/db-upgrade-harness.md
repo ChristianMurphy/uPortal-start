@@ -22,6 +22,7 @@ and a `gradle.properties` (copy `gradle.properties.example`).
 tests/db/harness.sh postgres-16                       # one vendor
 tests/db/harness.sh hsqldb postgres-16 mysql-8.4 mariadb-10.6 mariadb-11.4 sqlserver-2022 oracle-23
 tests/db/harness.sh --portal postgres-16              # also start the portal and run the API specs
+tests/db/harness.sh --full-suite postgres-16          # every overlay and every Playwright spec
 tests/db/harness.sh postgres-16 -- -PtomcatHttpPort=8180 -PtomcatShutdownPort=8105 -PhsqlPort=8987
 ```
 
@@ -37,6 +38,7 @@ its own ports there. Options:
 | `--skip-init` | Do not run `dataInit`; snapshot the database as it is |
 | `--no-deploy` | Reuse the Tomcat and uPortal already deployed for this vendor |
 | `--portal` | Also deploy CAS, start Tomcat against the database and run `tests/api` (needs `npm ci`) |
+| `--full-suite` | Like `--portal`, but deploy every overlay, create the portlets' tables after the snapshot, and run the whole Playwright suite (also needs `npx playwright install chromium`) |
 
 Each container is named `uportal-dbh-<vendor>` and maps the vendor's `host.port` (15xxx).
 The `hsqldb` vendor uses the bundled HSQLDB on `hsqlPort` and **deletes `.gradle/hsqldb` first**,
@@ -47,6 +49,11 @@ including `harness.log` and, after a comparison, `drift-report.txt`.
 PostgreSQL, SQL Server and Oracle run as GitHub Actions service containers (`--external`). MySQL
 and MariaDB need a server option (`lower_case_table_names=1`, see their vendor files) that a
 service container cannot be given, so the script starts those containers itself.
+
+With `--full-suite` the snapshot is taken right after uPortal's `dataInit`, as with the other
+options, so it covers uPortal's schema only. The portlets' own `dataInit` tasks (Announcements,
+Calendar, News Reader, Simple Content) run afterwards, because the bundled portlets keep their
+tables in the same database.
 
 ### Using the Gradle tasks directly
 
