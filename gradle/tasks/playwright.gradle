@@ -58,8 +58,10 @@ task playwrightRun(type: NpxTask, dependsOn: [
 // playwrightSkin files (not the stale committed copies) get compiled.
 // Deferred to projectsEvaluated so the cross-project lookup doesn't trigger
 // eager configuration of :overlays:uPortal.
+// overlays/uPortal does not create prepareSkinResources when the build runs dataImport (or when
+// there is no custom skin), so look it up without failing (MOD-I91: dataImport failed here).
 gradle.projectsEvaluated {
-    tasks.getByPath(':overlays:uPortal:prepareSkinResources').mustRunAfter(
+    tasks.findByPath(':overlays:uPortal:prepareSkinResources')?.mustRunAfter(
             ':overlays:uPortal:playwrightSkinFixture')
 }
 
