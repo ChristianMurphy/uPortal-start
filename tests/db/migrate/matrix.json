@@ -1,0 +1,27 @@
+{
+  "description": "G-migrate (MOD-D25): 5.17 databases on old servers (sources) copied with dbMigrate into current servers (targets). Names are files in tests/db/vendors. matrix.mjs turns this into the GitHub Actions matrices and checks their coverage.",
+  "targets": {
+    "postgres": "postgres-18",
+    "mysql": "mysql-9.7",
+    "mariadb": "mariadb-12.3",
+    "sqlserver": "sqlserver-2025",
+    "oracle": "oracle-23",
+    "hsqldb": "hsqldb"
+  },
+  "sources": {
+    "postgres": ["postgres-14", "postgres-15", "postgres-16"],
+    "mysql": ["mysql-8.0", "mysql-8.4"],
+    "mariadb": ["mariadb-10.6", "mariadb-10.11", "mariadb-11.4"],
+    "sqlserver": ["sqlserver-2019", "sqlserver-2022"],
+    "oracle": ["oracle-xe-21"],
+    "hsqldb": ["hsqldb-2.5.1", "hsqldb"]
+  },
+  "push": [
+    { "source": "postgres-16", "target": "postgres-18", "playwright": true },
+    { "source": "mariadb-11.4", "target": "postgres-18" },
+    { "source": "postgres-15", "target": "mariadb-12.3", "playwright": true },
+    { "source": "mysql-8.4", "target": "mysql-9.7" },
+    { "source": "sqlserver-2022", "target": "sqlserver-2025" },
+    { "source": "oracle-xe-21", "target": "oracle-23" }
+  ]
+}
