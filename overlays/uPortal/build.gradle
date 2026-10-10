@@ -228,7 +228,7 @@ else if (!skinsDir.exists()) {
 else {
     // Step 1:  Unpack the upstream uPortal.war into a work directory
     task prepareSkinResources(dependsOn: npmInstall) {
-        String workDir = "${buildDir}/tmp/skin/uPortal"
+        String workDir = "${layout.buildDirectory.get().asFile}/tmp/skin/uPortal"
         doLast {
             // Locate the uPortal.war dependency
             File uPortalWar = configurations.runtimeClasspath.find { it.name ==~ /uPortal-webapp-.+\.war/ }
@@ -252,7 +252,7 @@ else {
         }
     }
 
-    String skinTmpDir = "${buildDir}/tmp/skin/uPortal/media/skins/respondr/"
+    String skinTmpDir = "${layout.buildDirectory.get().asFile}/tmp/skin/uPortal/media/skins/respondr/"
     // Identify custom skins located in skinsDir
     logger.lifecycle "Preparing Gradle tasks to compile the following custom skin files defined in ${skinsDir}"
     FileTree skinFiles = fileTree(dir: skinsDir, include: "*.less")
@@ -271,7 +271,7 @@ else {
     // Step 4:  Use NodeJS & sass to compile custom skin(s) (SCSS)
     // Bootstrap SCSS source is included in the upstream uPortal WAR's webjars;
     // --load-path tells sass where to find bare @import "bootstrap" references.
-    String bootstrapScssLoadPath = "${buildDir}/tmp/skin/uPortal/webjars/bootstrap/scss"
+    String bootstrapScssLoadPath = "${layout.buildDirectory.get().asFile}/tmp/skin/uPortal/webjars/bootstrap/scss"
     FileTree scssFiles = fileTree(dir: skinsDir, include: "*.scss")
     scssFiles.eachWithIndex { f, index ->
         String it = f.toString()
@@ -302,9 +302,7 @@ else {
         into deployDir
     }
 
-    war.dependsOn {
-        tasks.findAll { task -> task.name.startsWith('compileLess') || task.name.startsWith('compileScss') }
-    }
+    war.dependsOn tasks.matching { task -> task.name.startsWith('compileLess') || task.name.startsWith('compileScss') }
 }
 
 /*
@@ -314,7 +312,7 @@ else {
 import org.apereo.portal.start.shell.PortalShellInvoker
 
 ext {
-    shellDir = rootProject.file("${buildDir}/shell")
+    shellDir = layout.buildDirectory.dir('shell').get().asFile
 }
 
 dataInit {
@@ -380,7 +378,7 @@ portalShellBuildHelper.hibernateCreate('db-hibernate',
         String archive = ' '
         String files = ' '
         String filesListFile = ' '
-        String logDir = PortalShellInvoker.createGroovySafePath(buildDir.getPath())
+        String logDir = PortalShellInvoker.createGroovySafePath(layout.buildDirectory.get().asFile.path)
 
         File scriptFile = rootProject.file(new File(shellDir, 'dataInit.groovy'))
         [ baseEntitiesLocation, implementationEntitiesLocation ].each { entitiesLocation ->
@@ -432,7 +430,7 @@ dataImport {
             String filesEscaped = ' ' // Not currently in use
             String manifestEscaped = args.containsKey('manifest') ? PortalShellInvoker.createGroovySafePath(args['manifest']) : ' '
             String archiveEscaped = args.containsKey('archive') ? PortalShellInvoker.createGroovySafePath(args['archive']) : ' '
-            String logDirEscaped = PortalShellInvoker.createGroovySafePath(buildDir.getPath())
+            String logDirEscaped = PortalShellInvoker.createGroovySafePath(layout.buildDirectory.get().asFile.path)
 
             // Prepare the scriptFile
             shellDir.mkdirs()
@@ -460,12 +458,12 @@ dataExport {
 
     doLast {
         // Three -D arguments may be passed;  all are optional
-        String dir = System.getProperty('dir') ?: "${buildDir}/export"
+        String dir = System.getProperty('dir') ?: "${layout.buildDirectory.get().asFile}/export"
         String type = System.getProperty('type') ?: ' '
         String sysid = System.getProperty('sysid') ?: ' '
 
         String dirEscaped = PortalShellInvoker.createGroovySafePath(dir)
-        String logDirEscaped = PortalShellInvoker.createGroovySafePath(buildDir.getPath())
+        String logDirEscaped = PortalShellInvoker.createGroovySafePath(layout.buildDirectory.get().asFile.path)
 
         // Prepare the scriptFile
         shellDir.mkdirs()

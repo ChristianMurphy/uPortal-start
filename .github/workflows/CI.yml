@@ -41,9 +41,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.java-distribution }}
-          java-version: ${{ matrix.java-version }}
+          # 21 runs the Gradle daemon (gradle/gradle-daemon-jvm.properties).  The last version
+          # listed becomes JAVA_HOME, which runs Tomcat, HSQLDB and the data tools.
+          java-version: |
+            21
+            ${{ matrix.java-version }}
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_21_ARM64" >> ~/.gradle/gradle.properties
+        shell: bash
       - name: Generate and submit dependency graph
         if: ${{ github.event_name == 'push' }}
         uses: gradle/actions/dependency-submission@v4
@@ -79,13 +88,20 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 11
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> ~/.gradle/gradle.properties
       - name: Initialize portal
         run: ./gradlew -i -S portalInit
       - name: Start Tomcat

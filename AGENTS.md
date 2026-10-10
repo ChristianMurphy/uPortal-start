@@ -29,7 +29,9 @@ gradle.properties.example   # canonical versions; copy to gradle.properties (git
 
 ## Java version
 
-Build and run on **Java 11** (`11.0.30-amzn`), matching the rest of the workspace and the Tomcat 8.5/9 runtime. Java versions are managed with [SDKMAN](https://sdkman.io/) (`sdk use java 11.0.30-amzn`). Source/config must not rely on Java 12+ behavior. (Note: this repo's `README.md` still references JDK 8 — that predates the workspace move to Java 11.)
+Run the portal on **Java 11** (`11.0.30-amzn`), matching the rest of the workspace and the Tomcat 8.5/9 runtime: `JAVA_HOME` selects the JDK for Tomcat, HSQLDB and the import/export tools. Java versions are managed with [SDKMAN](https://sdkman.io/) (`sdk use java 11.0.30-amzn`). Source/config must not rely on Java 12+ behavior; overlay Java sources compile with `--release 11`.
+
+Gradle 9 itself needs Java 17+, so the Gradle daemon runs on a **JDK 21** that Gradle locates on its own (`gradle/gradle-daemon-jvm.properties`; with SDKMAN, `sdk install java` any 21.x identifier from `sdk list java`). Keep `JAVA_HOME` on 11.
 
 ## Versions and the gradle.properties copy
 

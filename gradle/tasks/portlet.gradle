@@ -19,7 +19,7 @@ task deployPortletApp() {
             throw new GradleException("The specified portlet application does not exist: ${warfile}")
         }
 
-        File destinationDir = file(new File(buildDir, 'pluto'))
+        File destinationDir = layout.buildDirectory.dir('pluto').get().asFile
         destinationDir.mkdir()
         File archiveOutput = file(new File(destinationDir, warfile.getName()))
 

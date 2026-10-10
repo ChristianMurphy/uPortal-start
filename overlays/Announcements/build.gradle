@@ -59,7 +59,7 @@ dataInit {
         File deployDir = rootProject.file(new File(serverBase, "webapps/${project.name}"))
 
         ant.setLifecycleLogLevel('INFO')
-        ant.java(fork: true, failonerror: true, dir: rootProject.projectDir, classname: 'org.jasig.portlet.announcements.SchemaCreator') {
+        ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.jasig.portlet.announcements.SchemaCreator') {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
@@ -81,7 +81,7 @@ dataInit {
         String implementationEntitiesLocation = PortalShellInvoker.createGroovySafePath(rootProject.ext['buildProperties'].getProperty('implementation.entities.location'))
 
         ant.setLifecycleLogLevel('INFO')
-        ant.java(fork: true, failonerror: true, dir: rootProject.projectDir, classname: 'org.jasig.portlet.announcements.Importer') {
+        ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.jasig.portlet.announcements.Importer') {
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")

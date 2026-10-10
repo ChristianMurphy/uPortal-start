@@ -49,7 +49,7 @@ task hsqlStart {
             classpath += it.getAbsolutePath()
         }
 
-        ant.exec(executable: 'java', spawn: true) {
+        ant.exec(executable: portalJava, spawn: true) {
             arg(value: '-cp')
             arg(value: classpath)
             arg(value: 'org.hsqldb.server.Server')
@@ -89,14 +89,14 @@ task hsqlStop {
         }
 
         // SqlTool needs a copy of the rc file that points at this build's hsqlPort
-        File rcDir = file("${buildDir}/tmp/hsql")
+        File rcDir = layout.buildDirectory.dir('tmp/hsql').get().asFile
         copy {
             from 'etc/hsql/hsqldb.sqltool.rc'
             into rcDir
             filter(ReplaceTokens, tokens: portTokens)
         }
 
-        ant.exec(executable: 'java', spawn: true) {
+        ant.exec(executable: portalJava, spawn: true) {
             arg(value: '-cp')
             arg(value: classpath)
             arg(value: 'org.hsqldb.cmdline.SqlTool')
@@ -133,7 +133,7 @@ task hsqlOpen {
             classpath += it.getAbsolutePath()
         }
 
-        ant.exec(executable: 'java', spawn: true) {
+        ant.exec(executable: portalJava, spawn: true) {
             arg(value: '-cp')
             arg(value: classpath)
             arg(value: 'org.hsqldb.util.DatabaseManagerSwing')

@@ -54,13 +54,13 @@ war {
     exclude 'WEB-INF/lib/aspectjweaver-1.6.10.jar'
 
     // Point CAS at this build's Tomcat and HSQLDB ports (see portTokens in the root build.gradle)
-    inputs.properties(portTokens)
+    inputs.properties(rootProject.ext.portTokens)
     filesMatching([
         'WEB-INF/cas.properties',
         'WEB-INF/deployerConfigContext.xml',
         'WEB-INF/spring-configuration/clearpass-configuration.xml',
     ]) {
-        filter(ReplaceTokens, tokens: portTokens)
+        filter(ReplaceTokens, tokens: rootProject.ext.portTokens)
     }
     filteringCharset = 'ISO-8859-1'  // Leaves every byte other than the tokens as-is
 }
