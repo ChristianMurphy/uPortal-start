@@ -44,14 +44,22 @@ function runsOf(name, file, endOverride) {
     }
   }
   for (const [mutex, start] of open) {
-    runs.push({ node: name, mutex, start, end: endOverride ?? last, unfinished: true });
+    runs.push({
+      node: name,
+      mutex,
+      start,
+      end: endOverride ?? last,
+      unfinished: true,
+    });
   }
   return runs;
 }
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
-  console.error("Usage: lock-overlap.mjs <name>=<portal.log>[@<end ms>] <name>=<portal.log> ...");
+  console.error(
+    "Usage: lock-overlap.mjs <name>=<portal.log>[@<end ms>] <name>=<portal.log> ...",
+  );
   process.exit(2);
 }
 
@@ -64,10 +72,13 @@ for (const arg of args) {
   }
   // The kill time comes from `date +%s%3N` (UTC); the log is local time, shifted the same way
   // as parseTime when the machine runs in UTC, as CI runners do
-  runs = runs.concat(runsOf(m[1], m[2], m[3] === undefined ? undefined : Number(m[3])));
+  runs = runs.concat(
+    runsOf(m[1], m[2], m[3] === undefined ? undefined : Number(m[3])),
+  );
 }
 
-const iso = (ms) => new Date(ms).toISOString().replace("T", " ").replace("Z", "");
+const iso = (ms) =>
+  new Date(ms).toISOString().replace("T", " ").replace("Z", "");
 const short = (mutex) => mutex.replace(/^org\.apereo\.portal\./, "");
 
 const counts = new Map();
@@ -82,7 +93,7 @@ for (const [mutex, perNode] of [...counts].sort()) {
   console.log(
     `  ${mutex}: ${Object.entries(perNode)
       .map(([node, n]) => `${node} ${n}`)
-      .join(", ")}`
+      .join(", ")}`,
   );
 }
 
@@ -100,14 +111,18 @@ for (const [mutex, list] of byMutex) {
 }
 
 if (runs.length === 0) {
-  console.log("FAILED: no cluster-lock activity in the logs (is the TRACE logger missing?)");
+  console.log(
+    "FAILED: no cluster-lock activity in the logs (is the TRACE logger missing?)",
+  );
   process.exit(1);
 }
 if (overlaps.length === 0) {
   console.log(`OK: no job ran on two nodes at once (${runs.length} runs)`);
   process.exit(0);
 }
-console.log(`FAILED: ${overlaps.length} time(s) a job ran on two nodes at once:`);
+console.log(
+  `FAILED: ${overlaps.length} time(s) a job ran on two nodes at once:`,
+);
 for (const { mutex, first, second } of overlaps.slice(0, 20)) {
   const describe = (run) =>
     `${run.node} ${iso(run.start)} to ${iso(run.end)}${run.unfinished ? " (unfinished)" : ""}`;
