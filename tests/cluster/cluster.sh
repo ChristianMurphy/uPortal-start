@@ -409,7 +409,9 @@ traffic() {  # traffic <rounds>: every test user logs in and renders their layou
     done
 }
 
-unaggregated() { sql "select count(*) from up_raw_events where aggregated is not true"; }
+unaggregated() {  # events still to aggregate (one that failed to convert is never aggregated)
+    sql "select count(*) from up_raw_events where aggregated is not true and error_aggr is not true"
+}
 
 wait_aggregated() {  # wait_aggregated <seconds>: until every raw event so far is aggregated
     local deadline=$(( $(date +%s) + $1 )) n
@@ -439,17 +441,17 @@ aggregates() {  # one line per aggregation and interval: <kind>|<interval>|<coun
 
 raw_counts() {  # <kind>|<count> of the raw events since the given local timestamp
     sql "select 'login', count(*) from up_raw_events
-             where event_type = 'org.apereo.portal.events.LoginEvent' and timestamp >= '$1'
+             where event_type = 'org.apereo.portal.events.LoginEvent' and \"timestamp\" >= '$1'
          union all
          select 'render', count(*) from up_raw_events
-             where event_type = 'org.apereo.portal.events.PortletRenderExecutionEvent' and timestamp >= '$1'"
+             where event_type = 'org.apereo.portal.events.PortletRenderExecutionEvent' and \"timestamp\" >= '$1'"
 }
 
 compare_counts() {  # compare_counts <check> <before aggregates file> <since timestamp>
     local check="$1" before="$2" since="$3" kind interval count base raw problems=() summary=()
     aggregates > "$OUT/$check-aggregates-after.txt"
     raw_counts "$since" > "$OUT/$check-raw.txt"
-    sql "select server_id, event_type, count(*) from up_raw_events where timestamp >= '$since'
+    sql "select server_id, event_type, count(*) from up_raw_events where \"timestamp\" >= '$since'
          group by 1, 2 order by 1, 2" > "$OUT/$check-raw-by-node.txt"
     while IFS='|' read -r kind raw; do
         summary+=("$kind: $raw raw events")
