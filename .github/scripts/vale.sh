@@ -5,7 +5,8 @@
 #   vale.sh commits <range>    lint the messages of the non-merge commits in <range>
 #
 # Downloads the pinned Vale binary and ai-tells styles on first use, checks their SHA-256,
-# and keeps them under .github/vale/ (ignored by git). Exits non-zero when Vale reports an
+# and keeps them under .github/vale/ (ignored by git). The uPortal style next to them is ours
+# and committed. Exits non-zero when Vale reports an
 # error. In GitHub Actions each finding becomes an annotation.
 set -euo pipefail
 
@@ -66,7 +67,7 @@ install_styles() {
   fetch "$base/ai-tells-commits.zip" "$AI_TELLS_COMMITS_SHA256" "$tmp/ai-tells-commits.zip"
   unzip -q "$tmp/ai-tells.zip" -d "$tmp/prose"
   unzip -q "$tmp/ai-tells-commits.zip" -d "$tmp/commits"
-  rm -rf "$styles"
+  rm -rf "$styles/ai-tells" "$styles/ai-tells-commits"
   mkdir -p "$styles"
   mv "$tmp/prose/ai-tells/styles/ai-tells" "$tmp/commits/ai-tells-commits" "$styles/"
   echo "$AI_TELLS_VERSION" > "$styles/.version"
