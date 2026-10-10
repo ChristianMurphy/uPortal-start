@@ -9,6 +9,7 @@ import {
   getAllPortletLists,
   createPortletListFailsWith409,
   updatePortletListFailsWith409,
+  expectEqualExceptUpdatedOn,
 } from "./utils/api-portlet-list-utils";
 import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
 
@@ -620,6 +621,7 @@ test("PUT confirm disallow duplicate name", async ({ request }) => {
 test("PUT confirm noop resave", async ({ request }) => {
   const key = `PUT_confirm_noop_resave_${Date.now()}`;
   await loginViaApi(request, config.users.staff);
+  const writesStarted = Date.now();
   const listId = await createPortletList(request, key, [
     { entityId: "fname1" },
   ]);
@@ -630,9 +632,16 @@ test("PUT confirm noop resave", async ({ request }) => {
     { data: {} }
   );
   expect(response.status()).toEqual(200);
+  const writesElapsed = Date.now() - writesStarted;
 
+  // Nothing changes, but the resave re-stamps updatedOn
   const currentState = await getPortletList(request, listId);
-  expect(currentState).toEqual(baselineState);
+  expectEqualExceptUpdatedOn(
+    currentState,
+    baselineState,
+    baselineState.updatedOn,
+    writesElapsed
+  );
 
   await removePortletList(request, listId);
 });
@@ -650,6 +659,7 @@ test("POST / PUT allow admin to specify name as favorites", async ({
   const baselineState = await getPortletList(request, listId);
 
   // Change to a unique name that is not 'favorites'
+  const updatesStarted = Date.now();
   const responseUpdate1 = await request.put(
     `${config.url}api/portlet-list/${listId}`,
     {
@@ -671,10 +681,15 @@ test("POST / PUT allow admin to specify name as favorites", async ({
     }
   );
   expect(responseUpdate2.status()).toEqual(200);
+  const updatesElapsed = Date.now() - updatesStarted;
 
   const currentState = await getPortletList(request, listId);
-  baselineState.updatedOn = updatedState.updatedOn;
-  expect(currentState).toEqual(baselineState);
+  expectEqualExceptUpdatedOn(
+    currentState,
+    baselineState,
+    updatedState.updatedOn,
+    updatesElapsed
+  );
 
   // Clean up
   await removePortletList(request, listId);

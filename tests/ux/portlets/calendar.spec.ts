@@ -54,7 +54,17 @@ test.describe("Calendar Portlet", () => {
     // template source leaks into the events column instead of being
     // interpolated. Catching that here is cheap.
     await loginViaUrl(page, config.users.admin);
+    // <calendar-portlet> keeps .upcal-event-list hidden until its events
+    // resource request returns. That request aggregates every configured
+    // feed, including external ones that can be slow or unreachable, so
+    // wait for the response itself rather than for a fixed timeout.
+    const eventsLoaded = page.waitForResponse(
+      (response) =>
+        response.url().includes("/p/calendar.") &&
+        response.url().includes(".resource.uP")
+    );
     await page.goto(CALENDAR_URL);
+    await eventsLoaded;
 
     const eventList = page.locator(".upcal-event-list");
     await expect(eventList).toBeVisible();

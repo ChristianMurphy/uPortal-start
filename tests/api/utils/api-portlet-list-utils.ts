@@ -154,3 +154,47 @@ export async function updatePortletListFailsWith409(
     message: `Specified ${inputTypeToFail} is not the correct length or has invalid characters.`,
   });
 }
+
+/*
+ * Epoch milliseconds of a portlet-list audit timestamp such as
+ * "2026-10-10 06:01:39 +0000" (config.formats.auditDateTimeTz).
+ */
+function auditTimestampMillis(value: unknown): number {
+  const match =
+    typeof value === "string"
+      ? config.formats.auditDateTimeTz.exec(value)
+      : undefined;
+  if (!match) throw new Error(`Not an audit timestamp: ${String(value)}`);
+  const [, year, month, day, hour, minute, second, zone] = match;
+  return Date.parse(
+    `${year}-${month}-${day}T${hour}:${minute}:${second}` +
+      `+${zone.slice(0, 2)}:${zone.slice(2)}`
+  );
+}
+
+/*
+ * Assert that `current` equals `expected` in every field but updatedOn.
+ *
+ * The server stamps updatedOn on every successful PUT, at one-second
+ * resolution, so two writes a few milliseconds apart get the same value
+ * unless a second boundary falls between them. updatedOn must therefore
+ * be no earlier than `previousUpdatedOn` (the value written before the
+ * PUTs under test) and later by at most the whole seconds the caller
+ * measured around those writes (`elapsedMs`).
+ */
+export function expectEqualExceptUpdatedOn(
+  current: Record<string, unknown>,
+  expected: Record<string, unknown>,
+  previousUpdatedOn: unknown,
+  elapsedMs: number
+): void {
+  expect(current).toEqual({
+    ...expected,
+    updatedOn: expect.stringMatching(config.formats.auditDateTimeTz),
+  });
+  const advancedBy =
+    auditTimestampMillis(current.updatedOn) -
+    auditTimestampMillis(previousUpdatedOn);
+  expect(advancedBy).toBeGreaterThanOrEqual(0);
+  expect(advancedBy).toBeLessThanOrEqual(Math.ceil(elapsedMs / 1000) * 1000);
+}
