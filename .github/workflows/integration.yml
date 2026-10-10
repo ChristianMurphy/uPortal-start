@@ -470,3 +470,81 @@ jobs:
           path: |
             build/db-migrate/
             .gradle/tomcat/logs/
+
+  # MOD-D29 item 9: two uPortal nodes on one PostgreSQL 18 database, with uPortal's default
+  # cluster configuration (Ehcache replication over JGroups, UP_MUTEX cluster locks). Checks cache
+  # invalidation across the nodes, that clustered jobs run once, and lock failover when the node
+  # holding a lock dies (tests/cluster/cluster.sh, docs/cluster-tests.md).
+  cluster:
+    name: "Cluster: two nodes${{ matrix.fault && format(', seeded fault {0}', matrix.fault) || '' }}"
+    needs: [uportal, plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        # Nightly, each seeded fault must make the checks meant to catch it fail
+        fault: ${{ fromJSON(needs.plan.outputs.nightly == 'true' && '["", "replication-off", "lock-ignored"]' || '[""]') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the uPortal build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: uportal-maven-local
+          path: ~/.m2/repository/org/jasig/portal
+      - name: Bootstrap gradle.properties for the uPortal build
+        env:
+          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
+        run: |
+          cp gradle.properties.example gradle.properties
+          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
+          grep '^uPortalVersion=' gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
+      - name: Deploy two nodes on PostgreSQL 18 and run the cluster checks
+        env:
+          FAULT: ${{ matrix.fault }}
+        run: |
+          options=()
+          if [ -n "$FAULT" ]; then options+=(--fault "$FAULT"); fi
+          tests/cluster/cluster.sh "${options[@]}" -- -PdbWaitSeconds=600
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Two-node cluster${FAULT:+, seeded fault $FAULT}"
+            echo '```'
+            cat build/cluster/results.txt 2> /dev/null || echo "no results"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          FAULT: ${{ matrix.fault }}
+      - name: Upload results and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-cluster${{ matrix.fault && format('-{0}', matrix.fault) || '' }}
+          path: build/cluster/
