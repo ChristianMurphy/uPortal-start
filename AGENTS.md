@@ -127,7 +127,7 @@ Conventions when writing tests:
 
 ## Git
 
-Branch `GH-{issue}` off `master`. [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `revert`. Subject imperative, lowercase, no period, ≤72 chars. Reference the issue in the footer (`Closes GH-42` / `Refs GH-42`). `.github/scripts/check-commit-messages.sh origin/master..HEAD` checks subjects; CI runs it.
+Branch `GH-{issue}` off `master`. [Conventional Commits](https://www.conventionalcommits.org/): `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `revert`. Subject imperative, lowercase, no period, ≤72 chars. Reference the issue in the footer (`Closes GH-42` / `Refs GH-42`). `.github/scripts/check-commit-messages.sh origin/master..HEAD` checks subjects; CI runs it. `.github/scripts/vale.sh commits origin/master..HEAD` checks commit messages for AI writing tells (Vale with the ai-tells rules, MOD-D35), and `.github/scripts/vale.sh docs` checks the 6.0 docs; CI runs the commit check.
 
 ## Gotchas
 
