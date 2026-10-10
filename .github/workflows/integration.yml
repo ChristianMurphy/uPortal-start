@@ -49,7 +49,9 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
+  # cancels the older run.
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
 jobs:
   uportal:
@@ -664,7 +666,9 @@ jobs:
   # p6spy in front of uPortal's JDBC driver in the deployed copy only (docs/query-budgets.md)
   query-budgets:
     name: "Query budgets: hsqldb"
-    needs: uportal
+    needs: [uportal, plan]
+    # Prototype only (MOD-D30): on a workstream branch (ccr-43ba0785-hzlrj5-<topic>) nightly only
+    if: ${{ !startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') || needs.plan.outputs.nightly == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
