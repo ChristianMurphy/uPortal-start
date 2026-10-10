@@ -17,6 +17,7 @@ seq-scan up_person_attr@bee7a8c0 vendor=postgres -- 6.0: R1 adds an index on UP_
 seq-scan up_person_dir@047ee72e vendor=postgres -- 6.0: R1; with tens of thousands of accounts and no index on UP_PERSON_ATTR (USER_DIR_ID) the planner hashes both tables for the login lookup
 seq-scan up_person_attr@556cedc1 vendor=postgres -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); lazy load of a local account's attributes
 # People search (search portlet, /api/v5-0/portal/search?type=people) matches lower(value) LIKE '%term%'
+seq-scan up_person_attr@ca83943e vendor=postgres -- 6.0: R6, the same people search; with hundreds of thousands of attribute rows the planner scans UP_PERSON_ATTR for the ATTR_NAME condition as well
 seq-scan up_person_attr_values@ca83943e vendor=postgres -- 6.0: R6, a leading-wildcard LIKE cannot use a btree; PostgreSQL gets a pg_trgm GIN index on lower(ATTR_VALUE), the other vendors keep the scan (search over local accounts only)
 # The admin attribute list: select distinct ATTR_NAME from UP_PERSON_ATTR (whole table by design)
 seq-scan up_person_attr@a8aaea90 vendor=postgres -- 6.0: R1's index has USER_DIR_ID first; a second index on (ATTR_NAME) turns this into an index-only scan (R6); rare (person directory administration)
