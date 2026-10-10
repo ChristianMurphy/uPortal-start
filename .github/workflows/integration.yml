@@ -589,3 +589,117 @@ jobs:
           path: |
             build/db-migrate/
             .gradle/tomcat/logs/
+
+  # MOD-D29: the UI specs on Firefox, WebKit and a phone viewport, the axe-core accessibility
+  # ratchet and the visual snapshots of the key pages, nightly, on HSQLDB
+  # (docs/browser-a11y-tests.md).
+  browsers:
+    name: "Browsers: ${{ matrix.suite }}"
+    needs: [uportal, plan]
+    if: ${{ needs.plan.outputs.nightly == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: firefox
+            browser: firefox
+            args: --config=tests/browsers-pw.config.ts --project=firefox
+          - suite: webkit
+            browser: webkit
+            args: --config=tests/browsers-pw.config.ts --project=webkit
+          - suite: phone
+            browser: chromium
+            args: --config=tests/browsers-pw.config.ts --project=phone
+          - suite: a11y
+            browser: chromium
+            args: --config=tests/a11y-pw.config.ts
+          - suite: visual
+            browser: chromium
+            args: --config=tests/visual-pw.config.ts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the uPortal build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: uportal-maven-local
+          path: ~/.m2/repository/org/jasig/portal
+      - name: Bootstrap gradle.properties for the uPortal build
+        env:
+          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
+        run: |
+          cp gradle.properties.example gradle.properties
+          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
+          grep '^uPortalVersion=' gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
+      - name: Initialize portal
+        run: ./gradlew -S portalInit
+      - name: Start Tomcat
+        run: ./gradlew -S tomcatStart
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Install the browser
+        env:
+          BROWSER: ${{ matrix.browser }}
+        run: npx playwright install --with-deps "$BROWSER"
+      - name: Run ${{ matrix.suite }}
+        env:
+          ARGS: ${{ matrix.args }}
+        run: |
+          read -r -a args <<< "$ARGS"
+          npx playwright test "${args[@]}" --reporter=list 2>&1 | tee build-playwright.log
+          exit "${PIPESTATUS[0]}"
+      - name: Report failures and new snapshots
+        if: always()
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: |
+          {
+            echo "### Browsers: $SUITE"
+            echo '```'
+            sed -n '/^  [0-9]* \(passed\|failed\|flaky\|skipped\)/,$p' build-playwright.log 2> /dev/null | head -n 60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # The accessibility ratchet prints what it observed; keep it where the run shows it
+          grep -o 'observed={.*}' build-playwright.log 2> /dev/null | sort -u | head -n 10 |
+            while read -r line; do echo "::warning title=a11y observed::${line:0:4000}"; done
+          # A snapshot written by this run (none existed) is printed in the log as base64, between
+          # markers, so it can be committed (tests/visual/fetch-snapshots.sh)
+          if [ "$SUITE" = visual ]; then
+            git status --porcelain --untracked-files=all tests/visual/snapshots | sed 's/^?? //' |
+              while read -r file; do
+                echo "::notice title=new visual snapshot::$file"
+                echo "=== BEGIN SNAPSHOT $file"
+                base64 -w 0 "$file"
+                echo
+                echo "=== END SNAPSHOT $file"
+              done
+          fi
+      - name: Stop Tomcat
+        if: always()
+        run: ./gradlew -S tomcatStop
