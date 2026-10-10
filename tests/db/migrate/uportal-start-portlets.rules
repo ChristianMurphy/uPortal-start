@@ -1,0 +1,13 @@
+#
+# Copy migration rules for the portlets uPortal-start bundles (dbMigrate task, MOD-D11). Their
+# tables share the portal database; uPortal's own tables and generators are known to the tool.
+# Rule syntax: org.apereo.portal.dbmigrate.rules.RuleSet in uPortal-db-migrate.
+#
+# The portlets with tables (Announcements, Bookmarks, Calendar, Feedback, NewsReader,
+# Notification) take their ids from one shared generator: the hibernate_sequence sequence on
+# PostgreSQL, HSQLDB and Oracle; on MySQL/MariaDB they use AUTO_INCREMENT columns (moved by the
+# copy's own inserts) or a one-row hibernate_sequence table. SimpleContent's attachments use
+# UP_ATTACHMENT_SEQ. Bookmarks, Feedback and Notification create their tables when they first
+# start (Hibernate schema update), not in dataInit: start the target portal once before copying.
+generator hibernate_sequence allocation=1 serves=ANNOUNCEMENT.ANN_ID,TOPIC.TOPIC_ID,SUBSCRIPTION.SUB_ID,CALENDAR_CONFIGURATION.CALENDAR_CONFIGURATION_ID,CALENDAR_STORE.CALENDAR_ID,NEWS_CONFIGURATION.NEWS_CONFIGURATION_ID,NEWS_DEFINITION.NEWS_ID,NEWS_SET.SET_ID,BOOKMARK_STORE.ENTRY_ID,BOOKMARK_PREFS.PREF_ID,FEEDBACK_STORE.ITEM_ID,NOTICE_ENTRY.ID,NOTICE_ACTION.ID,NOTICE_ADDRESSEE.ID,NOTICE_ATTRIBUTE.ID,NOTICE_EVENT.ID,NOTICE_RECIPIENT.ID
+generator UP_ATTACHMENT_SEQ allocation=1 serves=SCM_ATTACHMENT.ID
