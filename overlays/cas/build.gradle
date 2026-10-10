@@ -54,13 +54,23 @@ war {
     exclude 'WEB-INF/lib/aspectjweaver-1.6.10.jar'
 
     // Point CAS at this build's Tomcat and HSQLDB ports (see portTokens in the root build.gradle)
-    inputs.properties(rootProject.ext.portTokens)
+    // and at the portal database: the bundled HSQLDB, or the database harness's -PdbVendor one
+    // (gradle/tasks/db.gradle), so that CAS logins work against any vendor
+    Map harness = rootProject.ext.dbHarness
+    Closure<String> xml = { String s -> (s ?: '').replace('&', '&amp;').replace('"', '&quot;').replace('<', '&lt;') }
+    Map<String, String> tokens = rootProject.ext.portTokens + [
+        casDbDriver: xml(harness ? harness.driverClass : 'org.hsqldb.jdbc.JDBCDriver'),
+        casDbUrl: xml(harness ? harness.url : "jdbc:hsqldb:hsql://localhost:${rootProject.ext.hsqlPort}/uPortal".toString()),
+        casDbUser: xml(harness ? harness.username : 'sa'),
+        casDbPassword: xml(harness ? harness.password : ''),
+    ]
+    inputs.properties(tokens)
     filesMatching([
         'WEB-INF/cas.properties',
         'WEB-INF/deployerConfigContext.xml',
         'WEB-INF/spring-configuration/clearpass-configuration.xml',
     ]) {
-        filter(ReplaceTokens, tokens: rootProject.ext.portTokens)
+        filter(ReplaceTokens, tokens: tokens)
     }
     filteringCharset = 'ISO-8859-1'  // Leaves every byte other than the tokens as-is
 }
