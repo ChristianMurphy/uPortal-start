@@ -141,7 +141,7 @@ and CI's Build step runs it. One seeded WAR contains eight uses and must give ex
 A clean WAR, a hidden jar class and a Tomcat class packaged by the WAR give none. The allowlist
 accepts only what it names and refuses an entry without a reason. All 5 tests pass.
 
-## Gate results
+## Results of the required checks
 
 All local runs used uPortal 5.17.10-SNAPSHOT built from uPortal's `ccr-43ba0785-hzlrj5`
 (`./gradlew install` on JDK 25), uPortal-start at this branch, and HSQLDB. Playwright 1.64 drove
@@ -246,7 +246,7 @@ GitHub cancelled the earlier pushes' runs as superseded. Results to be added.
    portlets). The spike recorded identical results on 8.5, 10.1 and 11, using that day's uPortal
    5.17.10-SNAPSHOT and JDK 21 or 25. This run used the integration branch's uPortal. The change
    goes in the right direction. Its cause is still open. It may be Tomcat 11's request attribute
-   enumeration, or a change on the integration branch. Settle it before the P7-1 gate fixes the expected Pluto
+   enumeration, or a change on the integration branch. Settle it before the P7-1 required checks fix the expected Pluto
    numbers.
 4. **The scan indexes the whole WAR and needs memory.** Run in parallel, the 16 scans outgrew the
    Gradle daemon's default 512 MB heap. They now share a build service with one slot. Each scan
