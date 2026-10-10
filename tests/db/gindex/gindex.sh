@@ -136,9 +136,9 @@ start_gindex_database() {
                -c auto_explain.log_min_duration=-1 -c auto_explain.log_analyze=on
                -c auto_explain.log_buffers=on -c auto_explain.log_timing=off -c auto_explain.log_format=json
                -c auto_explain.log_verbose=off -c auto_explain.log_nested_statements=on
-               -c shared_buffers=512MB -c max_wal_size=4GB)
+               -c shared_buffers=512MB -c max_wal_size=4GB -c max_connections=300)
     else
-        extra=(--performance-schema=ON --local-infile=1 --innodb-buffer-pool-size=1G
+        extra=(--performance-schema=ON --local-infile=1 --innodb-buffer-pool-size=1G --max-connections=300
                --performance-schema-digests-size=20000 --max-digest-length=4096
                --performance-schema-max-digest-length=4096)
     fi
@@ -215,7 +215,7 @@ capture() {  # capture on|off
     if [ "$FAMILY" = postgres ]; then
         if [ "$1" = on ]; then
             # In a schema of its own, so the audit and the harness see only uPortal's objects
-            dbsql <<'EOF'
+            dbsql <<'EOF' || return 1
 CREATE SCHEMA IF NOT EXISTS gindex;
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA gindex;
 SELECT gindex.pg_stat_statements_reset();
@@ -319,7 +319,7 @@ workload() {
     local status=0
     step "workload"
     portal_properties
-    capture on
+    capture on || { echo "could not reset the statement statistics" >&2; return 1; }
     local started
     started=$(date +%s)
     start_portal "$VENDOR" || return 1
@@ -333,8 +333,9 @@ workload() {
     cat "$OUT/driver.json" "$OUT/driver.log"
     # The analytics jobs start 120 s after the portal and then run every ~20 s; give them three rounds
     while [ $(( $(date +%s) - started )) -lt 200 ]; do sleep 10; done
-    capture off
+    # Stop the portal first: its pools hold most of the database's connections
     stop_own_tomcat "$VENDOR"
+    capture off || { echo "could not freeze the captured statements" >&2; return 1; }
     local elapsed=$(( $(date +%s) - started ))
 
     {
