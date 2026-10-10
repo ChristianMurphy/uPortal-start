@@ -31,8 +31,8 @@ notificationWebComponentsVersion=1.0.4
 ckeditor4Version=4.22.1
 
 # Dependencies driven by Tomcat version
-tomcatVersion=8.5.100
-servletApiDependency=javax.servlet:javax.servlet-api:3.0.1
+tomcatVersion=9.0.122
+servletApiDependency=javax.servlet:javax.servlet-api:4.0.1
 ccppVersion=1.0
 
 # Dependencies driven by uPortal

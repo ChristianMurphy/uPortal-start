@@ -24,8 +24,10 @@
   <!-- Security listener. Documentation at /docs/config/listeners.html
   <Listener className="org.apache.catalina.security.SecurityListener" />
   -->
-  <!--APR library loader. Documentation at /docs/apr.html -->
-  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+  <!-- APR connector and OpenSSL support using Tomcat Native -->
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" />
+  <!-- OpenSSL support using FFM API from Java 22 -->
+  <!-- <Listener className="org.apache.catalina.core.OpenSSLLifecycleListener" /> -->
   <!-- Prevent memory leaks due to use of particular java/javax APIs-->
   <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
   <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
@@ -66,40 +68,50 @@
          APR (HTTP/AJP) Connector: /docs/apr.html
          Define a non-SSL/TLS HTTP/1.1 Connector on port 8080
     -->
+    <!-- uPortal sets maxParameterCount and maxPartCount explicitly.  Tomcat's own server.xml
+         lowers maxParameterCount to 1000, which large portal admin forms (e.g. the Permissions
+         Manager) can exceed;  10000 is Tomcat's built-in default and the value uPortal-start ran
+         with on Tomcat 8.5.  maxPartCount limits the parts of a multipart/form-data request (such
+         as an Import/Export upload);  Tomcat 8.5 had no such limit, and 50 is Tomcat 9's default. -->
     <Connector port="@tomcatHttpPort@" protocol="HTTP/1.1"
                connectionTimeout="20000"
                redirectPort="8443"
+               maxParameterCount="10000"
+               maxPartCount="50"
                maxThreads="1200"
-               compression="on" 
-               compressionMinSize="1024" 
-               compressableMimeType="text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json"
-    />
+               compression="on"
+               compressionMinSize="1024"
+               compressibleMimeType="text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json"
+               />
     <!-- Model: 500 users, 1 page / 15 sec, 25 HTTP req / page, 20% buffer -->
     <!-- A "Connector" using the shared thread pool-->
     <!--
     <Connector executor="tomcatThreadPool"
                port="8080" protocol="HTTP/1.1"
                connectionTimeout="20000"
-               redirectPort="8443" />
+               redirectPort="8443"
+               maxParameterCount="1000"
+               />
     -->
-    <!-- Define a SSL/TLS HTTP/1.1 Connector on port 8443
+    <!-- Define an SSL/TLS HTTP/1.1 Connector on port 8443
          This connector uses the NIO implementation. The default
          SSLImplementation will depend on the presence of the APR/native
-         library and the useOpenSSL attribute of the
-         AprLifecycleListener.
+         library and the useOpenSSL attribute of the AprLifecycleListener.
          Either JSSE or OpenSSL style configuration may be used regardless of
          the SSLImplementation selected. JSSE style configuration is used below.
     -->
     <!--
     <Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
-               maxThreads="150" SSLEnabled="true">
+               maxThreads="150" SSLEnabled="true"
+               maxParameterCount="1000"
+               >
         <SSLHostConfig>
             <Certificate certificateKeystoreFile="conf/localhost-rsa.jks"
-                         type="RSA" />
+                         certificateKeystorePassword="changeit" type="RSA" />
         </SSLHostConfig>
     </Connector>
     -->
-    <!-- Define a SSL/TLS HTTP/1.1 Connector on port 8443 with HTTP/2
+    <!-- Define an SSL/TLS HTTP/1.1 Connector on port 8443 with HTTP/2
          This connector uses the APR/native implementation which always uses
          OpenSSL for TLS.
          Either JSSE or OpenSSL style configuration may be used. OpenSSL style
@@ -107,7 +119,9 @@
     -->
     <!--
     <Connector port="8443" protocol="org.apache.coyote.http11.Http11AprProtocol"
-               maxThreads="150" SSLEnabled="true" >
+               maxThreads="150" SSLEnabled="true"
+               maxParameterCount="1000"
+               >
         <UpgradeProtocol className="org.apache.coyote.http2.Http2Protocol" />
         <SSLHostConfig>
             <Certificate certificateKeyFile="conf/localhost-rsa-key.pem"
@@ -120,9 +134,13 @@
 
     <!-- Define an AJP 1.3 Connector on port 8009 -->
     <!--
-    <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+    <Connector protocol="AJP/1.3"
+               address="::1"
+               port="8009"
+               redirectPort="8443"
+               maxParameterCount="1000"
+               />
     -->
-
 
     <!-- An Engine represents the entry point (within Catalina) that processes
          every request.  The Engine implementation for Tomcat stand alone
