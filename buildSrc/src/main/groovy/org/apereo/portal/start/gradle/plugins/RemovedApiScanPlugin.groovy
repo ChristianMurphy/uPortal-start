@@ -10,6 +10,8 @@ import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
@@ -38,7 +40,13 @@ class RemovedApiScanPlugin implements Plugin<Project> {
             removedApiReference "javax.servlet.jsp:javax.servlet.jsp-api:${project.jspApiVersion}"
             removedApiReference "javax.el:javax.el-api:${project.elApiVersion}"
         }
+        // One scan at a time:  each indexes a whole WAR (uPortal's has some 40,000 classes), and in
+        // parallel they outgrow the Gradle daemon's heap
+        def oneAtATime = project.gradle.sharedServices.registerIfAbsent('removedApiScan', RemovedApiScanSlot) {
+            maxParallelUsages = 1
+        }
         def scan = project.tasks.register('removedApiScan', RemovedApiScanTask) {
+            usesService(oneAtATime)
             group = 'Verification'
             description = 'Fails on uses of Servlet, Pages, EL and Tomcat APIs that Tomcat 11 removed'
             war.set(project.tasks.named('war', War).flatMap { it.archiveFile })
@@ -50,6 +58,9 @@ class RemovedApiScanPlugin implements Plugin<Project> {
         project.tasks.named('check') { dependsOn scan }
         project.tasks.matching { it.name == 'tomcatDeploy' }.configureEach { dependsOn scan }
     }
+}
+
+abstract class RemovedApiScanSlot implements BuildService<BuildServiceParameters.None> {
 }
 
 abstract class RemovedApiScanTask extends DefaultTask {
