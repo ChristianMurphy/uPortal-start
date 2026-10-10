@@ -94,6 +94,13 @@ export async function openLoginForm(page: Page): Promise<void> {
   const uportalSignin = page.locator(SEL_UPORTAL_LOGIN);
   await expect(uportalSignin).toHaveText("Sign In");
   await page.click(SEL_UPORTAL_LOGIN);
+  await expectLoginForm(page);
+}
+
+/*
+ * Confirm the page shows the login form of the configured authMode
+ */
+export async function expectLoginForm(page: Page): Promise<void> {
   if (config.authMode === "cas") {
     await expect(page).toHaveURL((url) =>
       url.href.startsWith(`${config.casUrl}login`)
@@ -130,8 +137,9 @@ export async function expectSignedOut(page: Page): Promise<void> {
 
 /*
  * Confirm the login form rejected the credentials submitted by
- * submitLoginForm:  CAS stays on its form with an error, and uPortal shows
- * its login form again with an error
+ * submitLoginForm.  CAS stays on its form with an error.  uPortal goes back
+ * to the guest page without saying why; its login form shows the error when
+ * it is opened again.
  */
 export async function expectLoginRefused(page: Page): Promise<void> {
   if (config.authMode === "cas") {
@@ -142,6 +150,8 @@ export async function expectLoginRefused(page: Page): Promise<void> {
       "Authentication attempt has failed"
     );
   } else {
+    await expectSignedOut(page);
+    await openLoginForm(page);
     await expect(page.locator(".portlet-msg-error")).toContainText(
       "Invalid username or password"
     );

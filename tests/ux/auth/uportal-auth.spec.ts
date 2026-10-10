@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
+  expectLoginForm,
   expectLoginRefused,
   expectSignedOut,
   loginViaPage,
@@ -53,4 +54,12 @@ test("a wrong password is refused", async ({ page }) => {
   // Still a guest
   await page.goto(`${config.url}f/welcome/normal/render.uP`);
   await expectSignedOut(page);
+});
+
+test("a guest opening a page that needs a login gets the login form", async ({
+  page,
+}) => {
+  const response = await page.goto(`${config.url}p/user-administration`);
+  expect(response?.status()).toBe(200);
+  await expectLoginForm(page);
 });
