@@ -70,4 +70,3 @@ duplicate-index up_portlet_pref.idx_upp_prefs_id vendor=mariadb -- 6.0: R10, the
 duplicate-index up_ss_user_pref_lay_attr.idx_ss_user_pref_id vendor=mariadb -- 6.0: R10, the same SS_USER_PREF_ID column as InnoDB's foreign-key index; keep one
 duplicate-index up_dlm_evaluator_paren.fk_* vendor=mariadb -- 6.0: R10, InnoDB's foreign-key index duplicates the unique key of the same name
 duplicate-index up_event_aggr_conf_groups_*.fk_* vendor=mariadb -- 6.0: R10, InnoDB's foreign-key index duplicates the unique key of the same name
-redundant-index up_*_aggr.idx_up_*_dti vendor=mariadb -- 6.0: R8 drops it; the *_dtic index has the same leading columns
