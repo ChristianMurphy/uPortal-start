@@ -90,7 +90,7 @@ jobs:
             port: 1433
             host-port: 15433
           - vendor: oracle-23
-            image: gvenzl/oracle-free:23-slim@sha256:6d61d267a3b978c24c5ac1790e62e927416a0aec446bd86e4b3a1527562757bd
+            image: gvenzl/oracle-free:23.26.3-slim@sha256:6d61d267a3b978c24c5ac1790e62e927416a0aec446bd86e4b3a1527562757bd
             port: 1521
             host-port: 15521
     services:
