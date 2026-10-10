@@ -13,17 +13,43 @@ For each vendor, the harness:
 4. takes a snapshot of the schema and of every ID generator;
 5. compares the snapshot with the recorded baseline in `tests/db/snapshots/<baseline>/<vendor>/`.
 
+## Which databases
+
+uPortal 6.0 runs on, and is tuned for, current database servers (MOD-D25). Older servers stay in
+the plan only as **migration sources**: 5.17 runs on them, and the copy migration (`dbMigrate`,
+below) reads them and writes a current server. Each column below names files in
+`tests/db/vendors`.
+
+| Vendor | 6.0 runtime: the minimum version | Migration sources (5.17) |
+| --- | --- | --- |
+| PostgreSQL | 18 (`postgres-18`) | 14, 15, 16 (`postgres-14`, `postgres-15`, `postgres-16`) |
+| MySQL | 9.7 LTS (`mysql-9.7`) | 8.0, 8.4 (`mysql-8.0`, `mysql-8.4`) |
+| MariaDB | 12.3 LTS (`mariadb-12.3`) | 10.6, 10.11, 11.4 (`mariadb-10.6`, `mariadb-10.11`, `mariadb-11.4`) |
+| SQL Server | 2025 (`sqlserver-2025`) | 2019, 2022 (`sqlserver-2019`, `sqlserver-2022`) |
+| Oracle | Free 23.26 (`oracle-23`) | XE 21 (`oracle-xe-21`), the closest freely available stand-in for 19c |
+| HSQLDB | 2.7.4, development only (`hsqldb`) | 2.5.1, 2.7.4 (`hsqldb-2.5.1`, `hsqldb`) |
+
+* The harness (this gate, `G-db`) runs on the six runtime databases.
+* The copy-migration gate (`G-migrate`, see "Copy migration in CI") copies used 5.17 databases on
+  the migration sources into the runtime databases.
+* uPortal's own `db-integration.yml` runs its JPA/DAO tests on the five runtime servers on every
+  push, and nightly on the next releases (PostgreSQL 19 beta, MySQL 26 innovation, MariaDB 13) as
+  canaries that are allowed to fail.
+
+Every image is pinned as `name:tag@sha256:digest` in the vendor file. Renovate moves digests and
+patch versions; a new release series is a change to this table, with its own baseline.
+
 ## Running it
 
 You need Docker, Java 11 for the portal plus a JDK 21 for Gradle (see "Prerequisites" in `README.md`),
 and a `gradle.properties` (copy `gradle.properties.example`).
 
 ```bash
-tests/db/harness.sh postgres-16                       # one vendor
-tests/db/harness.sh hsqldb postgres-16 mysql-8.4 mariadb-10.6 mariadb-11.4 sqlserver-2022 oracle-23
-tests/db/harness.sh --portal postgres-16              # also start the portal and run the API specs
-tests/db/harness.sh --full-suite postgres-16          # every overlay and every Playwright spec
-tests/db/harness.sh postgres-16 -- -PtomcatHttpPort=8180 -PtomcatShutdownPort=8105 -PhsqlPort=8987
+tests/db/harness.sh postgres-18                       # one vendor
+tests/db/harness.sh hsqldb postgres-18 mysql-9.7 mariadb-12.3 sqlserver-2025 oracle-23
+tests/db/harness.sh --portal postgres-18              # also start the portal and run the API specs
+tests/db/harness.sh --full-suite postgres-18          # every overlay and every Playwright spec
+tests/db/harness.sh postgres-18 -- -PtomcatHttpPort=8180 -PtomcatShutdownPort=8105 -PhsqlPort=8987
 ```
 
 Arguments after `--` go to every Gradle call, so give a checkout that runs next to another portal
@@ -42,20 +68,26 @@ its own ports there. Options:
 
 Each container is named `uportal-dbh-<vendor>` and maps the vendor's `host.port` (15xxx).
 The `hsqldb` vendor uses the bundled HSQLDB on `hsqlPort` and **deletes `.gradle/hsqldb` first**,
-like any `dataInit` would wipe it. Everything a run produces is in `build/db-harness/<vendor>/`,
-including `harness.log` and, after a comparison, `drift-report.txt`.
+like any `dataInit` would wipe it (`hsqldb-2.5.1` does the same with its own port and directory,
+from its `gradle.args`). Everything a run produces is in `build/db-harness/<vendor>/`, including
+`harness.log` and, after a comparison, `drift-report.txt`.
 
-`.github/workflows/db-harness.yml` runs the same script with `--portal` for every vendor.
-PostgreSQL, SQL Server and Oracle run as GitHub Actions service containers (`--external`). MySQL
-and MariaDB need a server option (`lower_case_table_names=1`, see their vendor files) that a
-service container cannot be given, so the script starts those containers itself.
+`.github/workflows/integration.yml` runs the harness against uPortal built from source: it
+builds the uPortal branch of the same name (or `master`, or the repository and ref given to a
+manual run) and installs it into `~/.m2`. On every push it then runs the whole Playwright suite on
+HSQLDB, the harness with `--portal` on the six runtime databases, the harness with `--full-suite`
+on PostgreSQL 18 and MariaDB 12.3 (nightly on MySQL 9.7 as well), and the G-migrate pairs. The
+scripts start every database themselves from its vendor file; MySQL and MariaDB need a server
+option (`lower_case_table_names=1`) that a service container cannot be given. On GitHub Actions
+the harness also shows a failed vendor's drift report and failed specs as annotations on the run.
+In the prototype, a workstream branch (`ccr-43ba0785-hzlrj5-<topic>`, MOD-D30) runs a light profile
+instead: the uPortal build, Playwright on HSQLDB, the harness and Playwright on PostgreSQL 18, and
+one G-migrate pair.
 
-`.github/workflows/integration.yml` does the same against uPortal built from source instead of
-the released `uPortalVersion`: it builds the uPortal branch of the same name (or `master`, or the
-repository and ref given to a manual run) and installs it into `~/.m2`. It then runs the whole
-Playwright suite on HSQLDB, the harness with `--portal` on every vendor, and the harness with
-`--full-suite` on PostgreSQL 16 and MariaDB 11.4. On GitHub Actions the harness also shows a
-failed vendor's drift report and failed specs as annotations on the run.
+`.github/workflows/db-harness.yml` checks the released `uPortalVersion` on master, on the servers
+the 5.17 baselines were first recorded on (PostgreSQL 16, MySQL 8.4, MariaDB 10.6 and 11.4, SQL
+Server 2022, Oracle Free 23.26 and HSQLDB). PostgreSQL, SQL Server and Oracle run there as GitHub
+Actions service containers (`--external`).
 
 With `--full-suite` the snapshot is taken right after uPortal's `dataInit`, as with the other
 options, so it covers uPortal's schema only. The portlets' own `dataInit` tasks (Announcements,
@@ -75,11 +107,11 @@ To Start the Embedded Database" in `README.md`).
 `ORG_GRADLE_PROJECT_dbPassword` and so on. The same switch runs a whole portal against a database:
 
 ```bash
-docker run -d --name pg -p 15432:5432 -e POSTGRES_DB=uportal -e POSTGRES_USER=uportal \
-    -e POSTGRES_PASSWORD=uportal postgres:16-alpine
-./gradlew -PdbVendor=postgres-16 tomcatInstall :overlays:uPortal:tomcatDeploy \
+docker run -d --name pg -p 15418:5432 -e POSTGRES_DB=uportal -e POSTGRES_USER=uportal \
+    -e POSTGRES_PASSWORD=uportal postgres:18-alpine
+./gradlew -PdbVendor=postgres-18 tomcatInstall :overlays:uPortal:tomcatDeploy \
     dbWait dbSetup :overlays:uPortal:dataInit dbSnapshot dbVerify
-./gradlew -PdbVendor=postgres-16 tomcatStart
+./gradlew -PdbVendor=postgres-18 tomcatStart
 ```
 
 | Task | What it does |
@@ -165,24 +197,29 @@ it from its `baseline` input, which is empty unless a manual run sets it.
 ### Recording a baseline in CI
 
 SQL Server and Oracle do not fit next to a portal in a small container, so record new baselines
-on GitHub Actions instead of locally:
+on GitHub Actions instead of locally. On GitHub Actions the harness attaches the snapshot files
+(as a base64 `tar.gz`) to the job as notice annotations titled `snapshot of <vendor>` whenever it
+records (`--record`) or finds no baseline to compare with, and annotations can be read wherever
+the GitHub API can, even where artifacts cannot be downloaded:
 
 1. Point the run at the uPortal to record: `uPortalVersion` in `gradle.properties.example` for
    `db-harness.yml`, or the uPortal branch for `integration.yml`.
-2. Run the workflow (a push, or "Run workflow" for `db-harness.yml`). Every vendor's job uploads
-   `build/db-harness/<vendor>/` as an artifact, and it holds the snapshot whether or not the
-   comparison passed.
-3. Download the artifacts and copy `schema.txt`, `schema-normalized.txt`, `generators.txt` and,
-   for PostgreSQL, `lob-report.txt` from each `build/db-harness/<vendor>/` into
-   `tests/db/snapshots/<version>/<vendor>/`, e.g. `tests/db/snapshots/5.17.9/postgres-16/`.
-   These are the files `dbRecord` (`--record`) would copy.
-4. Commit them, and push again: the next run picks the new directory by itself and has to show
-   zero drift on every vendor before the baseline counts as reproduced.
+2. Run the harness for the vendor with `--record --baseline <directory>` (or simply without a
+   baseline for it), on a push or a manual run.
+3. `tests/db/fetch-ci-snapshot.sh <owner/repo> <run id> <directory> [<vendor>...]` reads the
+   annotations and writes `schema.txt`, `schema-normalized.txt`, `generators.txt` and, for
+   PostgreSQL, `lob-report.txt` into `tests/db/snapshots/<directory>/<vendor>/`, the files
+   `dbRecord` would write. When two jobs of the run snapshot the same vendor, it checks that the
+   two are identical. It never overwrites a recorded file.
+4. Commit them, and push again: the next run compares with the new files by itself and has to show
+   zero drift on a fresh database before the baseline counts as reproduced.
 
-Never re-record `5.17`; a new uPortal version or an intentional schema change gets a new
-directory. The one exception is a database server that uPortal-start itself ships, when the
-upgrade changes nothing but names. `hsqldb` was re-recorded with `--record --baseline 5.17` when
-uPortal-start moved from HSQLDB 2.5.1 to 2.7.4 (see "5.17 reference results").
+Never re-record a baseline; a new uPortal version or an intentional schema change gets a new
+directory, and a new database server a new vendor directory. `dbRecord` refuses to overwrite a
+recorded baseline unless `-PdbRecordReplace` is given. The one exception so far is a database
+server that uPortal-start itself ships, when the upgrade changes nothing but names: `hsqldb` was
+re-recorded when uPortal-start moved from HSQLDB 2.5.1 to 2.7.4 (MOD-I83, see "5.17 reference
+results").
 
 ## How later phases use it
 
@@ -196,11 +233,11 @@ uPortal-start moved from HSQLDB 2.5.1 to 2.7.4 (see "5.17 reference results").
   `NAMES: DRIFT, n renamed`, with every rename listed, so a reviewer can see that nothing else
   moved.
 * **In-place upgrade (from P2-2).** Create the database with the old build and keep it:
-  `tests/db/harness.sh --keep postgres-16 -- -PuPortalVersion=<5.17.x>`. Start the new build on
+  `tests/db/harness.sh --keep postgres-18 -- -PuPortalVersion=<5.17.x>`. Start the new build on
   that database without `dataInit`; it must start and pass the API specs:
-  `tests/db/harness.sh --external --skip-init --keep --portal postgres-16 -- -PuPortalVersion=<new>`.
+  `tests/db/harness.sh --external --skip-init --keep --portal postgres-18 -- -PuPortalVersion=<new>`.
   Then snapshot the database the new code has run against:
-  `tests/db/harness.sh --external --skip-init postgres-16 -- -PuPortalVersion=<new>`.
+  `tests/db/harness.sh --external --skip-init postgres-18 -- -PuPortalVersion=<new>`.
   `STRUCTURE` and `NAMES` must show no drift. `DATA` and `GENERATORS` move, because the portal
   wrote rows. The harness does not insert one row per entity yet. Add that when the generator
   mappings change (P2-3, P6-1).
@@ -277,10 +314,67 @@ portal start, then copied with `-PdbMigrateClearTarget`; every table and generat
 | HSQLDB 2.7.4, after the API and smoke specs | PostgreSQL 18 (schema-only copy) | 114 / 9,765 | 7.7 s + 3.5 s | not run |
 | PostgreSQL 16, 1,000,000 synthetic raw events | MariaDB 12.3 | 1 / 1,000,000 | 148.5 s + 108.6 s, at most 94 MiB heap | not run |
 
+### Copy migration in CI (G-migrate)
+
+`tests/db/migrate.sh [--playwright] <source> <target>` checks one pair the way an adopter
+upgrades:
+
+1. It starts both databases.
+2. It fills the source like a used 5.17 portal: every overlay is deployed for the source,
+   `dataInit` runs on the old server, and the portal is started once to run the Playwright API
+   specs. That leaves events, portlet lists and the tables that Bookmarks, Feedback and
+   Notification create on their first start.
+3. It prepares the target: deploy, `dataInit`, and one portal start (MOD-I92).
+4. `./gradlew dbMigrate -PsourceDbVendor=<source> -PtargetDbVendor=<target> -PdbMigrateClearTarget`
+   must exit with 0: every table copied and verified, every generator positioned.
+5. With `--playwright`, the whole Playwright suite then runs on the migrated portal.
+
+The script prints how long each step took and, on GitHub Actions, annotates the first failure.
+The pairs live in `tests/db/migrate/matrix.json`, and `tests/db/migrate/matrix.mjs` turns them into
+the `integration.yml` job matrix, failing when a set misses its rules:
+
+* **Every push:** the six pairs listed in `matrix.json`: four upgrades within a vendor from its
+  newest source (PostgreSQL 16 → 18, MySQL 8.4 → 9.7, SQL Server 2022 → 2025, Oracle XE 21 → Free
+  23.26) and two across vendors (MariaDB 11.4 → PostgreSQL 18, PostgreSQL 15 → MariaDB 12.3). The
+  whole Playwright suite runs after PostgreSQL 16 → 18 and PostgreSQL 15 → MariaDB 12.3.
+* **Workstream branches** (prototype only, MOD-D30): the one cross-vendor pair listed under
+  `workstream` (MariaDB 11.4 → PostgreSQL 18).
+* **Nightly** (the schedule, or a manual run with `nightly`): every (source vendor, target vendor)
+  pair once, 36 in all. The versions of each source vendor take turns, so every source version is
+  read at least once, and every target is written six times. The whole Playwright suite runs on
+  each target once, after a copy from another vendor.
+
+CI results (uPortal 5.17.10-SNAPSHOT built from source, 2026-10-10). Nightly run 38087260340 copied
+and verified all 36 pairs. Each source held about 3,200 rows in 114 tables. The copy took 1 to 4 s
+and verification under 2 s. A job takes 10 to 20 minutes, almost all of it deploying the portal
+twice and filling both databases. The whole Playwright suite passed on migrated PostgreSQL 18,
+MySQL 9.7, MariaDB 12.3, SQL Server 2025, Oracle Free 23.26 and HSQLDB portals. The first runs found
+three bugs, all fixed:
+
+* Parallel data tasks deadlocked on SQL Server (MOD-I107).
+* The Feedback portlet had no usable SQL Server dialect (MOD-I108; see `portlet.<file>.<key>` in
+  `hsqldb.properties`).
+* Verification of SQL Server `datetime` values copied into whole seconds (MOD-I109).
+
+`hsqldb-2.5.1` reads a database that HSQLDB 2.5.1, which uPortal-start bundled before 2.7.4,
+created. HSQLDB 2.7.4 can open such files, but converts them as it does, and a migration source
+should only be read. So the vendor file runs uPortal-start's own HSQLDB server at 2.5.1, on its own
+port and in its own directory. An adopter serves an existing 2.5.1 database the same way:
+
+```bash
+./gradlew -PhsqldbVersion=2.5.1 -PhsqlPort=15925 -PhsqlDatabaseDir=<directory> hsqlStart
+./gradlew dbMigrate -PsourceDbVendor=hsqldb-2.5.1 -PtargetDbVendor=postgres-18 -PdbMigrateClearTarget
+```
+
 ## 5.17 reference results
 
 Recorded with uPortal 5.17.10-SNAPSHOT (Hibernate 4.3.11) and the quickstart data, then
 reproduced with zero drift by a second fresh run on every vendor.
+
+The baselines of the 6.0 runtime servers PostgreSQL 18.6, MySQL 9.7.2, MariaDB 12.3.3 and SQL
+Server 2025 were recorded in CI (MOD-D25) from the same code. Apart from their version headers they
+equal those of PostgreSQL 16, MySQL 8.4, MariaDB 11.4 and SQL Server 2022 line for line: 5.17
+creates the same schema, names and generators on the newer servers, with the same dialects.
 
 The `hsqldb` baseline was first recorded on HSQLDB 2.5.1 and re-recorded on 2.7.4, the version
 uPortal-start now bundles. Compared with the 2.5.1 recording, `STRUCTURE`, `DATA` and `GENERATORS`
@@ -297,11 +391,11 @@ depends on the server version that the driver reports, and so on the driver:
 | Vendor | JDBC driver | Dialect uPortal uses | Generated IDs (49 + 2 UUID) are backed by |
 | --- | --- | --- | --- |
 | `hsqldb` 2.7.4 | hsqldb 2.7.4 | `HSQLDialect` (standard) | 49 sequences |
-| `postgres-16` | pgjdbc 42.7.11 | `PostgreSQL81Dialect` (standard: Hibernate 4.3 only knows PostgreSQL 8 and 9, so 10+ falls through to 8.1) | 49 sequences |
-| `mysql-8.4` | MySQL Connector/J 8.4.0 | `MySQL5Dialect` (standard; `PortalDialectResolver` only handles MySQL 5) | 49 one-row tables `up_*_seq (next_val)` |
+| `postgres-16`, `postgres-18` | pgjdbc 42.7.11 | `PostgreSQL81Dialect` (standard: Hibernate 4.3 only knows PostgreSQL 8 and 9, so 10+ falls through to 8.1) | 49 sequences |
+| `mysql-8.4`, `mysql-9.7` | MySQL Connector/J 8.4.0 | `MySQL5Dialect` (standard; `PortalDialectResolver` only handles MySQL 5) | 49 one-row tables `up_*_seq (next_val)` |
 | `mariadb-10.6` | MySQL Connector/J 8.4.0 | `MySQL5InnoDBCompressedDialect` (`PortalDialectResolver`: MariaDB 10 announces itself as `5.5.5-10.6`); every entity and legacy table is `ROW_FORMAT=COMPRESSED` | 49 one-row tables |
-| `mariadb-11.4` | MariaDB Connector/J 3.5.6, `useMysqlMetadata=true` | `MySQL5Dialect` (standard) | 49 one-row tables |
-| `sqlserver-2022` | mssql-jdbc 13.4.0 | `SQLServer2005Dialect` (`PortalDialectResolver`) | 49 one-row tables `UP_*_SEQ (next_val)` |
+| `mariadb-11.4`, `mariadb-12.3` | MariaDB Connector/J 3.5.6, `useMysqlMetadata=true` | `MySQL5Dialect` (standard) | 49 one-row tables |
+| `sqlserver-2022`, `sqlserver-2025` | mssql-jdbc 13.4.0 | `SQLServer2005Dialect` (`PortalDialectResolver`) | 49 one-row tables `UP_*_SEQ (next_val)` |
 | `oracle-23` (Free 23.26) | ojdbc11 23.9 | `Oracle12ForceClobDialect` (`PortalDialectResolver`); `varchar` columns longer than 4000 become `CLOB` | 49 sequences |
 
 Released uPortal 5.17.9 (Hibernate 4.2.21) compared with this baseline on PostgreSQL shows
