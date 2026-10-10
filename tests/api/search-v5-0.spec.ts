@@ -4,14 +4,12 @@ import { loginViaApi } from "../ux/utils/ux-general-utils";
 
 test("search all", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
-  const response = await request.get(
-    `${config.url}api/v5-0/portal/search?q=cartoon`
-  );
-  expect(response.status()).toEqual(200);
-  const body = await response.json() as {
+  const response = await request.get<{
     people: unknown[];
     portlets: { description: string; favorite: boolean; fname: string; name: string; score: string; title: string; url: string }[];
-  };
+  }>(`${config.url}api/v5-0/portal/search?q=cartoon`);
+  expect(response.status()).toEqual(200);
+  const body = await response.json();
   expect(body.people).toEqual([]);
   expect(body.portlets).toHaveLength(1);
   expect(body.portlets[0]).toMatchObject({
@@ -29,7 +27,7 @@ test("search all", async ({ request }) => {
 
 test("search type people", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
-  const response = await request.get(
+  const response = await request.get<unknown>(
     `${config.url}api/v5-0/portal/search?q=steven&type=people`
   );
   expect(response.status()).toEqual(200);
