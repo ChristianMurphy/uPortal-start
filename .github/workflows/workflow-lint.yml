@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - master
+      # Prototype only (MOD-I74): run CI on the modernization
+      # integration branches. Drop this line before upstreaming.
+      - 'ccr-*'
     paths:
       - '.github/**'
   pull_request:
