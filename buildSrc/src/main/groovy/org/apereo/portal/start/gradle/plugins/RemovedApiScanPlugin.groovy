@@ -89,8 +89,10 @@ abstract class RemovedApiScanTask extends DefaultTask {
                 rejected << "REMOVED:  ${hit}"
             }
         }
+        // An entry for every webapp ('*') need not match in each one;  one naming this webapp should
         List<String> unused = allowlist.entries.findAll {
-            it.uses == 0 && RemovedApiAllowlist.glob(it.text.split('\\|')[0].trim()).matcher(name).matches()
+            String webapp = it.text.split('\\|')[0].trim()
+            it.uses == 0 && webapp != '*' && RemovedApiAllowlist.glob(webapp).matcher(name).matches()
         }.collect { "unused allowlist line ${it.line}:  ${it.text}" }
 
         File out = getReport().get().asFile
