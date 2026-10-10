@@ -163,8 +163,24 @@ by uPortal-start.
 uPortal-start also comes pre-integrated with a Relational Database Management System (RDBMS) called
 [HSQLDB][].  A supported RDBMS instance is another uPortal requirement.  For uPortal server
 deployments, you will want to choose a different RDBMS platform:  most likely Oracle, MS SQL
-Server, MySQL, or PostgreSQL.  The integrated HSQLDB instance, however, is recommended for local
-dev environments of uPortal.
+Server, MySQL, MariaDB, or PostgreSQL.  The integrated HSQLDB instance, however, is recommended for
+local dev environments of uPortal.
+
+uPortal 6.0 runs on, and is tuned for, current database servers. These are its minimum versions:
+
+| Database | uPortal 6.0 minimum | Older versions: copy-migration sources only |
+| --- | --- | --- |
+| PostgreSQL | 18 | 14, 15, 16 |
+| MySQL | 9.7 LTS | 8.0, 8.4 |
+| MariaDB | 12.3 LTS | 10.6, 10.11, 11.4 |
+| Microsoft SQL Server | 2025 | 2019, 2022 |
+| Oracle Database | 23.26 ("26ai") | 21 (tested with XE 21, the closest free stand-in for 19c) |
+| HSQLDB (development only) | 2.7.4 | 2.5.1 |
+
+A uPortal 5.17 database on an older server is not upgraded in place: the copy migration reads it
+and writes a fresh database on a current server, of the same or another vendor, and verifies every
+table (`./gradlew dbMigrate`, see "Copy migration" in
+[docs/db-upgrade-harness.md](docs/db-upgrade-harness.md)). The old database is left untouched.
 
 :warning:  CAS checks passwords in the portal database itself. When you move the portal off the
 bundled HSQLDB (the `hibernate.connection.*` settings in `global.properties`), point CAS at the
@@ -175,6 +191,12 @@ JDBC driver to the `jdbc` configuration in `overlays/build.gradle`, which both w
 CAS still points at HSQLDB, every login through the CAS form fails. The database upgrade harness
 (`-PdbVendor`, see [docs/db-upgrade-harness.md](docs/db-upgrade-harness.md)) fills the tokens from
 its vendor file, so CAS and the portal share one database there.
+
+:warning:  On Microsoft SQL Server, also put `hibernate.dialect=org.hibernate.dialect.SQLServerDialect`
+in `${portal.home}/feedback.properties`. The Feedback portlet bundles Hibernate 3.2, which has no
+`SQLServer2005Dialect` (or later) as named in `global.properties` for the other portlets; without
+the override it cannot start and never creates its table. The database upgrade harness does this
+for its SQL Server vendors.
 
 Use the following command to start the embedded HSQLDB instance:
 
