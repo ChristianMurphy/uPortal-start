@@ -14,6 +14,7 @@ interface BootstrapGlobal {
 declare global {
   interface Window {
     bootstrap?: BootstrapGlobal;
+    upPortalRequestsInFlight?: number;
   }
 }
 
@@ -80,18 +81,131 @@ export async function loginViaPage(
   );
 }
 
+const trackedPages = new WeakSet<Page>();
+
+/*
+ * Count the portal (*.uP) XHR and fetch requests a page has in flight, in
+ * window.upPortalRequestsInFlight, for waitForPortalRequestsToSettle().
+ *
+ * Why: uPortal keeps the "focused" transient portlet (a /p/<fname> portlet
+ * that is not in the user's layout, rendered as ctfN) in session state.
+ * Every *.uP request clears it first (UserLayoutParameterProcessor calls
+ * TransientUserLayoutManagerWrapper.setFocusedId(null)), including the
+ * AJAX that portlets fire after load (emergency-alert, calendar, file
+ * manager, ...). If one of those reaches the server while the next page
+ * is rendering a transient portlet, that page renders without the
+ * portlet. Leaving a page only once its *.uP requests have finished keeps
+ * the session to one *.uP request at a time.
+ *
+ * A request stays counted until a task after it completes, so a request
+ * started from the previous one's completion callback (as jQuery chains
+ * do) keeps the counter above zero. Must be called before the page
+ * navigates.
+ */
+export async function trackPortalRequests(page: Page): Promise<void> {
+  if (trackedPages.has(page)) return;
+  trackedPages.add(page);
+  await page.addInitScript(() => {
+    if (window.upPortalRequestsInFlight !== undefined) return;
+    window.upPortalRequestsInFlight = 0;
+    const portalUrl = /\.uP([#?]|$)/;
+    const increment = (): void => {
+      window.upPortalRequestsInFlight =
+        (window.upPortalRequestsInFlight ?? 0) + 1;
+    };
+    const decrement = (): void => {
+      window.upPortalRequestsInFlight =
+        (window.upPortalRequestsInFlight ?? 1) - 1;
+    };
+
+    class TrackedXMLHttpRequest extends window.XMLHttpRequest {
+      private portalRequest = false;
+
+      open(
+        method: string,
+        url: string | URL,
+        async?: boolean,
+        username?: string | null,
+        password?: string | null
+      ): void {
+        this.portalRequest = portalUrl.test(String(url));
+        super.open(method, url, async ?? true, username, password);
+      }
+
+      send(body?: Document | XMLHttpRequestBodyInit | null): void {
+        if (!this.portalRequest) {
+          super.send(body);
+          return;
+        }
+        increment();
+        let finished = false;
+        const finish = (): void => {
+          if (finished) return;
+          finished = true;
+          window.setTimeout(decrement, 0);
+        };
+        this.addEventListener("loadend", finish);
+        try {
+          super.send(body);
+        } catch (error) {
+          finish();
+          throw error;
+        }
+      }
+    }
+    window.XMLHttpRequest = TrackedXMLHttpRequest;
+
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (
+      input: RequestInfo | URL,
+      init?: RequestInit
+    ): Promise<Response> => {
+      const url =
+        typeof input === "string" || input instanceof URL
+          ? String(input)
+          : input.url;
+      if (!portalUrl.test(url)) return originalFetch(input, init);
+      increment();
+      try {
+        return await originalFetch(input, init);
+      } finally {
+        window.setTimeout(decrement, 0);
+      }
+    };
+  });
+}
+
+/*
+ * Wait until the current page has loaded and none of its portal (*.uP)
+ * requests are in flight. Call this before leaving a portal page (goto,
+ * link click, form submit) when the next page renders a portlet that is
+ * not in the user's layout; see trackPortalRequests() for why.
+ */
+export async function waitForPortalRequestsToSettle(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () =>
+      document.readyState === "complete" &&
+      (window.upPortalRequestsInFlight ?? 0) === 0
+  );
+}
+
 /*
  * Log into uPortal via URL-based login (faster than CAS form for smoke tests)
+ *
+ * Returns once the landing page's own portal requests have finished, so
+ * that a test's next page.goto() cannot race with them.
  */
 export async function loginViaUrl(
   page: Page,
   user: Record<string, string>
 ): Promise<void> {
+  await trackPortalRequests(page);
   await page.goto(
     `${config.url}Login?userName=${user.username}&password=${user.password}`
   );
   const loggedIn = page.locator("div.user-name");
   await expect(loggedIn).toContainText(user.displayName);
+  await waitForPortalRequestsToSettle(page);
 }
 
 /*

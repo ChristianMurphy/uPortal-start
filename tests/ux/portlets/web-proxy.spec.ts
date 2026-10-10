@@ -49,8 +49,18 @@ test.describe("Web Proxy Portlet", () => {
     await loginViaUrl(page, config.users.admin);
     await page.goto(PROXY_URL);
     // Wait for the proxied body text — proves both the proxy fetch
-    // and any client JS the upstream included have executed.
-    await expect(page.locator("body")).toContainText("Example Domain");
+    // and any client JS the upstream included have executed. Scope to
+    // the portlet's content area and match text only example.com serves:
+    // the portlet titlebar reads "Example Domain (test proxy)", so a
+    // body-wide "Example Domain" match passes even when nothing was
+    // proxied.
+    await expect(
+      page.locator(
+        ".up-portlet-wrapper.web-proxy-example .up-portlet-content-wrapper"
+      )
+    ).toContainText(
+      /this domain is for use in (illustrative|documentation) examples/i
+    );
 
     const criticalErrors = jsErrors.filter(
       (error) =>
