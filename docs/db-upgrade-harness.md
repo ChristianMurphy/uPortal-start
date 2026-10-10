@@ -65,7 +65,9 @@ tables in the same database.
 
 `-PdbVendor=<name>` selects `tests/db/vendors/<name>.properties`. With it set, the vendor's JDBC
 driver is added to the overlays' `jdbc` configuration, and `tomcatConfig` (run by `tomcatInstall`)
-appends the vendor's connection settings to `.gradle/tomcat/portal/global.properties`.
+appends the vendor's connection settings to `.gradle/tomcat/portal/global.properties`. The CAS
+overlay, which checks passwords against `UP_PERSON_DIR` itself (`deployerConfigContext.xml`), is
+built against the same database; without `-PdbVendor` it keeps using the bundled HSQLDB.
 `-PdbHost`, `-PdbPort`, `-PdbUrl`, `-PdbUser` and `-PdbPassword` override the defaults, also as
 `ORG_GRADLE_PROJECT_dbPassword` and so on. The same switch runs a whole portal against a database:
 

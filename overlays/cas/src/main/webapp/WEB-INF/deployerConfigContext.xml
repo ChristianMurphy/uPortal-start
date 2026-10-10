@@ -139,11 +139,13 @@
     <bean id="userPasswordDao" class="org.apereo.portal.cas.authentication.handler.support.PortalPersonDirUserPasswordDao"
         p:data-source-ref="dataSource" />
     
+    <!-- The portal database:  the bundled HSQLDB, or the -PdbVendor database of the database
+         upgrade harness (the @casDb*@ tokens are filled by overlays/cas/build.gradle) -->
     <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
-        <property name="driverClassName" value="org.hsqldb.jdbc.JDBCDriver" />
-        <property name="url" value="jdbc:hsqldb:hsql://localhost:@hsqlPort@/uPortal" />
-        <property name="username" value="sa" />
-        <property name="password" value="" />
+        <property name="driverClassName" value="@casDbDriver@" />
+        <property name="url" value="@casDbUrl@" />
+        <property name="username" value="@casDbUsername@" />
+        <property name="password" value="@casDbPassword@" />
         
         <property name="minIdle" value="1" />
         <property name="maxIdle" value="2" />
