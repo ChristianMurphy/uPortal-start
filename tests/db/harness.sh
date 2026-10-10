@@ -219,6 +219,22 @@ run_portal() {
     return $status
 }
 
+annotate() {  # on GitHub Actions, show a failed vendor's drift report and failed specs on the run
+    [ "${GITHUB_ACTIONS:-}" = true ] || return 0
+    local f text
+    for f in "build/db-harness/$1/drift-report.txt" "build/db-harness/$1/playwright-api.log" \
+            "build/db-harness/$1/playwright.log"; do
+        [ -f "$f" ] || continue
+        case "$f" in
+            *drift-report.txt) grep -q '^RESULT: DRIFT' "$f" || continue; text=$(head -n 40 "$f") ;;
+            *) text=$(sed -n '/^  [0-9]* failed/,$p' "$f" | head -n 40) ;;
+        esac
+        [ -n "$text" ] || continue
+        text=${text//'%'/'%25'}; text=${text//$'\r'/'%0D'}; text=${text//$'\n'/'%0A'}
+        echo "::error title=$1 ($(basename "$f"))::$text"
+    done
+}
+
 overall=0
 summary=()
 for vendor in "${VENDORS[@]}"; do
@@ -226,6 +242,7 @@ for vendor in "${VENDORS[@]}"; do
         summary+=("$vendor: OK")
     else
         summary+=("$vendor: FAILED (see build/db-harness/$vendor)")
+        annotate "$vendor"
         overall=1
     fi
 done

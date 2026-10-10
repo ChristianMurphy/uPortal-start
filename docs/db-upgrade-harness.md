@@ -54,7 +54,8 @@ service container cannot be given, so the script starts those containers itself.
 the released `uPortalVersion`: it builds the uPortal branch of the same name (or `master`, or the
 repository and ref given to a manual run) and installs it into `~/.m2`. It then runs the whole
 Playwright suite on HSQLDB, the harness with `--portal` on every vendor, and the harness with
-`--full-suite` on PostgreSQL 16 and MariaDB 11.4.
+`--full-suite` on PostgreSQL 16 and MariaDB 11.4. On GitHub Actions the harness also shows a
+failed vendor's drift report and failed specs as annotations on the run.
 
 With `--full-suite` the snapshot is taken right after uPortal's `dataInit`, as with the other
 options, so it covers uPortal's schema only. The portlets' own `dataInit` tasks (Announcements,
