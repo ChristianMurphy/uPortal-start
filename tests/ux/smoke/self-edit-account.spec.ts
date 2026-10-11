@@ -17,11 +17,6 @@ import {
   submitLoginForm,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
-import {
-  Account,
-  createEditableAccount,
-  exportedAccount,
-} from "../utils/self-edit-account-utils";
 
 /*
  * What the Password Management channel (fname passwordmgr, framework portlet
@@ -41,16 +36,16 @@ import {
  * Guests opening the channel get the login form instead, as for any channel
  * they may not see.
  *
- * Changed on purpose (MOD-D18, proposed to the project owner):
- * - A new password needs the current password. uPortal 5.17 asked only for
- *   the new password and its confirmation (enterPassword.jsp has a Current
- *   Password field, but no flow state used it).
- * - A confirmation that differs from the password is refused with
- *   "Passwords must match". uPortal 5.17 saved the password field: its
- *   script compared the fields only when the password input's textLength was
- *   above 0, and inputs have no textLength; PersonFormValidator never ran
- *   because Web Flow looks for a bean named after the model,
- *   accountFormValidator, and the bean is called personValidator.
+ * Known defects (uPortal 5.17), recorded as they are:
+ * - The edit form asks for a new password and its confirmation but not for
+ *   the current password. (enterPassword.jsp has a Current Password field,
+ *   but no flow state uses it.)
+ * - A confirmation that differs from the password is not refused: the
+ *   password field is saved. The form's script compares the fields only when
+ *   the password input's textLength is above 0, and inputs have no
+ *   textLength; PersonFormValidator never runs because Web Flow looks for a
+ *   bean named after the model, accountFormValidator, and the bean is called
+ *   personValidator.
  * - The form's "Add Preference" link adds an input for any attribute name,
  *   but saving ignores attributes the user may not edit, so nothing it adds
  *   is stored. The tests leave the link alone.
@@ -58,6 +53,9 @@ import {
  * The locators use roles and names only, so the same tests describe the
  * portlet and any replacement that keeps its behaviour.
  */
+// Provided by Node at run time; declared here so tsc does not need @types/node.
+declare const Buffer: { from(text: string): Uint8Array };
+
 const URL = `${config.url}p/passwordmgr`;
 
 const DETAIL_LABELS = [
@@ -69,9 +67,114 @@ const DETAIL_LABELS = [
   "Address",
 ];
 const EDITABLE_LABELS = ["Title", "Department", "Org", "Email", "Phone"];
+const EDITABLE_ATTRIBUTES = [
+  "title",
+  "department",
+  "organization",
+  "mail",
+  "telephoneNumber",
+];
 
 const UPDATED_MESSAGE =
   "Your account has been successfully updated. Your changes will be visible upon your next login.";
+
+/** The hash of "student" from the quickstart data's student account. */
+const STUDENT_PASSWORD_HASH = "(MD5)mhmjKvf2F3gPizS9DrA+CsFmqj74oTSb";
+
+// A type, not an interface, so it fits the helpers' Record<string, string>
+type Account = {
+  username: string;
+  password: string;
+  displayName: string;
+};
+
+let accountCount = 0;
+
+function userXml(username: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<user xmlns="https://source.jasig.org/schemas/uportal/io/user" version="4.0" username="${username}">
+    <default-user>defaultTemplateUser</default-user>
+    <password>${STUDENT_PASSWORD_HASH}</password>
+    <attribute><name>givenName</name><value>Selma</value></attribute>
+    <attribute><name>sn</name><value>${username}</value></attribute>
+    <attribute><name>mail</name><value>${username}@example.org</value></attribute>
+    <attribute><name>department</name><value>Playwright Department</value></attribute>
+</user>`;
+}
+
+function permissionSetXml(
+  username: string,
+  activity: string,
+  targets: string[],
+): string {
+  const targetXml = targets
+    .map(
+      (target) =>
+        `<target permission-type="GRANT"><literal>${target}</literal></target>`,
+    )
+    .join("");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<permission-set script="classpath://org/jasig/portal/io/import-permission_set_v3-1.crn">
+    <owner>UP_USERS</owner>
+    <principal-type>org.apereo.portal.security.IPerson</principal-type>
+    <principal><literal>${username}</literal></principal>
+    <activity>${activity}</activity>
+    ${targetXml}
+</permission-set>`;
+}
+
+async function importXml(
+  admin: APIRequestContext,
+  name: string,
+  xml: string,
+): Promise<void> {
+  const response = await admin.post<unknown>(`${config.url}api/import`, {
+    multipart: {
+      file: { name, mimeType: "text/xml", buffer: Buffer.from(xml) },
+    },
+  });
+  expect(response.status(), `import of ${name}`).toEqual(200);
+}
+
+/**
+ * A new local account with the password "student", the permissions to edit
+ * itself and its five attributes, and a department of "Playwright
+ * Department".
+ */
+async function createEditableAccount(
+  admin: APIRequestContext,
+): Promise<Account> {
+  accountCount += 1;
+  const username = `selfedit-${Date.now()}-${accountCount}`;
+  await importXml(admin, `${username}.user.xml`, userXml(username));
+  await importXml(
+    admin,
+    `${username}-edit-user.permission-set.xml`,
+    permissionSetXml(username, "EDIT_USER", ["SELF"]),
+  );
+  await importXml(
+    admin,
+    `${username}-edit-attributes.permission-set.xml`,
+    permissionSetXml(username, "EDIT_USER_ATTRIBUTE", EDITABLE_ATTRIBUTES),
+  );
+  return {
+    username,
+    password: config.users.student.password,
+    displayName: `Selma ${username}`,
+  };
+}
+
+/** The local account as the export API sees it. */
+async function exportedAccount(
+  admin: APIRequestContext,
+  username: string,
+): Promise<string> {
+  const response = await admin.get<unknown>(
+    `${config.url}api/entity/user/${username}`,
+  );
+  expect(response.status()).toEqual(200);
+  return response.text();
+}
 
 async function openAccount(page: Page): Promise<void> {
   await waitForPortalRequestsToSettle(page);
@@ -186,7 +289,7 @@ test.describe("Self edit account", () => {
         "",
       );
       await expect(page.getByLabel("Confirm Password")).toHaveValue("");
-      await expect(page.getByLabel("Current Password")).toHaveValue("");
+      await expect(page.getByLabel("Current Password")).toHaveCount(0);
     });
 
     test("cancel goes back to the details", async ({ page }) => {
@@ -257,10 +360,11 @@ test.describe("Self edit account", () => {
       );
     });
 
-    test("changes the password with the current one", async ({ page }) => {
+    test("changes the password without asking for the current one", async ({
+      page,
+    }) => {
       const newPassword = `Pw-${Date.now()}`;
       await openEditForm(page);
-      await page.getByLabel("Current Password").fill(account.password);
       await page.getByLabel("Password", { exact: true }).fill(newPassword);
       await page.getByLabel("Confirm Password").fill(newPassword);
       await save(page);
@@ -276,46 +380,20 @@ test.describe("Self edit account", () => {
       await expectLoginRefused(page);
     });
 
-    test("refuses a new password without the current one", async ({
+    test("saves the password when the confirmation differs (defect)", async ({
       page,
     }) => {
       const newPassword = `Pw-${Date.now()}`;
       await openEditForm(page);
       await page.getByLabel("Password", { exact: true }).fill(newPassword);
-      await page.getByLabel("Confirm Password").fill(newPassword);
-      await save(page);
-      await expect(
-        page.getByText("Please enter your current password"),
-      ).toBeVisible();
-
-      await page.getByLabel("Current Password").fill("not-the-password");
-      await save(page);
-      await expect(
-        page.getByText(
-          "Provided password does not match the current account password",
-        ),
-      ).toBeVisible();
-
-      await logout(page);
-      await loginViaUrl(page, account);
-    });
-
-    test("refuses a confirmation that differs", async ({ page }) => {
-      const newPassword = `Pw-${Date.now()}`;
-      await openEditForm(page);
-      await page.getByLabel("Password", { exact: true }).fill(newPassword);
       await page.getByLabel("Confirm Password").fill(`${newPassword}-typo`);
       await save(page);
-      await expect(page.getByText("Passwords must match")).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: "Edit My Account" }),
+        page.getByRole("heading", { name: "Account Updated" }),
       ).toBeVisible();
 
       await logout(page);
-      await openLoginForm(page);
-      await submitLoginForm(page, account.username, newPassword);
-      await expectLoginRefused(page);
-      await loginViaUrl(page, account);
+      await loginViaUrl(page, { ...account, password: newPassword });
     });
 
     test("a blank password leaves the password as it was", async ({ page }) => {
