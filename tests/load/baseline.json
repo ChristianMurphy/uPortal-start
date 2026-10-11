@@ -1,1 +1,5 @@
-{}
+{
+  "guest": { "p50": 1, "p95": 69, "errorRate": 0 },
+  "login": { "p50": 5, "p95": 152, "errorRate": 0.0008 },
+  "portlet": { "p50": 2, "p95": 45, "errorRate": 0.0005 }
+}
