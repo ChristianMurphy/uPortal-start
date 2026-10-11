@@ -101,7 +101,7 @@ finding becomes an annotation with its suggested DDL.
 ## CI
 
 `.github/workflows/g-index.yml` builds uPortal from source like `integration.yml` (the branch of
-the same name, else its parent branch, else `master`) and runs:
+the same name, else `ccr-43ba0785-hzlrj5`, else `master`) and runs:
 
 * **every push:** PostgreSQL 18 at scale 0.01 with the whole Playwright suite and four minutes of
   the driver, then, on the same database, the seeded faults (`idx_upp_prefs_id` dropped, a second

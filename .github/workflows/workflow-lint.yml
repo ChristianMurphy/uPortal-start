@@ -45,3 +45,5 @@ jobs:
           args: -color
       - name: Test the G-index change filter
         run: .github/scripts/gindex-changes.test.sh
+      - name: Test the choice of the uPortal to build
+        run: .github/scripts/choose-uportal.test.sh

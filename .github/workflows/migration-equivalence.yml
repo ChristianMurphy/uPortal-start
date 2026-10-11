@@ -3,7 +3,8 @@ name: Migration equivalence
 # MOD-D29 item 1: does uPortal built from source read back exactly the data that uPortal 5.17
 # wrote? See docs/migration-equivalence.md and tests/db/equivalence.sh.
 #
-#   1. builds uPortal (by default the branch of the same name in <owner>/uPortal, else master),
+#   1. builds uPortal (by default the branch of the same name in <owner>/uPortal, else its integration
+#      branch ccr-43ba0785-hzlrj5, else master),
 #      as integration.yml does, and hands its ~/.m2 to the other jobs;
 #   2. in place: on each database, uPortal 5.17.9 creates the schema, imports the quickstart data
 #      and the fixture (tests/db/equivalence/fixture), starts once and exports everything; that
@@ -39,7 +40,7 @@ on:
         required: false
         default: ''
       uportal-ref:
-        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else its nearest parent branch (ccr-x-topic -> ccr-x), else master'
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch ccr-43ba0785-hzlrj5, else master'
         required: false
         default: ''
 permissions:
@@ -81,6 +82,7 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: |
+            .github/scripts
             tests/db/equivalence
             tests/db/migrate
             tests/db/vendors
@@ -110,33 +112,12 @@ jobs:
           INPUT_REF: ${{ inputs.uportal-ref }}
           OWNER: ${{ github.repository_owner }}
           BRANCH: ${{ github.ref_name }}
-        run: |
-          repository="${INPUT_REPOSITORY:-$OWNER/uPortal}"
-          ref="$INPUT_REF"
-          # A workstream branch (MOD-D30) such as ccr-x-topic uses uPortal's ccr-x-topic if it
-          # exists, else drops one -suffix at a time until a uPortal branch matches (ccr-x).
-          candidate="$BRANCH"
-          while [ -z "$ref" ] && [ -n "$candidate" ]; do
-            if git ls-remote --exit-code --heads "https://github.com/$repository" "refs/heads/$candidate" > /dev/null; then
-              ref="$candidate"
-            elif [[ "$candidate" == *-* ]]; then
-              candidate="${candidate%-*}"
-            else
-              candidate=""
-            fi
-          done
-          ref="${ref:-master}"
-          if ! [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "$ref" =~ ^[A-Za-z0-9_./-]+$ ]]; then
-            echo "Unexpected repository '$repository' or ref '$ref'" >&2
-            exit 1
-          fi
-          echo "repository=$repository" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+        run: plan/.github/scripts/choose-uportal.sh
       - name: Checkout uPortal
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ steps.source.outputs.repository }}
-          ref: ${{ steps.source.outputs.ref }}
+          ref: ${{ steps.source.outputs.sha || steps.source.outputs.ref }}
           persist-credentials: false
       # Build with the JDK major version and vendor uPortal's .sdkmanrc names
       - name: Read uPortal's JDK
