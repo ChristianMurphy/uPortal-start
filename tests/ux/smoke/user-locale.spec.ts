@@ -54,8 +54,7 @@ async function chooseLanguage(
 
 /**
  * Save English as the user's language, whatever language the page is in, so
- * every test starts from the same choice. Until a user saves one, no
- * language is chosen at all.
+ * every test starts from the same choice.
  */
 async function chooseEnglish(page: Page): Promise<void> {
   await openSelector(page);
@@ -131,8 +130,10 @@ test.describe("User locale selector", () => {
   test("a guest's choice lasts only the session", async ({ page, browser }) => {
     await openSelector(page);
     await expect(page.getByRole("radio")).toHaveCount(ENGLISH_LABELS.length);
-    // A new session has no chosen language, so nothing is checked
-    await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+    // A new session has no chosen language, so the language the page is in
+    // is checked (the 5.17 portlet checked nothing, MOD-I322)
+    await expect(page.getByRole("radio", { checked: true })).toHaveCount(1);
+    await expect(page.getByRole("radio", { name: "English" })).toBeChecked();
     await chooseLanguage(page, "French", "Update");
     await expect(page.locator("html")).toHaveAttribute("lang", /^fr/);
 
