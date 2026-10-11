@@ -35,10 +35,14 @@ export function loadRegistry(document, upgradingHeadings = null) {
         return {
             ...entry,
             used: 0,
-            matches(exchange, difference) {
+            // With a line, only that changed line of a JSON or HTML body has to match "detail"
+            matches(exchange, difference, line) {
                 if (!entry.path) return false;
                 if (entry.roles && !entry.roles.includes(exchange.role)) return false;
                 if (entry.method && entry.method !== exchange.method) return false;
+                if (entry.methods && !entry.methods.includes(exchange.method)) return false;
+                // 'status': the status the request answers now, whatever the difference is
+                if ('status' in entry && entry.status !== exchange.response.status) return false;
                 if (entry.set && entry.set !== exchange.set) return false;
                 if (!globToRegExp(entry.path).test(exchange.path)) return false;
                 if (entry.field !== '*' && !globToRegExp(entry.field).test(difference.field)) return false;
@@ -49,7 +53,10 @@ export function loadRegistry(document, upgradingHeadings = null) {
                 // 'detail': a regular expression every changed line of a JSON or HTML body must match
                 if (entry.detail) {
                     const pattern = new RegExp(entry.detail);
-                    if (!difference.detail || !difference.detail.every((line) => pattern.test(line))) return false;
+                    const lines = line === undefined ? difference.detail : [line];
+                    if (!lines || !lines.every((l) => pattern.test(l))) return false;
+                } else if (line !== undefined) {
+                    return false;
                 }
                 return true;
             },
@@ -70,6 +77,15 @@ function walkChanges(a, b, path, out) {
     } else {
         out.push({ path, from: a, to: b });
     }
+}
+
+function csrfByProbe(probes = []) {
+    return Object.fromEntries(
+        probes.map(({ role, method, path, token, headers, status, outcome }) => [
+            `${role} ${method} ${path}${token ? ' with _csrf' : ''}${headers ? ` ${JSON.stringify(headers)}` : ''}`,
+            `${status} ${outcome}`,
+        ])
+    );
 }
 
 /**
@@ -102,9 +118,17 @@ export function evaluate({ recorded, actual, keyOf, recordedMatrix, actualMatrix
         const unexplained = [];
         for (const difference of compare(expectedResponse, exchange.response)) {
             const entry = registry.entries.find((r) => r.matches(exchange, difference));
+            // A body that changed for more than one registered reason: each changed line needs an
+            // entry, and every entry that explains a line counts as used
+            const byLine = !entry && difference.detail ? difference.detail.map((line) => registry.entries.find((r) => r.matches(exchange, difference, line))) : [];
             if (entry) {
                 entry.used++;
                 intended.push({ exchange, difference, entry });
+            } else if (byLine.length > 0 && byLine.every(Boolean)) {
+                for (const lineEntry of new Set(byLine)) {
+                    lineEntry.used++;
+                    intended.push({ exchange, difference, entry: lineEntry });
+                }
             } else {
                 unexplained.push(difference);
             }
@@ -121,7 +145,8 @@ export function evaluate({ recorded, actual, keyOf, recordedMatrix, actualMatrix
         if (unexplained.length > 0) failures.push({ exchange, differences: unexplained, recorded: before });
     }
 
-    // The security matrix: every cell keeps its outcome unless its status change is registered
+    // The security matrix: every cell keeps its outcome unless its status or location change is
+    // registered (a redirect's outcome depends on where it points)
     const matrixChanges = [];
     for (const [route, cells] of Object.entries(recordedMatrix)) {
         for (const [role, cell] of Object.entries(cells)) {
@@ -134,7 +159,7 @@ export function evaluate({ recorded, actual, keyOf, recordedMatrix, actualMatrix
                     i.exchange.role === role &&
                     i.exchange.method === method &&
                     i.exchange.path === path.join(' ') &&
-                    i.difference.field === 'status',
+                    ['status', 'location'].includes(i.difference.field),
             );
             const gain = NOT_SERVED.has(cell.split(' ').slice(1).join(' ')) && SERVED.has(now.split(' ').slice(1).join(' '));
             matrixChanges.push({ route, role, from: cell, to: now, registered: registered && !gain, gain });
@@ -144,7 +169,9 @@ export function evaluate({ recorded, actual, keyOf, recordedMatrix, actualMatrix
     // Logins, CSRF and the header snapshot. A CSRF change needs an entry that names its
     // UPGRADING-6.0.md section, like any other change in what clients may do.
     const securityChanges = [];
-    for (const part of ['logins', 'loginCookies', 'headers', 'csrf']) walkChanges(recordedSecurity[part], security[part], part, securityChanges);
+    for (const part of ['logins', 'loginCookies', 'headers']) walkChanges(recordedSecurity[part], security[part], part, securityChanges);
+    // One change per CSRF probe, named "csrf.<role> <method> <path>[ with _csrf]"
+    walkChanges(csrfByProbe(recordedSecurity.csrf), csrfByProbe(security.csrf), 'csrf', securityChanges);
     const securityFailures = securityChanges.filter((change) => {
         const entry = registry.entries.find(
             (r) => r.security && globToRegExp(r.security).test(change.path) && (!('to' in r) || JSON.stringify(r.to) === JSON.stringify(change.to)),

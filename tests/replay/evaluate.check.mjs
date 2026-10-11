@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import { evaluate, headingsOf, loadRegistry } from './evaluate.mjs';
 import { outcome } from './lib.mjs';
 
-const response = (status, location) => ({ status, ...(location ? { location } : {}), headers: {}, body: { kind: 'empty' } });
+const response = (status, location, body = { kind: 'empty' }) => ({ status, ...(location ? { location } : {}), headers: {}, body });
 const exchange = (role, path, status, location) => ({ set: 'crawl', role, method: 'GET', path, response: response(status, location) });
 const keyOf = (e) => `${e.set} ${e.role} ${e.method} ${e.path}`;
 const matrixOf = (exchanges) => {
@@ -117,13 +117,18 @@ test('rule 4 does not apply to the reference replayed against itself', () => {
 
 test('a CSRF change needs an entry with an UPGRADING-6.0.md section (MOD-I130)', () => {
     const recorded = [exchange('guest', '/uPortal/', 302)];
-    const before = { ...security, csrf: [{ role: 'guest', method: 'POST', path: '/uPortal/api/layout', status: 401 }] };
-    const after = { ...security, csrf: [{ role: 'guest', method: 'POST', path: '/uPortal/api/layout', status: 403 }] };
+    const probe = { role: 'guest', method: 'POST', path: '/uPortal/api/layout' };
+    const before = { ...security, csrf: [{ ...probe, status: 401, outcome: 'unauthorized' }] };
+    const after = { ...security, csrf: [{ ...probe, status: 403, outcome: 'forbidden' }] };
     const options = { recordedSecurity: before, security: after };
-    assert.equal(run(recorded, recorded, [entry({ id: 'csrf-no-section', security: 'csrf' })], options).failed, true);
+    assert.deepEqual(run(recorded, recorded, [], options).securityChanges, [
+        { path: 'csrf.guest POST /uPortal/api/layout', from: '401 unauthorized', to: '403 forbidden' },
+    ]);
+    assert.equal(run(recorded, recorded, [entry({ id: 'csrf-no-section', security: 'csrf.*' })], options).failed, true);
     const cited = entry({
         id: 'csrf',
-        security: 'csrf',
+        security: 'csrf.* /uPortal/api/*',
+        to: '403 forbidden',
         log: 'MOD-I130',
         visible: true,
         upgrading: 'Servlet controllers are mapped by RequestMappingHandlerMapping',
@@ -137,4 +142,41 @@ test('an unregistered difference fails', () => {
     const result = run(recorded, actual, []);
     assert.equal(result.failed, true);
     assert.equal(result.failures.length, 1);
+});
+
+test('a body that changed for two registered reasons needs an entry for every changed line', () => {
+    const page = (outline) => response(200, null, { kind: 'html', outline });
+    const recorded = [{ ...exchange('guest', '/uPortal/f/welcome/normal/render.uP', 200), response: page(['a#login[href=/cas/login]']) }];
+    const actual = [{ ...exchange('guest', '/uPortal/f/welcome/normal/render.uP', 200), response: page(['a#login[href=/uPortal/p/login]', 'meta[name=_csrf]']) }];
+    const login = entry({ id: 'login', path: '/uPortal/*', field: 'body', detail: 'a#login' });
+    const csrf = entry({ id: 'csrf-meta', path: '/uPortal/*', field: 'body', detail: 'meta\\[name=_csrf' });
+    assert.equal(run(recorded, actual, [login]).failed, true, 'one entry explains only some lines');
+    const both = run(recorded, actual, [login, csrf]);
+    assert.equal(both.failed, false);
+    assert.deepEqual(
+        both.intended.map((i) => i.entry.id),
+        ['login', 'csrf-meta']
+    );
+});
+
+test('"methods" and "status" limit an entry to the requests that answer that status now', () => {
+    const recorded = [exchange('guest', '/uPortal/api/layout', 401), exchange('guest', '/uPortal/api/session.json', 401)];
+    const actual = [exchange('guest', '/uPortal/api/layout', 403), exchange('guest', '/uPortal/api/session.json', 500)];
+    recorded[0].method = actual[0].method = 'POST';
+    const csrf = entry({ id: 'csrf', path: '/uPortal/api/*', methods: ['POST', 'PUT', 'PATCH', 'DELETE'], status: 403, field: '*' });
+    const result = run(recorded, actual, [csrf]);
+    assert.deepEqual(
+        result.failures.map((f) => f.exchange.path),
+        ['/uPortal/api/session.json']
+    );
+});
+
+test('a matrix cell whose redirect now points at the login form needs its location change registered', () => {
+    const recorded = [exchange('guest', '/uPortal/Login?userName=admin&password=wrong', 302, '/uPortal/f/welcome/normal/render.uP')];
+    const actual = [exchange('guest', '/uPortal/Login?userName=admin&password=wrong', 302, '/uPortal/p/login')];
+    assert.equal(run(recorded, actual, []).matrixChanges[0].registered, false);
+    const form = entry({ id: 'form', path: '/uPortal/Login*', field: 'location', to: '/uPortal/p/login' });
+    const result = run(recorded, actual, [form]);
+    assert.equal(result.matrixChanges[0].registered, true);
+    assert.equal(result.failed, false);
 });
