@@ -1,9 +1,11 @@
 {
     "$comment": [
-        "Reviewed differences between uPortal 5.17 (tests/replay/fixtures/5.17) and the current build that are intended (docs/http-replay.md, 'Intended differences').",
+        "Reviewed differences between uPortal 5.17 (tests/replay/fixtures/5.17) and the current build that are intended (docs/http-replay.md, 'Intended differences' and 'Rules').",
         "An entry matches an exchange by 'path' (glob, * matches anything), and optionally 'roles', 'method' and 'set' (crawl or suite), and one difference by 'field' (status, location, header:<name>, cookie:<name>, body, or a glob) and optionally its exact 'from' and 'to' values, regular expressions 'fromMatch' and 'toMatch' for them, or 'detail', a regular expression that every changed line of a JSON or HTML body must match.",
-        "An entry with 'security' instead matches a change in the security checks by its path (e.g. logins.admin.cas.password).",
-        "Every entry needs a 'reason' and a 'log' reference. Entries that match nothing are listed in the report so they can be removed."
+        "An entry with 'security' instead matches a change in the security checks by its path (e.g. logins.admin.cas.password or csrf).",
+        "Every entry has a 'reason', a 'log' reference and 'visible' (does a user, admin or API client see the change). A visible entry, a lost-access entry and a CSRF entry name their section of uPortal's docs/UPGRADING-6.0.md in 'upgrading'. CSRF changes from protecting every unsafe /api request cite MOD-I130.",
+        "No entry can excuse a request that 5.17 refused and that is served now (rule 1).",
+        "An entry that matches nothing fails the run, unless 'where' and 'whereReason' say where it applies."
     ],
     "differences": [
         {
@@ -12,7 +14,9 @@
             "field": "body",
             "detail": "^[+-] +h3 \"Apache Tomcat/[0-9.]+\"$",
             "reason": "Tomcat's default error page names the Tomcat version; uPortal-start runs Tomcat 9.0.122 instead of 8.5.100 (uPortal-start 2df5751). The rest of the error page must stay the same. 5.17 shows the version too (see the http-replay notes).",
-            "log": "MOD-D17"
+            "log": "MOD-D17",
+            "visible": true,
+            "upgrading": "uPortal-start runs Tomcat 9"
         },
         {
             "id": "tomcat-9-json-charset",
@@ -21,22 +25,27 @@
             "from": "application/json;charset=ISO-8859-1",
             "to": "application/json;charset=UTF-8",
             "reason": "Error responses that uPortal writes as JSON (401, 403, 404 from the /api controllers) now say UTF-8. The same uPortal webapp on Tomcat 8.5 still says ISO-8859-1, so the change comes with Tomcat 9 (uPortal-start 2df5751); UTF-8 is what the bodies are.",
-            "log": "MOD-D17"
+            "log": "MOD-D17",
+            "visible": true,
+            "upgrading": "uPortal-start runs Tomcat 9"
         },
         {
             "id": "portal-version",
             "path": "*session.json*",
             "field": "body",
             "detail": "^\\$\\.person\\.version: \"5\\.17\\.9\" -> \"[^\"]+\"$",
-            "reason": "/api/session.json reports the uPortal version, which is the built version instead of 5.17.9.",
-            "log": "MOD-D29"
+            "reason": "/api/session.json reports the uPortal version, which is the built version instead of 5.17.9. Every release reports its own version, so this is not listed as a change for adopters.",
+            "log": "MOD-D29",
+            "visible": false
         },
         {
             "id": "portal-analytics-dropdown-fix",
             "path": "/uPortal/scripts/portal-analytics.js",
             "field": "body",
             "reason": "uPortal f301239691 (on master after 5.17.9) removes a capture-phase click handler that blocked Bootstrap dropdowns.",
-            "log": "uPortal f301239691"
+            "log": "uPortal f301239691",
+            "visible": true,
+            "upgrading": "Fixes made after uPortal 5.17.9"
         },
         {
             "id": "vendored-portlet-mvc-exception",
@@ -46,14 +55,19 @@
             "fromMatch": "pP_actionException=org\\.springframework\\.web\\.portlet\\.NoHandlerFoundException",
             "toMatch": "pP_actionException=org\\.apereo\\.portal\\.spring\\.web\\.portlet\\.NoHandlerFoundException",
             "reason": "A portlet action without a handler reports the exception in the redirect; its class is now the vendored Portlet MVC's (uPortal 272a417fb3). The redirect is otherwise the same. That the portal puts an exception message into a URL is 5.17 behaviour (see the http-replay notes).",
-            "log": "MOD-D26"
+            "log": "MOD-D26",
+            "visible": true,
+            "upgrading": "Spring Portlet MVC is now part of uPortal"
         },
         {
             "id": "skin-css-pinned-compilers",
             "path": "/uPortal/media/skins/respondr/*.css",
             "field": "body",
             "reason": "uPortal-start compiles the Respondr skins. master installs less ^3.13 and sass ^1.77 without a lockfile, so its CSS depends on the versions current on the day it is built. This branch installs the versions package-lock.json pins. The pages that use the CSS are compared on their own.",
-            "log": "MOD-I106"
+            "log": "MOD-I106",
+            "visible": false,
+            "where": "local",
+            "whereReason": "CI's runners resolve the same less and sass versions as the recording from master, so the CSS matches there. A machine whose npm resolves other versions sees a different CSS."
         },
         {
             "id": "api-unmapped-404-status",
@@ -62,7 +76,9 @@
             "from": 405,
             "to": 404,
             "reason": "An unmapped GET under /api answered 405 with Allow: POST on 5.17, because the /api dispatcher also loads renderingServletContext.xml and its legacy handler mapping matched PortalController's /** for POST. uPortal 3127a82ab9 maps the servlet controllers with RequestMappingHandlerMapping, and the same requests now answer 404. To review with WS6.",
-            "log": "uPortal 3127a82ab9"
+            "log": "uPortal 3127a82ab9",
+            "visible": true,
+            "upgrading": "Servlet controllers are mapped by RequestMappingHandlerMapping"
         },
         {
             "id": "api-unmapped-404-allow",
@@ -71,7 +87,9 @@
             "from": "POST",
             "to": null,
             "reason": "An unmapped GET under /api answered 405 with Allow: POST on 5.17, because the /api dispatcher also loads renderingServletContext.xml and its legacy handler mapping matched PortalController's /** for POST. uPortal 3127a82ab9 maps the servlet controllers with RequestMappingHandlerMapping, and the same requests now answer 404. To review with WS6.",
-            "log": "uPortal 3127a82ab9"
+            "log": "uPortal 3127a82ab9",
+            "visible": true,
+            "upgrading": "Servlet controllers are mapped by RequestMappingHandlerMapping"
         },
         {
             "id": "api-unmapped-404-page",
@@ -79,14 +97,18 @@
             "field": "body",
             "detail": "^[+-] +((title|h1) \"HTTP Status 40[45] – (Not Found|Method Not Allowed)\"|h3 \"Apache Tomcat/[0-9.]+\")$",
             "reason": "The error page that goes with the 405 to 404 change above.",
-            "log": "uPortal 3127a82ab9"
+            "log": "uPortal 3127a82ab9",
+            "visible": true,
+            "upgrading": "Servlet controllers are mapped by RequestMappingHandlerMapping"
         },
         {
             "id": "spring-js-resource-servlet-removed",
             "path": "/uPortal/resources/*",
             "field": "*",
             "reason": "uPortal bcc1d9139d removes the spring-js ResourceServlet, which served /resources/* from jars; nothing in the portal or the Playwright suite requested it. Its URLs answer 404 now. To review with WS6.",
-            "log": "uPortal bcc1d9139d"
+            "log": "uPortal bcc1d9139d",
+            "visible": true,
+            "upgrading": "The /resources/* servlet is gone"
         }
     ]
 }

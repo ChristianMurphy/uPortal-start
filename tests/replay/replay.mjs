@@ -2,6 +2,7 @@
 //
 //   node tests/replay/replay.mjs record --origin http://localhost:8080 [--suite suite.json] [--out dir] [--label text]
 //   node tests/replay/replay.mjs replay --origin http://localhost:8080 [--fixtures dir] [--report file] [--actual saved.json]
+//                                       [--upgrading path/to/UPGRADING-6.0.md] [--self-check true] [--registry file]
 //
 // record  runs the route crawl (routes.json) and the requests the Playwright suite made (from
 //         harvest.mjs) as every role against a freshly initialised portal, plus the security
@@ -12,13 +13,13 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { evaluate, headingsOf, loadRegistry } from './evaluate.mjs';
 import {
     LOCAL_ACCOUNTS,
     NORMALISER_VERSION,
     ROLES,
     SECURITY_HEADERS,
     Session,
-    compare,
     currentUser,
     exchangeKey,
     login,
@@ -28,7 +29,6 @@ import {
     outcome,
     resolvePath,
     sessionFor,
-    renormalise,
 } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -65,7 +65,8 @@ function plan(routes, suite) {
         const fromSuite = (suite?.requests ?? []).filter((r) => r.role === role && replayable(r.path));
         const probes = ROLES.includes(role) ? routes.routes.filter((r) => r.probe && forRole(r)) : [];
         for (const route of [...crawl, ...portlets]) items.push({ set: 'crawl', role, method: route.method ?? 'GET', path: route.path, route });
-        for (const request of fromSuite) items.push({ set: 'suite', role, method: request.method, path: request.path, headers: request.headers, route: request });
+        for (const request of fromSuite)
+            items.push({ set: 'suite', role, method: request.method, path: request.path, headers: request.headers, route: request });
         for (const route of probes) items.push({ set: 'crawl', probe: route.probe, role, method: route.method ?? 'GET', path: route.path, route });
     }
     return items;
@@ -73,7 +74,7 @@ function plan(routes, suite) {
 
 const itemKey = (item) => {
     const headers = item.headers ?? item.route?.headers;
-    const token = item.csrfToken ?? item.route?.csrfToken ? ' with _csrf' : '';
+    const token = (item.csrfToken ?? item.route?.csrfToken) ? ' with _csrf' : '';
     const body = item.requestBody ?? item.route?.body;
     return `${item.set} ${exchangeKey(item)}${token}${headers && Object.keys(headers).length > 0 ? ` ${JSON.stringify(headers)}` : ''}${body ? ` body ${body}` : ''}`;
 };
@@ -170,10 +171,7 @@ async function securityChecks(exchanges) {
         const wrong = await login(new Session(origin), account, `${account}-wrong`);
         logins[account] = {
             portal: { password: right.ok ? 'accepted' : `refused (${right.status})`, wrongPassword: wrong.ok ? 'accepted' : 'refused' },
-            cas: {
-                password: await casOutcome(account, account),
-                wrongPassword: await casOutcome(account, `${account}-wrong`),
-            },
+            cas: { password: await casOutcome(account, account), wrongPassword: await casOutcome(account, `${account}-wrong`) },
         };
     }
     // The session cookie the portal sets when a user logs in, with its attributes
@@ -234,7 +232,11 @@ function matrixMarkdown(matrix, label) {
 
 async function record() {
     const routes = readJson(join(here, 'routes.json'));
-    const suite = options.suite ? readJson(options.suite) : existsSync(join(fixtures, 'suite-requests.json')) ? readJson(join(fixtures, 'suite-requests.json')) : null;
+    const suite = options.suite
+        ? readJson(options.suite)
+        : existsSync(join(fixtures, 'suite-requests.json'))
+          ? readJson(join(fixtures, 'suite-requests.json'))
+          : null;
     mkdirSync(fixtures, { recursive: true });
     if (options.suite) writeJson(join(fixtures, 'suite-requests.json'), suite);
     const items = plan(routes, suite);
@@ -254,41 +256,18 @@ async function record() {
             routes: Object.keys(matrix).length,
         },
     });
-    writeJson(join(fixtures, 'crawl.json'), exchanges.filter((e) => e.set === 'crawl'));
-    writeJson(join(fixtures, 'suite.json'), exchanges.filter((e) => e.set === 'suite'));
+    writeJson(
+        join(fixtures, 'crawl.json'),
+        exchanges.filter((e) => e.set === 'crawl'),
+    );
+    writeJson(
+        join(fixtures, 'suite.json'),
+        exchanges.filter((e) => e.set === 'suite'),
+    );
     writeJson(join(fixtures, 'security.json'), security);
     writeJson(join(fixtures, 'security-matrix.json'), matrix);
     writeFileSync(join(fixtures, 'security-matrix.md'), matrixMarkdown(matrix, label));
     console.error(`record: wrote ${exchanges.length} exchanges and ${Object.keys(matrix).length} matrix routes to ${fixtures}`);
-}
-
-function globToRegExp(glob) {
-    return new RegExp(`^${glob.replaceAll(/[.+?^${}()|[\]\\]/g, '\\$&').replaceAll('*', '.*')}$`);
-}
-
-function loadRegistry() {
-    const registry = readJson(join(here, 'intended-differences.json'));
-    return registry.differences.map((entry) => ({
-        ...entry,
-        used: 0,
-        matches(exchange, difference) {
-            if (entry.roles && !entry.roles.includes(exchange.role)) return false;
-            if (entry.method && entry.method !== exchange.method) return false;
-            if (entry.set && entry.set !== exchange.set) return false;
-            if (!globToRegExp(entry.path).test(exchange.path)) return false;
-            if (entry.field !== '*' && !globToRegExp(entry.field).test(difference.field)) return false;
-            if ('from' in entry && JSON.stringify(entry.from) !== JSON.stringify(difference.from)) return false;
-            if ('to' in entry && JSON.stringify(entry.to) !== JSON.stringify(difference.to)) return false;
-            if (entry.fromMatch && !new RegExp(entry.fromMatch).test(String(difference.from))) return false;
-            if (entry.toMatch && !new RegExp(entry.toMatch).test(String(difference.to))) return false;
-            // 'detail': a regular expression every changed line of a JSON or HTML body must match
-            if (entry.detail) {
-                const pattern = new RegExp(entry.detail);
-                if (!difference.detail || !difference.detail.every((line) => pattern.test(line))) return false;
-            }
-            return true;
-        },
-    }));
 }
 
 const escapeCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
@@ -302,99 +281,91 @@ async function replay() {
     const routes = readJson(join(here, 'routes.json'));
     const meta = readJson(join(fixtures, 'meta.json'));
     if (meta.normaliserVersion !== NORMALISER_VERSION) {
-        throw new Error(`The fixtures were normalised with version ${meta.normaliserVersion}, this code is version ${NORMALISER_VERSION}: re-record them (docs/http-replay.md)`);
+        throw new Error(
+            `The fixtures were normalised with version ${meta.normaliserVersion}, this code is version ${NORMALISER_VERSION}: re-record them (docs/http-replay.md)`,
+        );
     }
     const suiteRequests = existsSync(join(fixtures, 'suite-requests.json')) ? readJson(join(fixtures, 'suite-requests.json')) : null;
     const expected = [...readJson(join(fixtures, 'crawl.json')), ...readJson(join(fixtures, 'suite.json'))];
-    const expectedByKey = new Map(expected.map((e) => [itemKey(e), e]));
     const items = plan(routes, suiteRequests);
     console.error(`replay: ${items.length} requests against ${origin}, compared with ${meta.label}`);
     // --actual re-evaluates a saved run (build/replay/actual.json), for example after editing the registry
     const saved = options.actual ? readJson(options.actual) : null;
     const actual = saved ? saved.exchanges : await execute(items);
-    const registry = loadRegistry();
-
-    const failures = [];
-    const intended = [];
-    let compared = 0;
-    for (const exchange of actual) {
-        const recorded = expectedByKey.get(itemKey(exchange));
-        if (!recorded) {
-            failures.push({ exchange, differences: [{ field: 'fixture', from: null, to: 'not recorded (re-record after changing routes.json)' }] });
-            continue;
-        }
-        compared++;
-        expectedByKey.delete(itemKey(exchange));
-        const unexplained = [];
-        // The masks and sorting rules apply to the recording too, so a rule added later needs no re-record
-        const expectedResponse = renormalise(recorded.response, recorded.path);
-        for (const difference of compare(expectedResponse, exchange.response)) {
-            const entry = registry.find((r) => r.matches(exchange, difference));
-            if (entry) {
-                entry.used++;
-                intended.push({ exchange, difference, entry });
-            } else {
-                unexplained.push(difference);
-            }
-        }
-        if (unexplained.length > 0) failures.push({ exchange, differences: unexplained, recorded });
-    }
-
-    // Security matrix: every cell must keep its outcome unless the status change is registered
+    const upgrading = options.upgrading ? headingsOf(readFileSync(options.upgrading, 'utf8')) : null;
+    const registry = loadRegistry(readJson(options.registry ?? join(here, 'intended-differences.json')), upgrading);
     const recordedMatrix = readJson(join(fixtures, 'security-matrix.json'));
     const actualMatrix = securityMatrix(actual);
-    const matrixChanges = [];
-    for (const [route, cells] of Object.entries(recordedMatrix)) {
-        for (const [role, cell] of Object.entries(cells)) {
-            const now = actualMatrix[route]?.[role] ?? '(not requested)';
-            if (now === cell) continue;
-            const [method, ...path] = route.split(' ');
-            const registered = intended.some((i) => i.exchange.role === role && i.exchange.method === method && i.exchange.path === path.join(' ') && i.difference.field === 'status');
-            matrixChanges.push({ route, role, from: cell, to: now, registered });
-        }
-    }
-
-    // Logins, CSRF and the header snapshot
     const recordedSecurity = readJson(join(fixtures, 'security.json'));
     const security = saved ? saved.security : await securityChecks(actual);
-    const securityChanges = [];
-    const walk = (a, b, path) => {
-        if (JSON.stringify(a) === JSON.stringify(b)) return;
-        if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a)) {
-            for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) walk(a[key], b[key], `${path}.${key}`);
-        } else {
-            securityChanges.push({ path, from: a, to: b });
-        }
-    };
-    walk(recordedSecurity.logins, security.logins, 'logins');
-    walk(recordedSecurity.loginCookies, security.loginCookies, 'loginCookies');
-    walk(recordedSecurity.headers, security.headers, 'headers');
-    walk(recordedSecurity.csrf, security.csrf, 'csrf');
-    const securityFailures = securityChanges.filter((change) => {
-        const entry = registry.find((r) => r.security && globToRegExp(r.security).test(change.path) && (!('to' in r) || JSON.stringify(r.to) === JSON.stringify(change.to)));
-        if (entry) entry.used++;
-        return !entry;
+    const result = evaluate({
+        recorded: expected,
+        actual,
+        keyOf: itemKey,
+        recordedMatrix,
+        actualMatrix,
+        recordedSecurity,
+        security,
+        registry,
+        selfCheck: options['self-check'] === 'true',
     });
-
-    const missing = [...expectedByKey.values()];
-    const stale = registry.filter((r) => r.used === 0);
-    const failed = failures.length > 0 || securityFailures.length > 0 || matrixChanges.some((c) => !c.registered);
+    const {
+        failed,
+        compared,
+        failures,
+        intended,
+        privilegeGains,
+        lostAccess,
+        matrixChanges,
+        securityChanges,
+        securityFailures,
+        stale,
+        unusedElsewhere,
+        missing,
+        problems,
+    } = result;
 
     // Report
     const lines = [];
     lines.push(`## HTTP replay against ${meta.label}: ${failed ? 'differences found' : 'no unexplained differences'}`);
     lines.push('');
-    lines.push(`* Requests: ${actual.length} (${actual.filter((e) => e.set === 'crawl').length} crawl, ${actual.filter((e) => e.set === 'suite').length} from the Playwright suite), roles: ${[...new Set(actual.map((e) => e.role))].join(', ')}`);
+    lines.push(
+        `* Requests: ${actual.length} (${actual.filter((e) => e.set === 'crawl').length} crawl, ${actual.filter((e) => e.set === 'suite').length} from the Playwright suite), roles: ${[...new Set(actual.map((e) => e.role))].join(', ')}`,
+    );
     const skipped = (suiteRequests?.requests ?? []).filter((r) => !replayable(r.path)).length;
     if (skipped > 0) lines.push(`* Suite requests not replayed because they write or name a generated id: ${skipped}`);
-    lines.push(`* Compared with the recording: ${compared}; unexplained differences in ${failures.length} exchanges; intended differences applied: ${intended.length}`);
-    lines.push(`* Security matrix: ${Object.keys(recordedMatrix).length} routes x ${ROLES.length} roles; changed cells: ${matrixChanges.length} (${matrixChanges.filter((c) => !c.registered).length} unexplained)`);
+    lines.push(
+        `* Compared with the recording: ${compared}; unexplained differences in ${failures.length} exchanges; intended differences applied: ${intended.length}`,
+    );
+    lines.push(
+        `* Security matrix: ${Object.keys(recordedMatrix).length} routes x ${ROLES.length} roles; changed cells: ${matrixChanges.length} (${matrixChanges.filter((c) => !c.registered).length} unexplained)`,
+    );
     lines.push(`* Logins, CSRF and header snapshot: ${securityChanges.length} changes (${securityFailures.length} unexplained)`);
     if (missing.length > 0) lines.push(`* Recorded but not replayed: ${missing.length} (routes.json changed? re-record)`);
-    if (stale.length > 0) lines.push(`* Registry entries that matched nothing: ${stale.map((s) => s.id).join(', ')}`);
+    if (unusedElsewhere.length > 0)
+        lines.push(`* Registry entries for other machines, unused here: ${unusedElsewhere.map((s) => `${s.id} (${s.where})`).join(', ')}`);
+    const fail = (title, rows) => {
+        if (rows.length === 0) return;
+        lines.push('', `### ${title}`, '', ...rows.map((row) => `* ${row}`));
+        for (const row of rows) annotate(`${title}: ${row}`);
+    };
+    fail(
+        'Privilege gains (rule 1, no registry entry excuses them)',
+        privilegeGains.map((g) => `\`${escapeCell(itemKey(g.exchange))}\`: ${g.from} -> ${g.to}`),
+    );
+    fail(
+        'Lost access without an UPGRADING-6.0.md section (rule 2)',
+        lostAccess.map((g) => `\`${escapeCell(itemKey(g.exchange))}\`: ${g.from} -> ${g.to}`),
+    );
+    fail(
+        'Registry entries that matched nothing (rule 4)',
+        stale.map((s) => `${s.id}: remove it, or give it "where" and "whereReason"`),
+    );
+    fail('Registry problems', problems);
     if (securityFailures.length > 0) {
         lines.push('', '### Security changes', '', '| Check | 5.17 | Now |', '| --- | --- | --- |');
-        for (const change of securityFailures) lines.push(`| \`${escapeCell(change.path)}\` | ${escapeCell(show(change.from))} | ${escapeCell(show(change.to))} |`);
+        for (const change of securityFailures)
+            lines.push(`| \`${escapeCell(change.path)}\` | ${escapeCell(show(change.from))} | ${escapeCell(show(change.to))} |`);
         for (const change of securityFailures) annotate(`Security: ${change.path}: ${show(change.from)} -> ${show(change.to)}`);
     }
     const unexplainedCells = matrixChanges.filter((c) => !c.registered);
@@ -411,7 +382,9 @@ async function replay() {
                 else lines.push(`${difference.field}: ${show(difference.from)} -> ${show(difference.to)}`);
             }
             lines.push('```', '</details>');
-            annotate(`${itemKey(exchange)}: ${differences.map((d) => (d.detail ? `${d.field} (${d.detail.length} changes)` : `${d.field}: ${show(d.from)} -> ${show(d.to)}`)).join('; ')}`);
+            annotate(
+                `${itemKey(exchange)}: ${differences.map((d) => (d.detail ? `${d.field} (${d.detail.length} changes)` : `${d.field}: ${show(d.from)} -> ${show(d.to)}`)).join('; ')}`,
+            );
         }
         if (failures.length > 150) lines.push('', `... and ${failures.length - 150} more`);
     }
@@ -419,7 +392,8 @@ async function replay() {
         const byEntry = new Map();
         for (const i of intended) byEntry.set(i.entry.id, (byEntry.get(i.entry.id) ?? 0) + 1);
         lines.push('', '### Intended differences applied', '', '| Registry entry | Differences | Reason | Log |', '| --- | --- | --- | --- |');
-        for (const entry of registry.filter((r) => byEntry.has(r.id))) lines.push(`| ${entry.id} | ${byEntry.get(entry.id)} | ${escapeCell(entry.reason)} | ${entry.log ?? ''} |`);
+        for (const entry of registry.entries.filter((r) => byEntry.has(r.id)))
+            lines.push(`| ${entry.id} | ${byEntry.get(entry.id)} | ${escapeCell(entry.reason)} | ${entry.log ?? ''} |`);
     }
     const report = `${lines.join('\n')}\n`;
     const reportPath = options.report ?? join('build', 'replay', 'report.md');

@@ -63,13 +63,7 @@ export class Session {
         const cookie = this.cookieHeader(url.pathname);
         if (cookie) requestHeaders.cookie = cookie;
         try {
-            const response = await fetch(url, {
-                method,
-                headers: requestHeaders,
-                body,
-                redirect: 'manual',
-                signal: AbortSignal.timeout(60_000),
-            });
+            const response = await fetch(url, { method, headers: requestHeaders, body, redirect: 'manual', signal: AbortSignal.timeout(60_000) });
             const setCookies = response.headers.getSetCookie();
             this.store(setCookies, url.pathname);
             const buffer = Buffer.from(await response.arrayBuffer());
@@ -129,6 +123,12 @@ export async function sessionFor(origin, role) {
 // would only report noise. Each mask states why it is safe.
 // ---------------------------------------------------------------------------------------------
 
+// Every mask and sorting rule below says what showed that 5.17 itself varies there ("Seen:").
+// The runs named are: the local stand-in's self-checks on 2026-10-10 and 2026-10-11 (5.17.9 on
+// Tomcat 8.5, replayed against its own recording after a reset), the reference recorded from
+// master in CI (runs 38096550769 and later) compared with the stand-in, and CI replay run
+// 38100658549. "By construction" means the value is random or the time by design, so no run was
+// needed. docs/http-replay.md lists what the masks hide ("Unreported changes").
 const STRING_MASKS = [
     // Generated ids. uPortal imports the files of one entity type in parallel, in the order the
     // file system lists them (JaxbPortalDataHandlerService with ConcurrentDirectoryScanner), so
@@ -136,46 +136,58 @@ const STRING_MASKS = [
     // layout node id (l1n210) comes from the fragment's data; the user part (u26) does not.
     // Inside generated names such as rateThisPortletu26l1n7 the whole id varies (the node is the
     // one the marketplace subscribes the portlet to), so all of it is masked there.
+    // Seen: 5.17.9 recorded in CI had u26l1s200 where the stand-in had u22l1s200 for the same
+    // fragment; CI run 38100658549 failed on it.
     [/(?<=[A-Za-z])(u\d+l\d+[ns]\d+|ctf\d+)(?!\d)/g, '{node}'],
     [/u\d+(l\d+[ns]\d+)(?!\d)/g, 'u{id}$1'],
     // Pluto namespaces carry the portlet entity and window ids: Pluto_43_u26l1n210_11_
+    // Seen: Pluto_43 in the CI recording, Pluto_46 on the stand-in, same portlet.
     [/\bPluto_\d+_/g, 'Pluto_{id}_'],
     [/(l\d+n\d+|ctf\{n\})_\d+_/g, '$1_{id}_'],
     // group keys (local.14), principal keys (12.local.14) and portlet ids (PORTLET_ID.25)
+    // Seen: local.14 in the CI recording, local.21 on the stand-in for the same category.
     [/\blocal\.\d+/g, 'local.{id}'],
     [/\bPORTLET_ID\.\d+/g, 'PORTLET_ID.{id}'],
     [/_local__\d+/g, '_local__{id}'],
-    // error portlet namespaces (Pluto_..._-20_ctf3_12-)
+    // error portlet namespaces (Pluto_..._-20_ctf3_12-). Seen: -3 and -20 in two CI runs of 5.17.
     [/_-\d+_ctf\{n\}_\d+-/g, '_-{id}_ctf{n}_{id}-'],
     // the entity type in a principal key (12.local.3, 13.pags.Authenticated Users)
+    // Seen: 13.local.20 in the CI recording, 12.local.x on the stand-in.
     [/\b\d+\.(local|pags)\./g, '{type}.$1.'],
     // Session ids are random per session (Tomcat's SecureRandom); URL rewriting embeds them.
+    // By construction.
     [/(;jsessionid=)[0-9A-Za-z._-]+/gi, '$1{session}'],
     [/(JSESSIONID=)[0-9A-Za-z._-]+/g, '$1{session}'],
-    // CAS tickets (service, proxy-granting, login) are random and single-use.
+    // CAS tickets (service, proxy-granting, login) are random and single-use. By construction.
     [/\b(ST|PT|PGT|PGTIOU|TGT|LT)-\d+-[0-9A-Za-z-]+(-cas)?/g, '$1-{ticket}'],
-    // CAS 3.6 login flow execution keys are encrypted, random blobs.
+    // CAS 3.6 login flow execution keys are encrypted, random blobs. By construction.
     [/(execution=)[0-9a-f-]{8,}_[0-9A-Za-z+/=%_-]+/g, '$1{execution}'],
     // UUIDs are generated (analytics event ids, request ids, CSRF tokens in some forms).
+    // By construction (UUID.randomUUID); the CSRF token in action URLs is one.
     [/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '{uuid}'],
     // Transient portlet subscribe ids (search.ctf1) count up per session in the order portlets are
     // first rendered, and portlets render on parallel worker threads.
+    // Seen: search.ctf1 and search.ctf2 for faculty in the stand-in's self-check on 2026-10-10.
     [/(?<![A-Za-z])ctf\d+(?=\b|_)/g, 'ctf{n}'],
     // The portal's own host and port, also inside other URLs (CAS service=, encoded or not)
+    // By construction: each run chooses its port (8080 in CI, 8180 for the stand-in).
     [/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g, '{origin}'],
     [/https?%3A%2F%2F(localhost|127\.0\.0\.1)(%3A\d+)?/gi, '{origin}'],
     // Aggregated skin resources are named by a hash of their content, which changes with every
     // build that changes a skin script; the page outline still shows which aggregates load.
+    // Not a 5.17 variation: the name follows the build, so this is a blind spot by design.
     [/[\w-]{22}\.aggr\.min\.(js|css)\b/g, '{content-hash}.aggr.min.$1'],
     // jQuery's cache-busting `_=<epoch ms>` parameter and other epoch-millisecond values in URLs
-    // are the time of the request.
+    // are the time of the request. By construction.
     [/([?&]_=)\d{10,13}/g, '$1{epoch-ms}'],
 ];
 
 // Date and time strings keep their shape (every digit becomes 9), so a changed format is still
 // reported while the value, which is the time of the request, is not. HTTP dates (RFC 9110
 // IMF-fixdate, with a weekday that changes at midnight) become {http-date}; a date in another
-// format does not match and still shows.
+// format does not match and still shows. By construction (the time of the request or of the
+// data import). Seen for HTTP dates: Sat and Sun for the same Expires header in the stand-in's
+// self-check across midnight on 2026-10-11.
 const DATE_TIME = /\b\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?\b/g;
 const HTTP_DATE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT\b/g;
 const shape = (text) => text.replaceAll(/\d/g, '9');
@@ -191,6 +203,8 @@ export function maskString(text) {
     // JAXB writes no fraction when the milliseconds are zero, so whether there is one depends on
     // the time. In ISO timestamps with a T (xsd:dateTime) the fraction's presence is therefore not
     // compared; other formats, such as the portlet-list audit dates, keep it strict.
+    // Seen: a portlet's PUBLISHED date in an entity export with and without its fraction in two
+    // local runs on 2026-10-11.
     masked = masked.replace(DATE_TIME, (match) => (match.includes('T') ? shape(match).replace(/(99:99:99)(?!\.)/, '$1.999') : shape(match)));
     masked = masked.replace(HTTP_DATE, '{http-date}');
     return masked;
@@ -245,6 +259,7 @@ function normaliseHeaderValue(name, value) {
     // ETags are hashes: of the body for /api (ShallowEtagHeaderFilter), so they follow every masked
     // value in it, or of the size and modification time of a deployed file. Only whether the tag
     // is weak and how long its hash is are compared; the body is compared on its own.
+    // Seen: /api/v5-1/userinfo and the entity exports changed ETags in the stand-in's self-check.
     if (name === 'etag') {
         if (value.includes('{hash')) return value;
         return value.includes('"') ? value.replace(/"[^"]*"/, (tag) => `"{hash:${tag.length - 2}}"`) : '{hash}';
@@ -324,18 +339,25 @@ export function normaliseBody(buffer, contentType, origin, path = '') {
 
 // A signed token (/api/v5-1/userinfo) differs on every request: it is issued now, expires later,
 // and is signed. Its header and claims are compared, with the times and the signature masked.
+// Seen: a different token on every request in the stand-in's self-check.
 const JWT_TIMES = new Set(['iat', 'exp', 'nbf', 'auth_time']);
 
 function normaliseJwt(token, origin) {
-    const [header, claims] = token.trim().split('.').slice(0, 2).map((part) => {
-        try {
-            return JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
-        } catch {
-            return null;
-        }
-    });
+    const [header, claims] = token
+        .trim()
+        .split('.')
+        .slice(0, 2)
+        .map((part) => {
+            try {
+                return JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
+            } catch {
+                return null;
+            }
+        });
     if (!header || !claims) return { kind: 'text', length: lengthBucket(token.length), sha: hash(token) };
-    const masked = Object.fromEntries(Object.entries(claims).map(([k, v]) => [k, JWT_TIMES.has(k) && typeof v === 'number' ? '{epoch-s:number}' : k === 'jti' ? '{id}' : v]));
+    const masked = Object.fromEntries(
+        Object.entries(claims).map(([k, v]) => [k, JWT_TIMES.has(k) && typeof v === 'number' ? '{epoch-s:number}' : k === 'jti' ? '{id}' : v]),
+    );
     return { kind: 'json', value: { jwtHeader: maskJson(header, origin), jwtClaims: maskJson(masked, origin) } };
 }
 
@@ -344,18 +366,23 @@ function normaliseJwt(token, origin) {
 // itself. A '*' step walks every element of an array; inner arrays are sorted first.
 const UNORDERED = [
     // the current user's groups (GroupRESTController, a Set of entity groups)
+    // Seen: Guests and All Users swapped places in the stand-in's self-check on 2026-10-10.
     [/^\/uPortal\/api\/groups/, ['groups']],
     // permission assignments (PermissionsListController, from a Set)
+    // Seen: Portal Administrators and Portal Developers swapped in the same self-check.
     [/^\/uPortal\/api\/permissionAssignments/, ['permissionsList']],
     // a group's members (EntitiesRESTController, a Set of children)
+    // Seen: Tenants and Staff swapped in the same self-check.
     [/^\/uPortal\/api\/entities\//, ['jsonEntityBean', 'children']],
     // entity search results (EntitiesRESTController, a Set filtered by @PostFilter)
+    // Seen: admin-lo and tenant-admin-lo swapped in a self-check of the current build.
     [/^\/uPortal\/api\/entities\.json/, ['jsonEntityBeanList']],
     // marketplace entries and their categories (MarketplaceRESTController, Sets)
+    // Seen: the entries' order changed in every self-check.
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets', '*', 'categories']],
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets']],
     // the portlet lists a user can see (PortletListRESTController); lists created in the same
-    // second have no fixed order
+    // second have no fixed order. Seen: admin's two lists swapped in the stand-in's last pass.
     [/^\/uPortal\/api\/portlet-list\/(\?|$)/, []],
 ];
 
@@ -363,14 +390,17 @@ const UNORDERED = [
 const UNSTABLE = [
     // PermissionsListController names a target by its key alone, so a group (local.25) and a
     // portlet (PORTLET_ID.25) with the same number can get each other's name. See
-    // docs/developer/modernization/notes/http-replay.md.
+    // docs/developer/modernization/notes/http-replay.md. Seen: target local.25 named
+    // "Demonstration" in one self-check and "Toggle Resources Aggregation" in the next.
     [/^\/uPortal\/api\/permissionAssignments/, ['permissionsList', '*', 'targetName']],
     // MarketplacePortletDefinition.getRandomSamplingRelatedPortlets shuffles on purpose; only how
-    // many related portlets there are is compared.
+    // many related portlets there are is compared. Seen: by construction (Collections.shuffle),
+    // and in every self-check.
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets', '*', 'relatedPortlets']],
     [/^\/uPortal\/api\/marketplace\/entry\//, ['relatedPortlets']],
     // The calendar demo's events are placed relative to today, and the suite asks for the day it
-    // ran on, so the whole answer depends on the day of the run.
+    // ran on, so the whole answer depends on the day of the run. Seen: recorded on 2026-10-10,
+    // replayed on 2026-10-11, the events moved.
     [/\/p\/calendar\.[^/]*\/[^/]+\/[^/]*\.resource\.uP/, []],
 ];
 
@@ -421,8 +451,11 @@ const EPOCH_MS_MAX = 4_102_444_800_000;
 
 // Keys whose values are measurements or random per session, not data: the health checks'
 // response times and memory figures, and the session key and host name in /api/session.json.
+// Seen: the timings and memory in every self-check; the session key in the stand-in's
+// self-check; the host name in the CI recording (a runner's name) against the stand-in (vm).
 const MEASUREMENT = /Response Time|Memory|^sessionKey$|^serverName$/;
 // Keys whose numeric values are generated ids (see the generated ids in STRING_MASKS)
+// Seen: portlet id 80 and type id 3 in the CI recording, 69 and 4 on the stand-in.
 const ID_KEYS = /^(id|chanID|channelId|typeId|typeID|fragment|portletId|entityTypeId)$/;
 
 export function maskJson(value, origin) {
@@ -431,6 +464,8 @@ export function maskJson(value, origin) {
         // 5.17 orders many lists (portlets, categories, groups, layout nodes from fragments) by
         // generated ids, which differ from machine to machine, so the order of objects in an
         // array is not compared. Arrays of plain values keep their order.
+        // Seen: CI run 38100658549, where the registry's categories and the layout's regions came
+        // in another order than in the recording from master.
         return masked.every((v) => v && typeof v === 'object') ? sortArray(masked) : masked;
     }
     if (value && typeof value === 'object') {
@@ -476,7 +511,8 @@ const LANDMARKS = new Set([
 const TEXT_ELEMENTS = new Set(['title', 'h1', 'h2', 'h3', 'h4', 'button']);
 const KEPT_ATTRIBUTES = ['name', 'type', 'method', 'action', 'rel', 'src', 'href', 'http-equiv', 'role'];
 const CLASS_HINT = /portlet|region|up-|layout|column|tab|nav|login|error/i;
-const TAG = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?]]>|<![^>]*>|<\?[^>]*>|<\/\s*([A-Za-z][\w:-]*)\s*>|<([A-Za-z][\w:-]*)((?:\s+[^\s=/>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?)>/g;
+const TAG =
+    /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?]]>|<![^>]*>|<\?[^>]*>|<\/\s*([A-Za-z][\w:-]*)\s*>|<([A-Za-z][\w:-]*)((?:\s+[^\s=/>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?)>/g;
 const ATTRIBUTE = /([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
 
 export function parseHtml(html) {
@@ -532,8 +568,9 @@ function describe(node, origin) {
         if (['action', 'src', 'href'].includes(name)) {
             // Keep the path and the parameter names; values are often generated (layout node
             // ids, flow execution keys, cache-busting versions are kept but masked as above).
-            value = normaliseUrl(value.replaceAll('&amp;', '&'), origin).replace(/\?.*$/, (query) =>
-                `?${[...new URLSearchParams(query.slice(1)).keys()].sort().join('&')}`
+            value = normaliseUrl(value.replaceAll('&amp;', '&'), origin).replace(
+                /\?.*$/,
+                (query) => `?${[...new URLSearchParams(query.slice(1)).keys()].sort().join('&')}`,
             );
         }
         line += `[${name}=${value}]`;
@@ -619,6 +656,8 @@ function compareBody(expected, actual, add) {
     } else if (expected.kind === 'html') {
         // Order is not compared: 5.17 merges fragments and lists portlets in an order that
         // depends on generated ids. Each element, with its attributes and depth, still is.
+        // Seen: the session-timeout script and the marketplace's rating dialogs moved between
+        // the recording from master and a replay on another machine (CI run 38100658549).
         const lines = outlineDiff(expected.outline.toSorted(), actual.outline.toSorted());
         if (lines.length > 0) add('body', null, null, lines);
     } else if (stable(expected) !== stable(actual)) {
