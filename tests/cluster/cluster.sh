@@ -384,6 +384,13 @@ check_permission_invalidation() {
     fi
     # Grant, and wait until node B allows it (its cached denial expires), so node B caches the grant
     update_permission "$admin" GRANT || { record invalidation-permission FAIL "grant on node A failed (HTTP $(status_of))"; return; }
+    log "invalidation-permission: UP_PERMISSION rows for the target: $(sql "select principal_type, principal_key, activity, permission_type from up_permission
+         where target = 'PORTLET_ID.$PORTLET_ID'" | tr '\n' ' ')"
+    if ! poll 30 allowed_on a "$a"; then
+        record invalidation-permission FAIL "node A itself did not allow the granted portlet within 30 s (HTTP $(status_of))"
+        update_permission "$admin" INHERIT
+        return
+    fi
     started=$(now_ms)
     if ! poll "$PERMISSION_BOUND_S" allowed_on b "$b"; then
         record invalidation-permission FAIL "node B still denied the portlet $PERMISSION_BOUND_S s after node A granted it"
@@ -436,7 +443,11 @@ wait_aggregated() {  # wait_aggregated <seconds>: until every raw event so far i
         n=$(unaggregated)
         [ "$n" = 0 ] && return 0
         if [ "$(date +%s)" -ge "$deadline" ]; then
-            log "$n raw events still not aggregated"
+            log "$n raw events still not aggregated; now $(sql "select localtimestamp")"
+            sql "select server_id, event_type, \"timestamp\", aggregated, error_aggr from up_raw_events
+                 where aggregated is not true and error_aggr is not true order by \"timestamp\" limit 30"
+            log "aggregator status:"
+            sql "select * from up_event_aggr_status"
             return 1
         fi
         sleep 3
@@ -619,6 +630,16 @@ cleanup() {
     fi
 }
 
+jgroups_report() {  # the cluster views and JGroups problems each node logged
+    local n f
+    for n in a b; do
+        f=$(node_home "$n")/logs/jgroups/portal.jgroups.log
+        log "node $n JGroups: $(grep -c . "$f" 2> /dev/null || echo 0) lines"
+        grep -hE 'view|View|GMS|ERROR|WARN' "$f" 2> /dev/null | sed -E 's/ [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:,]+ - / - /' |
+            cut -c1-220 | sort | uniq -c | sort -rn | head -n 12
+    done
+}
+
 collect_logs() {  # keep both nodes' logs next to the results
     local n
     for n in a b; do
@@ -649,6 +670,7 @@ if [ "$setup_ok" = true ]; then
     fi
     check_no_overlap
 fi
+jgroups_report
 collect_logs
 cleanup
 
