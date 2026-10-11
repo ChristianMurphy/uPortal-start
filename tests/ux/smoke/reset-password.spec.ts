@@ -40,11 +40,13 @@ import {
  * - The link works only in a session whose login portlet has not started its
  *   flow yet: after the login form has been shown, the link shows the login
  *   form again.
- * - A failed token check logs the account's real token and the submitted one
- *   at INFO (UserAccountHelper.validateLoginToken).
  * - Tokens do not expire.
  * - The update-password flow, which asks for the current password, is not
  *   reachable: no portlet maps a flowId to it.
+ *
+ * Fixed (uPortal, MOD-D19 workstream): a failed token check logged the
+ * account's real token and the submitted one at INFO, and the reset email
+ * logged the link; neither logs a token now.
  *
  * Each test imports its own account and uses its own browser context.
  */
