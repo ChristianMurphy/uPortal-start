@@ -215,3 +215,81 @@ test.describe("Session timeout warning for guests", () => {
     await expect(warning(page)).toHaveCount(0);
   });
 });
+
+/*
+ * The web component behind the warning (uPortal MOD-D18): a Web Component
+ * channel that renders <up-session-timeout> and talks to /api/v6-0/session.
+ */
+test.describe("Session timeout web component", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.clock.install();
+    await loginViaUrl(page, config.users.student);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await logout(page);
+  });
+
+  test("is rendered as up-session-timeout with the portal's attributes", async ({
+    page,
+  }) => {
+    const element = page.locator("up-session-timeout");
+
+    await expect(element).toHaveCount(1);
+    await expect(element).toHaveAttribute("fname", "session-timeout");
+    await expect(element).toHaveAttribute("context-path", "/uPortal");
+    await expect(element).toHaveAttribute("csrf-token", /\S/);
+    await expect(
+      page.locator('script[type="module"][src*="up-session-timeout"]'),
+    ).toHaveCount(1);
+    // Nothing of the portlet is left on the page
+    await expect(page.locator("[id$='session-timeout-dlg']")).toHaveCount(0);
+  });
+
+  test("names the warning dialog by its title and focuses the keep-alive button", async ({
+    page,
+  }) => {
+    await runUntilWarning(page);
+
+    const dialog = page.getByRole("dialog", { name: "Session expiration" });
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Yes, keep me signed in" }),
+    ).toBeFocused();
+  });
+
+  test("keeps the session alive through the session API with the CSRF token", async ({
+    page,
+  }) => {
+    const element = page.locator("up-session-timeout");
+    const header = (await element.getAttribute("csrf-header")) ?? "";
+    const token = (await element.getAttribute("csrf-token")) ?? "";
+    const dialog = await runUntilWarning(page);
+
+    const keepAlive = page.waitForRequest(
+      `${config.url}api/v6-0/session/keep-alive`,
+    );
+    await dialog
+      .getByRole("button", { name: "Yes, keep me signed in" })
+      .click();
+    const request = await keepAlive;
+
+    expect(request.method()).toBe("POST");
+    expect(request.headers()[header.toLowerCase()]).toBe(token);
+    await expect(warning(page)).toBeHidden();
+  });
+
+  test("shares the logout time under the portlet's storage key", async ({
+    page,
+  }) => {
+    const saved = await page.evaluate(() =>
+      Number(window.localStorage.getItem("UportalSessionTimeoutLogoutTime")),
+    );
+    const now = await page.evaluate(() => Date.now());
+
+    // Logged out 30 seconds before the 30-minute session would expire; the page
+    // loaded the session a few seconds before this check
+    expect(saved - now).toBeGreaterThan(SESSION_TIMEOUT_MS - 40 * SECOND);
+    expect(saved - now).toBeLessThanOrEqual(SESSION_TIMEOUT_MS - 30 * SECOND);
+  });
+});
