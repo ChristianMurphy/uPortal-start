@@ -19,6 +19,13 @@ import java.util.regex.Pattern
  * Zero drift means all four are empty.
  *
  * Sequence values are compared exactly unless the vendor asks for {@link SequenceValues#INVARIANT}.
+ *
+ * A data change made on purpose (say, quickstart data that publishes one more portlet type) is
+ * listed in the baseline set's {@value #INTENDED_CHANGES}, one table and row-count delta per line.
+ * The comparison adds each delta to the baseline's row count and to the rows of the generators
+ * that serve the table, and compares those generators' values and max(id) only by the rule
+ * value >= max(id). An intended change the run does not show is drift too, so the list can't go
+ * stale.
  */
 class SnapshotComparison {
 
@@ -39,6 +46,55 @@ class SnapshotComparison {
     static final String NORMALIZED = 'schema-normalized.txt'
     static final String GENERATORS = 'generators.txt'
     static final List<String> FILES = [SCHEMA, NORMALIZED, GENERATORS]
+    /** In the baseline set's directory (tests/db/snapshots/<baseline>), next to the vendors. */
+    static final String INTENDED_CHANGES = 'intended-changes.txt'
+
+    /** One line of {@value #INTENDED_CHANGES}: a table whose row count a data change moves on purpose. */
+    static class IntendedChange {
+        String table
+        long delta
+        String reference
+        /** The row count in the baseline, or null when the baseline has no such table. */
+        Long baselineRows
+        /** The row count in this run, or null when this run has no such table. */
+        Long currentRows
+
+        Long getExpectedRows() { return baselineRows == null ? null : baselineRows + delta }
+
+        boolean isFound() { return baselineRows != null && currentRows == expectedRows }
+
+        String describe() {
+            String what = "${table} rows ${delta > 0 ? '+' : ''}${delta} (${reference})"
+            if (baselineRows == null) return "${what}: the baseline has no row count for ${table}: NOT FOUND"
+            String result = found ? 'found' : 'NOT FOUND'
+            return "${what}: baseline ${baselineRows}, expected ${expectedRows}, this run ${currentRows == null ? 'none' : currentRows}: ${result}"
+        }
+    }
+
+    private static final Pattern INTENDED_LINE = ~/^(\S+)\s+rows\s+([+-]\d+)\s+(MOD-[A-Z]+\d+)$/
+
+    /**
+     * Reads {@value #INTENDED_CHANGES}: "<TABLE> rows <+n|-n> <MOD reference>" per line; '#' starts
+     * a comment. A missing file means no intended changes.
+     */
+    static List<IntendedChange> readIntendedChanges(File file) {
+        if (!file.file) return []
+        List<IntendedChange> out = []
+        file.readLines('UTF-8').eachWithIndex { String raw, int i ->
+            String l = raw.replaceFirst(/#.*$/, '').trim()
+            if (!l) return
+            def m = l =~ INTENDED_LINE
+            if (!m.matches() || (m.group(2) as long) == 0) {
+                throw new IllegalArgumentException("${file}:${i + 1}: expected '<TABLE> rows <+n|-n> <MOD-ID>' " +
+                        "with n other than 0, e.g. 'UP_PORTLET_TYPE rows +1 MOD-I134'; found '${raw}'")
+            }
+            if (out.any { it.table.equalsIgnoreCase(m.group(1)) }) {
+                throw new IllegalArgumentException("${file}:${i + 1}: ${m.group(1)} is listed twice")
+            }
+            out << new IntendedChange(table: m.group(1), delta: m.group(2) as long, reference: m.group(3))
+        }
+        return out
+    }
 
     final Map<String, List<String>> removed = [:]
     final Map<String, List<String>> added = [:]
@@ -47,9 +103,12 @@ class SnapshotComparison {
     /** With {@link SequenceValues#INVARIANT}: the generators.txt lines that break the invariant. */
     final List<String> invariantViolations = []
     SequenceValues sequenceValues = SequenceValues.EXACT
+    List<IntendedChange> intendedChanges = []
 
-    static SnapshotComparison compare(File baselineDir, File currentDir, SequenceValues sequenceValues = SequenceValues.EXACT) {
-        SnapshotComparison r = new SnapshotComparison(sequenceValues: sequenceValues)
+    static SnapshotComparison compare(File baselineDir, File currentDir, SequenceValues sequenceValues = SequenceValues.EXACT,
+                                      List<IntendedChange> intendedChanges = []) {
+        SnapshotComparison r = new SnapshotComparison(sequenceValues: sequenceValues, intendedChanges: intendedChanges)
+        Released released = intendedChanges ? Released.of(new File(baselineDir, GENERATORS), intendedChanges) : new Released()
         FILES.each { String name ->
             File b = new File(baselineDir, name)
             File c = new File(currentDir, name)
@@ -67,6 +126,12 @@ class SnapshotComparison {
                 }
                 bs = withoutSequenceValues(bs)
                 cs = withoutSequenceValues(cs)
+            }
+            if (intendedChanges) {
+                if (name == NORMALIZED) r.countIntendedRows(bs, cs)
+                if (name == GENERATORS) r.invariantViolations.addAll(released.violations(cs['[entities]'] ?: []))
+                bs = released.apply(bs, intendedChanges)
+                cs = released.apply(cs, [])
             }
             r.removed[name] = minus(bs, cs)
             r.added[name] = minus(cs, bs)
@@ -111,7 +176,21 @@ class SnapshotComparison {
 
     boolean isZeroDrift() {
         return missing.isEmpty() && FILES.every { removed[it].isEmpty() && added[it].isEmpty() } && renames.isEmpty() &&
-                invariantViolations.isEmpty()
+                invariantViolations.isEmpty() && intendedChanges.every { it.found }
+    }
+
+    /** Reads each intended table's row count from schema-normalized.txt, before the deltas are applied. */
+    private void countIntendedRows(Map<String, List<String>> baseline, Map<String, List<String>> current) {
+        intendedChanges.each { IntendedChange change ->
+            change.baselineRows = rowCount(baseline['[row counts]'], change.table)
+            change.currentRows = rowCount(current['[row counts]'], change.table)
+        }
+    }
+
+    private static Long rowCount(List<String> lines, String table) {
+        String line = (lines ?: []).find { it.split(' ')[0].equalsIgnoreCase(table) }
+        String count = line?.split(' ')?.getAt(1)
+        return count != null && count ==~ /\d+/ ? count as Long : null
     }
 
     List<String> report(String title) {
@@ -126,10 +205,16 @@ class SnapshotComparison {
         if (sequenceValues == SequenceValues.INVARIANT) {
             out << 'SEQUENCE VALUES: not compared with the baseline; checked instead: value > max(id) of every table served, increment = allocationSize'
         }
+        if (intendedChanges) {
+            int notFound = intendedChanges.count { !it.found } as int
+            out << "INTENDED CHANGES (${INTENDED_CHANGES}, added to the baseline before comparing): ".toString() +
+                    (notFound ? "${notFound} of ${intendedChanges.size()} NOT FOUND" : "${intendedChanges.size()} found")
+            intendedChanges.each { out << "~ ${it.describe()}".toString() }
+        }
         out << "RESULT: ${zeroDrift ? 'ZERO DRIFT' : 'DRIFT'}".toString()
         if (invariantViolations) {
             out << ''
-            out << '--- generators.txt: sequences that break the invariant'
+            out << '--- generators.txt: generators that break the invariant'
             invariantViolations.each { out << "! ${it}".toString() }
         }
         [NORMALIZED, GENERATORS, SCHEMA].each { String f ->
@@ -236,7 +321,7 @@ class SnapshotComparison {
         return parts.length > 1 ? parts[1] : '?'
     }
 
-    private static Map<String, List<String>> sections(List<String> lines) {
+    static Map<String, List<String>> sections(List<String> lines) {
         Map<String, List<String>> m = new LinkedHashMap<>()
         String current = ''
         lines.each { String l ->
@@ -267,5 +352,101 @@ class SnapshotComparison {
             }
         }
         return out
+    }
+
+    /**
+     * The generators that serve the tables of the intended changes: their values and the tables'
+     * max(id) move with the rows, by amounts that depend on the database's sequence semantics and
+     * caches, so they are masked in both snapshots and checked by value >= max(id) instead.
+     */
+    private static class Released {
+        /** Upper-cased table names of the intended changes. */
+        final Set<String> tables = new TreeSet<>(String.CASE_INSENSITIVE_ORDER)
+        /** Upper-cased sequence names that back those tables. */
+        final Set<String> sequences = new TreeSet<>(String.CASE_INSENSITIVE_ORDER)
+        /** Generator tables (whole table, key null) or rows (table, key) that back those tables. */
+        final List<List<String>> generatorRows = []
+
+        private static final Pattern TABLE_ATTR = ~/ table=(\S+)/
+        private static final Pattern SEQUENCE_BACKING = ~/SEQUENCE (\S+) increment=/
+        private static final Pattern TABLE_BACKING = ~/TABLE (\S+) /
+        private static final Pattern TABLE_ROW_BACKING = ~/TABLE-ROW ([^\[\s]+)\[([^\]]+)\]/
+        private static final Pattern GENERATOR_VALUE = ~/(?i)\b(value|next_val|next_hi_value|next_hi)=(-?\d+)/
+        private static final Pattern MAX_ID = ~/ max-id=(\S+)/
+
+        static Released of(File baselineGenerators, List<IntendedChange> changes) {
+            Released r = new Released()
+            changes.each { r.tables << it.table }
+            if (!baselineGenerators.file) return r
+            SnapshotComparison.sections(baselineGenerators.readLines('UTF-8'))['[entities]']?.each { String line ->
+                if (!r.servesTable(line)) return
+                line.findAll(SEQUENCE_BACKING) { all, seq -> r.sequences << seq }
+                line.findAll(TABLE_BACKING) { all, table -> r.generatorRows << [table, null] }
+                line.findAll(TABLE_ROW_BACKING) { all, table, key -> r.generatorRows << [table, key] }
+            }
+            return r
+        }
+
+        boolean servesTable(String entityLine) {
+            String table = entityLine.find(TABLE_ATTR) { all, t -> t }
+            return table != null && tables.contains(table)
+        }
+
+        /** The current [entities] lines of the released tables whose generator is behind max(id). */
+        List<String> violations(List<String> currentEntities) {
+            List<String> out = []
+            currentEntities.findAll { servesTable(it) }.each { String line ->
+                String maxId = line.find(MAX_ID) { all, id -> id }
+                if (maxId == null || !(maxId ==~ /-?\d+/)) return
+                line.findAll(GENERATOR_VALUE) { all, key, value ->
+                    if (new BigInteger(value) < new BigInteger(maxId)) {
+                        out << "${line.find(TABLE_ATTR) { a, t -> t }}: ${key}=${value} is below max(id)=${maxId} after an intended change".toString()
+                    }
+                }
+            }
+            return out
+        }
+
+        /**
+         * Masks the released generator values and max(id) values, and adds the deltas (when given)
+         * to the row counts of [row counts] and of the generators.txt lines.
+         */
+        Map<String, List<String>> apply(Map<String, List<String>> sections, List<IntendedChange> deltas) {
+            Map<String, List<String>> m = new LinkedHashMap<>()
+            sections.each { String section, List<String> lines ->
+                m[section] = lines.collect { String l -> applyTo(section, l, deltas) }
+            }
+            return m
+        }
+
+        private String applyTo(String section, String line, List<IntendedChange> deltas) {
+            String first = line.split(' ')[0]
+            switch (section) {
+                case '[row counts]':
+                    IntendedChange change = deltas.find { it.table.equalsIgnoreCase(first) }
+                    String count = line.split(' ').length > 1 ? line.split(' ')[1] : null
+                    return change && count != null && count ==~ /\d+/ ? "${first} ${(count as long) + change.delta}".toString() : line
+                case '[sequences]':
+                    return sequences.contains(first) ? line.replaceAll(/ value=\S+/, ' value=*') : line
+                case '[generator table rows]':
+                    boolean released = generatorRows.any { table, key ->
+                        first.equalsIgnoreCase(table) &&
+                                (key == null || line.split(' ').drop(1).any { it.toUpperCase(Locale.ROOT).endsWith("=${key.toUpperCase(Locale.ROOT)}") })
+                    }
+                    return released ? line.replaceAll(/=-?\d+/, '=*') : line
+                case '[entities]':
+                    if (!servesTable(line)) return line
+                    String table = line.find(TABLE_ATTR) { all, t -> t }
+                    IntendedChange change = deltas.find { it.table.equalsIgnoreCase(table) }
+                    String out = line.replaceAll(GENERATOR_VALUE) { all, key, value -> "${key}=*" }
+                            .replaceAll(MAX_ID, ' max-id=*')
+                    if (change) {
+                        out = out.replaceAll(/ rows=(\d+)/) { all, rows -> " rows=${(rows as long) + change.delta}" }
+                    }
+                    return out
+                default:
+                    return line
+            }
+        }
     }
 }
