@@ -260,6 +260,45 @@
             "visible": false,
             "where": "local",
             "whereReason": "CI's runners resolve the same less and sass versions as the recording from master, so the CSS matches there. A machine whose npm resolves other versions sees a different CSS."
+        },
+        {
+            "id": "spring53-suffix-groups",
+            "path": "/uPortal/api/groups.*",
+            "status": 404,
+            "field": "*",
+            "reason": "Spring 5.3 no longer matches a path with a file extension against a mapping declared without one. GroupRESTController maps /api/groups, so /api/groups.json and /api/groups.xml (which 5.17 answered with the same JSON) now answer 404. Spring 6 removes suffix matching altogether, so it is not turned back on.",
+            "log": "MOD-D38",
+            "visible": true,
+            "upgrading": "URL suffixes under /api"
+        },
+        {
+            "id": "spring53-suffix-people-v50",
+            "path": "/uPortal/api/v5-0/people/*.*",
+            "status": 404,
+            "field": "*",
+            "reason": "As spring53-suffix-groups, for PeopleRESTControllerV50 (/api/v5-0/people/me and /{username}): me.json and admin.json answer 404. A dot in the user name is now part of it: 5.17 cut admin.smith at the dot and answered for admin; the replay has no admin.smith, so it answers 404.",
+            "log": "MOD-D38",
+            "visible": true,
+            "upgrading": "URL suffixes under /api"
+        },
+        {
+            "id": "spring53-security-headers-on-small-images",
+            "path": "/uPortal/media/skins/*",
+            "field": "header:x-*",
+            "from": null,
+            "reason": "Spring Security 5.8 writes X-Content-Type-Options, X-Frame-Options and X-XSS-Protection on these four small images too. On 5.17 every other /media answer in the recording already had them, and these did not. Headers are added, none removed.",
+            "log": "MOD-D38",
+            "visible": false
+        },
+        {
+            "id": "spring53-cors-vary",
+            "path": "/uPortal/api/swagger-ui.html",
+            "field": "header:vary",
+            "from": null,
+            "to": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+            "reason": "swagger-ui.html is served by a Spring MVC resource handler, which carries a CORS configuration. Spring 5 adds these Vary values to every answer of such a handler, CORS request or not, so caches keep the two apart. Spring 4.3 added them only to CORS requests.",
+            "log": "MOD-D38",
+            "visible": false
         }
     ]
 }
