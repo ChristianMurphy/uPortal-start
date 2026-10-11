@@ -3,11 +3,11 @@
   <name>background-preference</name>
   <fname>background-preference</fname>
   <desc>Display user selected background images on main page.</desc>
-  <type>Portlet</type>
+  <type>Web Component</type>
   <timeout>30000</timeout>
   <portlet-descriptor>
     <up:isFramework>true</up:isFramework>
-    <up:portletName>backgroundPreference</up:portletName>
+    <up:portletName>WebComponent</up:portletName>
   </portlet-descriptor>
   <lifecycle>
     <entry name="PUBLISHED" user="system">‹masked›</entry>
@@ -48,6 +48,14 @@
   <parameter>
     <name>showChrome</name>
     <value>false</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.moduleUrl</name>
+    <value>up-background-preference</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.tagName</name>
+    <value>up-background-preference</value>
   </parameter>
   <portlet-preference>
     <name>backgroundImageCaptions</name>

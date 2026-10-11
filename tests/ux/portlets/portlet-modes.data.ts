@@ -65,6 +65,8 @@ export const BUNDLED_PORTLETS: BundledPortlet[] = [
   {
     fname: "background-preference",
     webapp: "/uPortal",
+    // A Web Component channel since the background preference conversion:
+    // uPortal's WebComponent portlet, which declares VIEW only
     modes: ["view"],
     groups: ["Authenticated Users"],
   },

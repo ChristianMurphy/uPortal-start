@@ -5,5 +5,7 @@
 # Favorites and Popular Portlets as Web Component channels: the Web Component portlet type, and
 # the webComponent.tagName and webComponent.moduleUrl parameters of the favorites and the
 # popular-portlets definitions (two each)
+# Background Preference as a Web Component channel: the background-preference definition's
+# webComponent.tagName and webComponent.moduleUrl (two more)
 UP_PORTLET_TYPE rows +1 MOD-I134
-UP_PORTLET_DEF_PARAM rows +4 MOD-I134
+UP_PORTLET_DEF_PARAM rows +6 MOD-I134
