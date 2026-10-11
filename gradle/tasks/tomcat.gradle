@@ -83,6 +83,14 @@ task tomcatConfig() {
     doLast {
         String serverHome = rootProject.ext['buildProperties'].getProperty('server.home')
 
+        /*
+         * Remove Tomcat's documentation and examples, which anyone could open, and its ROOT
+         * page, which names the Tomcat version (MOD-I251).  etc/tomcat/webapps/ROOT replaces
+         * ROOT with a redirect to the portal.  The manager webapps stay:  they have no users
+         * until conf/tomcat-users.xml gets one.
+         */
+        ['docs', 'examples', 'ROOT'].each { file("${serverHome}/webapps/${it}").deleteDir() }
+
         //  Configure our settings by overlaying etc/tomcat
         copy {
             from 'etc/tomcat'
