@@ -85,12 +85,14 @@ async function execute(items) {
     let session;
     let current;
     let resolver;
+    let csrfMeta = {};
     let done = 0;
     for (const item of items) {
         if (item.role !== current) {
             current = item.role;
             session = await sessionFor(origin, item.role);
             resolver = nodeIdResolver();
+            csrfMeta = {};
         }
         const { route } = item;
         const headers = { ...route.headers };
@@ -103,7 +105,17 @@ async function execute(items) {
             const token = page.body.toString('utf8').match(/[?&;]_csrf=([0-9a-f-]{36})/)?.[1] ?? 'none';
             url += `${url.includes('?') ? '&' : '?'}_csrf=${token}`;
         }
+        if (route.csrfHeader) {
+            // Setup requests send the session's CSRF header, as the portal's own scripts do
+            // (up.csrfHeaders()), from the last page this session loaded: another request here would
+            // change the UrlCanonicalizingFilter cookie the next requests see. 5.17 pages have no
+            // such meta tags and 5.17 exempts /api, so it gets "none".
+            headers[csrfMeta.header ?? 'X-CSRF-TOKEN'] = csrfMeta.token ?? 'none';
+        }
         const response = await session.send(item.method, url, { body: route.body, headers });
+        const page = response.body.toString('utf8');
+        const meta = (name) => page.match(new RegExp(`<meta[^>]*name="${name}"[^>]*content="([^"]*)"`))?.[1];
+        if (meta('_csrf')) csrfMeta = { header: meta('_csrf_header'), token: meta('_csrf') };
         if (item.set === 'crawl' && item.method === 'GET') resolver.learn(item.path, response.body);
         const exchange = { set: item.set, role: item.role, method: item.method, path: item.path };
         const requestHeaders = item.headers ?? route.headers;
