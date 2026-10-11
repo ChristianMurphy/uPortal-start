@@ -23,6 +23,9 @@
 #                   snapshot and run the whole Playwright suite (needs `npm ci` and
 #                   `npx playwright install chromium`)
 #
+# With --portal on PostgreSQL the database's client connections are counted every second from
+# Tomcat's start to the end of the specs and the peak is reported (docs/connection-budget.md).
+#
 # Environment:
 #   HARNESS_DB_CONTAINER  with --external: the container to `docker exec` into for vacuumlo
 #   HARNESS_BASELINE      the default for --baseline (empty: chosen from uPortalVersion)
@@ -196,7 +199,13 @@ run_portal() {
         phase_end "$status"
         [ "$status" -eq 0 ] || return 1
     fi
-    timed "start the portal" start_portal "$vendor" || return 1
+    local sample=false
+    if [ "$reachable" = true ] && [ "${vendor#postgres}" != "$vendor" ]; then sample=true; fi
+    if [ "$sample" = true ]; then start_connection_sampler "$container" "$out/connections.txt"; fi
+    if ! timed "start the portal" start_portal "$vendor"; then
+        if [ "$sample" = true ]; then stop_connection_sampler "$out/connections.txt" "$vendor"; fi
+        return 1
+    fi
     local specs=(tests/api) log="$out/playwright-api.log" what="the API specs"
     if [ "$FULL_SUITE" = true ]; then specs=(); log="$out/playwright.log"; what="the whole suite"; fi
     phase_begin "Playwright: $what"
@@ -204,6 +213,7 @@ run_portal() {
         "${specs[@]+"${specs[@]}"}" "$(playwright_reporter)" --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
     phase_end "$status"
+    if [ "$sample" = true ]; then stop_connection_sampler "$out/connections.txt" "$vendor"; fi
     timed "stop the portal" stop_own_tomcat "$vendor"
     use_vendor "$vendor"
     if [ "${vendor#postgres}" != "$vendor" ]; then
