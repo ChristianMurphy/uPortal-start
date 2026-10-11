@@ -195,7 +195,7 @@ jobs:
         with:
           cache-provider: basic
       - name: Build and install uPortal
-        run: ./gradlew -S --stacktrace --no-daemon --no-parallel -PquietCompile install
+        run: ./gradlew --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
         id: uportal
         env:
@@ -272,13 +272,13 @@ jobs:
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Initialize portal
-        run: ./gradlew -S portalInit
+        run: ./gradlew portalInit
       - name: Check the deployed uPortal version
         env:
           UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
         run: ls -l ".gradle/tomcat/webapps/uPortal/WEB-INF/lib/uPortal-core-$UPORTAL_VERSION.jar"
       - name: Start Tomcat
-        run: ./gradlew -S tomcatStart && tests/replay/portal.sh wait
+        run: ./gradlew tomcatStart && tests/replay/portal.sh wait
       - name: Replay and compare with 5.17
         run: node tests/replay/replay.mjs replay --origin http://localhost:8080 --upgrading uportal-docs/docs/UPGRADING-6.0.md
       - name: Upload the report and logs
@@ -292,7 +292,7 @@ jobs:
           include-hidden-files: true
       - name: Stop Tomcat
         if: always()
-        run: ./gradlew -S tomcatStop
+        run: ./gradlew tomcatStop
 
   record:
     name: "Record the 5.17 reference"
@@ -335,7 +335,7 @@ jobs:
           cache-read-only: true
       - name: Initialize and start the reference
         working-directory: reference
-        run: ./gradlew -S portalInit && ./gradlew -S tomcatStart && ../tests/replay/portal.sh wait
+        run: ./gradlew portalInit && ./gradlew tomcatStart && ../tests/replay/portal.sh wait
       - name: Install npm dependencies
         run: npm ci
       - name: Install Playwright browsers
@@ -369,7 +369,7 @@ jobs:
       - name: Stop the reference
         if: always()
         working-directory: reference
-        run: ./gradlew -S tomcatStop
+        run: ./gradlew tomcatStop
 
   commit:
     name: "Commit the recorded fixtures"
