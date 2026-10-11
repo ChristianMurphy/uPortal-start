@@ -49,3 +49,5 @@ jobs:
         run: .github/scripts/choose-uportal.test.sh
       - name: Test the wait for the portlets to register
         run: .github/scripts/wait-for-portlets.test.sh
+      - name: Test the search for an earlier uPortal build
+        run: .github/scripts/find-uportal-build.test.sh

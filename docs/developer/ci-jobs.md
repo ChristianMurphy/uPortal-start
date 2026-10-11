@@ -27,6 +27,20 @@ annotation give the repository, ref and commit that were chosen, and the last st
 `Build uPortal` job prints them again, so the last lines of its log show which uPortal ran. The
 checkout uses that commit. `.github/scripts/choose-uportal.test.sh` checks the order with a table of examples.
 
+## One build of each uPortal commit
+
+`Integration`, `G-index`, `Migration equivalence` and `HTTP replay` often build the same uPortal
+commit, minutes apart. Each `Build uPortal` job uploads its build as the artifact
+`uportal-m2-<commit>`, with the repository and commit written in `uportal-build.txt`.
+Before it builds, `.github/scripts/find-uportal-build.sh` looks for that artifact from an earlier
+push, manual or scheduled run of this repository (never a fork or a pull request). When it finds
+one, the job downloads it, checks the repository and commit in `uportal-build.txt` against the
+chosen ones and uploads that build again for its own jobs. It builds when anything is missing or
+doesn't match. A notice annotation and the last lines of the log say which run's build was
+reused. The build itself has no Gradle cache, and a branch's cache stores uPortal-start's own entry
+alone. `.github/scripts/find-uportal-build.test.sh` checks the choice with a table of examples,
+and the workflow lint job runs it.
+
 ## G-index on a workstream push
 
 The first job of `g-index.yml` compares the branch with `origin/ccr-43ba0785-hzlrj5` in

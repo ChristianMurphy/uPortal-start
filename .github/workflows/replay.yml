@@ -89,7 +89,11 @@ jobs:
     if: ${{ !((github.event_name == 'workflow_dispatch' && inputs.record == true) || (github.event_name != 'workflow_dispatch' && (contains(github.event.head_commit.message, '[replay-record commit]') || contains(github.event.head_commit.message, '[replay-record]')))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read # to check out the plan files
+      actions: read # to list and download earlier runs' uPortal builds (find-uportal-build.sh, MOD-I342)
     outputs:
+      artifact: ${{ steps.reuse.outputs.artifact }}
       version: ${{ steps.uportal.outputs.version }}
       repository: ${{ steps.source.outputs.repository }}
       ref: ${{ steps.source.outputs.ref }}
@@ -134,6 +138,16 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           BRANCH: ${{ github.ref_name }}
         run: plan/.github/scripts/choose-uportal.sh
+      # Reuse an earlier run's build of the same uPortal commit, if there is one (MOD-I342)
+      - name: Find an earlier build of this uPortal commit
+        id: reuse
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          UPORTAL_REPOSITORY: ${{ steps.source.outputs.repository }}
+          UPORTAL_SHA: ${{ steps.source.outputs.sha }}
+        run: plan/.github/scripts/find-uportal-build.sh
       - name: Checkout uPortal
         if: ${{ steps.mode.outputs.replay == 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -158,21 +172,50 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "distribution=$distribution" >> "$GITHUB_OUTPUT"
+      - name: Download the earlier build
+        if: ${{ steps.mode.outputs.replay == 'true' && steps.reuse.outputs.run-id != '' }}
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: ${{ steps.reuse.outputs.artifact }}
+          path: ~/.m2/repository/org/jasig/portal
+          run-id: ${{ steps.reuse.outputs.run-id }}
+          github-token: ${{ github.token }}
+      # Used only if it names the chosen repository and commit; otherwise uPortal is built
+      - name: Check the earlier build's commit
+        id: earlier
+        if: ${{ steps.mode.outputs.replay == 'true' && steps.reuse.outputs.run-id != '' }}
+        env:
+          EXPECTED: ${{ steps.source.outputs.repository }}@${{ steps.source.outputs.sha }}
+          RUN: ${{ steps.reuse.outputs.run-id }}
+        run: |
+          built=$(cat ~/.m2/repository/org/jasig/portal/uportal-build.txt 2> /dev/null || true)
+          if [ "$built" = "$EXPECTED" ]; then
+            echo "reused=true" >> "$GITHUB_OUTPUT"
+            echo "::notice title=uPortal build reused::$EXPECTED, built in run $RUN"
+          else
+            echo "The build of run $RUN is of '$built', not $EXPECTED, so uPortal is built"
+            rm -rf ~/.m2/repository/org/jasig/portal
+          fi
       - name: Setup Java
-        if: ${{ steps.mode.outputs.replay == 'true' }}
+        if: ${{ steps.mode.outputs.replay == 'true' && steps.earlier.outputs.reused != 'true' }}
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: ${{ steps.jdk.outputs.distribution }}
           java-version: ${{ steps.jdk.outputs.version }}
       - name: Setup Gradle
-        if: ${{ steps.mode.outputs.replay == 'true' }}
+        if: ${{ steps.mode.outputs.replay == 'true' && steps.earlier.outputs.reused != 'true' }}
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
           cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Build and install uPortal
-        if: ${{ steps.mode.outputs.replay == 'true' }}
+        if: ${{ steps.mode.outputs.replay == 'true' && steps.earlier.outputs.reused != 'true' }}
         run: ./gradlew --no-daemon --no-parallel -PquietCompile install
+      - name: Mark the build with its commit
+        if: ${{ steps.mode.outputs.replay == 'true' && steps.earlier.outputs.reused != 'true' }}
+        env:
+          BUILT: ${{ steps.source.outputs.repository }}@${{ steps.source.outputs.sha }}
+        run: echo "$BUILT" > ~/.m2/repository/org/jasig/portal/uportal-build.txt
       - name: Read the uPortal version
         if: ${{ steps.mode.outputs.replay == 'true' }}
         id: uportal
@@ -192,7 +235,7 @@ jobs:
         if: ${{ steps.mode.outputs.replay == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: replay-uportal-maven-local
+          name: ${{ steps.reuse.outputs.artifact }}
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 3
@@ -203,10 +246,11 @@ jobs:
         env:
           UPORTAL: ${{ steps.source.outputs.description }}
           VERSION: ${{ steps.uportal.outputs.version }}
+          REUSED: ${{ steps.earlier.outputs.reused == 'true' && steps.reuse.outputs.run-id || '' }}
           REPLAY: ${{ steps.mode.outputs.replay }}
         run: |
           echo "uPortal under test: ${UPORTAL:-none chosen}"
-          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "Built uPortal ${VERSION:-(no build)}${REUSED:+ in run $REUSED, reused}"
           echo "Replay: $REPLAY"
 
   replay:
@@ -223,7 +267,7 @@ jobs:
       - name: Download the uPortal build
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: replay-uportal-maven-local
+          name: ${{ needs.uportal.outputs.artifact }}
           path: ~/.m2/repository/org/jasig/portal
       # Registry entries name sections of the built uPortal's UPGRADING-6.0.md, which must exist
       - name: Checkout uPortal's UPGRADING-6.0.md
