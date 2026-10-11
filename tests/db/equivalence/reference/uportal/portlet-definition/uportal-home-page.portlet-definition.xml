@@ -1,0 +1,44 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>uPortal Home Page</title>
+  <name>uPortal Home Page</name>
+  <fname>uportal-home-page</fname>
+  <desc>uPortal Home Page channel</desc>
+  <type>Inline Frame</type>
+  <timeout>20000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>IFrame</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>News</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/mimetypes/text-html.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/star.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>height</name>
+    <readOnly>false</readOnly>
+    <value>800</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>url</name>
+    <readOnly>false</readOnly>
+    <value>http://www.apereo.org/uportal</value>
+  </portlet-preference>
+</portlet-definition>

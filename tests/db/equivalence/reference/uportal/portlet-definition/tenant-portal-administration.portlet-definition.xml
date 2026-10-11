@@ -1,0 +1,41 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Tenant Portal Administration</title>
+  <name>Tenant Portal Administration</name>
+  <fname>tenant-portal-administration</fname>
+  <desc>Administrative functions for tenants in the portal</desc>
+  <type>Portlet</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>JspInvoker</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Tenant Administrators</group>
+  <parameter>
+    <name>configurable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <portlet-preference>
+    <name>JspInvokerPortletController.viewLocation</name>
+    <readOnly>false</readOnly>
+    <value>/jsp/Invoker/tenant-administration</value>
+  </portlet-preference>
+</portlet-definition>

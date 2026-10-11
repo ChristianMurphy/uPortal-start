@@ -1,0 +1,11 @@
+<permission-owner version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/permission-owner https://source.jasig.org/schemas/uportal/io/permission-owner/permission-owner-4.0.xsd">
+  <name>Fragments</name>
+  <fname>UP_FRAGMENT</fname>
+  <desc>Permissions controlling uPortal DLM fragments</desc>
+  <activity>
+    <name>Fragment Subscription</name>
+    <fname>FRAGMENT_SUBSCRIBE</fname>
+    <desc>Subscribe to a pulled fragment</desc>
+    <targetProvider>peopleAndGroupsTargetProvider</targetProvider>
+  </activity>
+</permission-owner>

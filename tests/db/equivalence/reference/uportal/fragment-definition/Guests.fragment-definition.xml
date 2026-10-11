@@ -1,0 +1,5 @@
+<fragment-definition script="classpath://org/jasig/portal/io/import-fragment-definition_v3-1.crn">
+  <{http://org.jasig.portal.layout.dlm.config}fragment name="Guests" ownerID="guest-lo" precedence="80.0">
+    <{http://org.jasig.portal.layout.dlm.config}audience evaluatorFactory="org.apereo.portal.layout.dlm.providers.GuestUserEvaluatorFactory"/>
+  </{http://org.jasig.portal.layout.dlm.config}fragment>
+</fragment-definition>

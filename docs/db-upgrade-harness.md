@@ -162,6 +162,9 @@ Zero drift means all four match the baseline. Column order is not compared, beca
 orders columns differently in new tables and the order does not matter to an existing database.
 A rerun on unchanged code must not show any drift.
 
+`DATA` counts rows and compares no values. `docs/migration-equivalence.md` describes the check that
+compares the data itself: 5.17 and the build under test export the same database with `dataExport`.
+
 ### Sequence values
 
 Sequence values are compared exactly, because a changed value has caught a real change in how

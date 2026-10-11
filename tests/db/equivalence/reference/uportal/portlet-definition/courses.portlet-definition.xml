@@ -1,0 +1,40 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Courses</title>
+  <name>Courses</name>
+  <fname>courses</fname>
+  <desc>Course links and announcements.</desc>
+  <type>CMS</type>
+  <timeout>60000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Academics</category>
+  <category>Quicklinks</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>configurable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/apps/accessories-text-editor.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/courses_alt.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>\n            \n                &lt;div class="portlet ptl-courses view-courses"&gt;\n                    &lt;div class="portlet-content" data-role="content"&gt;\n                        &lt;ul data-role="listview" class="course-list"&gt;\n                            &lt;li&gt;\n                                &lt;a href="#"&gt;\n                                    &lt;strong class="title"&gt;Design Awareness&lt;/strong&gt;\n                                    &lt;p&gt;\n                                        &lt;span class="catalog"&gt;DSC 101&lt;/span&gt;&lt;span class="separator"&gt;, &lt;/span&gt;\n                                        &lt;span class="instructor"&gt;Cross&lt;/span&gt;\n                                    &lt;/p&gt;\n                                    &lt;span class="ui-li-count badge"&gt;1 item&lt;/span&gt;\n                                &lt;/a&gt;\n                            &lt;/li&gt;\n                            &lt;li&gt;\n                                &lt;a href="#"&gt;\n                                    &lt;strong class="title"&gt;Drawing for Industry&lt;/strong&gt;\n                                    &lt;p&gt;\n                                        &lt;span class="catalog"&gt;IND 120&lt;/span&gt;&lt;span class="separator"&gt;, &lt;/span&gt;\n                                        &lt;span class="instructor"&gt;Dr. Nafario&lt;/span&gt;\n                                    &lt;/p&gt;\n                                &lt;/a&gt;\n                            &lt;/li&gt;\n                            &lt;li&gt;\n        \n                                &lt;a href="#"&gt;\n                                    &lt;strong class="title"&gt;First-Year Composition&lt;/strong&gt;\n                                    &lt;p&gt;\n                                        &lt;span class="catalog"&gt;ENG 101&lt;/span&gt;&lt;span class="separator"&gt;, &lt;/span&gt;\n                                        &lt;span class="instructor"&gt;Smith&lt;/span&gt;\n                                    &lt;/p&gt;\n                                &lt;/a&gt;\n                            &lt;/li&gt;\n                            &lt;li&gt;\n                                &lt;a href="#"&gt;\n                                    &lt;strong class="title"&gt;Precalculus&lt;/strong&gt;\n                                    &lt;p&gt;\n                                        &lt;span class="catalog"&gt;MAT 170&lt;/span&gt;&lt;span class="separator"&gt;, &lt;/span&gt;\n                                        &lt;span class="instructor"&gt;Andrews&lt;/span&gt;\n        \n                                    &lt;/p&gt;\n                                &lt;/a&gt;\n                            &lt;/li&gt;\n                            &lt;li&gt;\n                                &lt;a href="#"&gt;\n                                    &lt;strong class="title"&gt;Graphic Design History&lt;/strong&gt;\n                                    &lt;p&gt;\n                                        &lt;span class="catalog"&gt;GRA 111&lt;/span&gt;&lt;span class="separator"&gt;, &lt;/span&gt;\n                                        &lt;span class="instructor"&gt;Cross&lt;/span&gt;\n                                    &lt;/p&gt;\n                                &lt;/a&gt;\n                            &lt;/li&gt;\n                        &lt;/ul&gt;\n                        &lt;div class="ui-grid-a utilities" style="margin-top: 20px"&gt;\n                            &lt;div class="ui-block-a"&gt;&lt;a data-role="button" class="schedule" title="schedule" href="/uPortal/p/calendar/max/render.uP"&gt;Schedule&lt;/a&gt;&lt;/div&gt;\n                            &lt;div class="ui-block-b"&gt;&lt;a data-role="button" class="grades" title="grades" href="course_grades.html"&gt;Grades&lt;/a&gt;&lt;/div&gt;\n                        &lt;/div&gt;\n                    &lt;/div&gt;\n                    &lt;p&gt;Mock of the Jasig Courses Portlet. This is a sample \n                    screen for demonstration purposes only.&lt;/p&gt;                \n                &lt;/div&gt;\n            \n        </value>
+  </portlet-preference>
+</portlet-definition>

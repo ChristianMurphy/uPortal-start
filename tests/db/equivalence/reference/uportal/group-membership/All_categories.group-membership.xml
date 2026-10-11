@@ -1,0 +1,26 @@
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>All categories</name>
+  <entity-type>org.apereo.portal.portlet.om.IPortletDefinition</entity-type>
+  <creator>system</creator>
+  <description>All channel categories</description>
+  <children>
+    <group>Academics</group>
+    <group>Administration</group>
+    <group>Advisor</group>
+    <group>Demonstration</group>
+    <group>Development</group>
+    <group>Entertainment</group>
+    <group>Finances</group>
+    <group>Information</group>
+    <group>Instructors</group>
+    <group>Library</group>
+    <group>News</group>
+    <group>Quicklinks</group>
+    <group>Research</group>
+    <group>Services</group>
+    <group>Tenant Portlets</group>
+    <group>Testing</group>
+    <group>Work</group>
+    <group>uPortal</group>
+  </children>
+</group>
