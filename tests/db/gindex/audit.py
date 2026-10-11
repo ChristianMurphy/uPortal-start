@@ -289,7 +289,8 @@ def seq_scans(plans, tables, min_rows):
 def explain_without_seqscan(db, finding):
     """Whether any index could serve the scan: EXPLAIN (GENERIC_PLAN) with seq scans disabled."""
     query = finding.pop("sql", finding["query"]).strip().rstrip(";")
-    if not re.match(r"(?is)^\s*(select|with)\b", query):
+    # EXPLAIN without ANALYZE plans a DELETE or UPDATE without running it
+    if not re.match(r"(?is)^\s*(select|with|delete|update)\b", query):
         return None
     try:
         out = db.execute("SET enable_seqscan = off;\nEXPLAIN (GENERIC_PLAN, FORMAT JSON) " + query + ";")
@@ -422,7 +423,7 @@ WHERE sum_no_index_used > 0
 
 def explain_full_scans(db, digest):
     """Tables a MariaDB digest reads with access type ALL, from EXPLAIN of its text."""
-    if not re.match(r"(?is)^\s*(select|with)\b", digest) or digest.rstrip().endswith("..."):
+    if not re.match(r"(?is)^\s*(select|with|delete|update)\b", digest) or digest.rstrip().endswith("..."):
         return None
     text = re.sub(r"\(\s*\?\s*(,\s*\?\s*)*(,\s*\.\.\.)?\s*\)", "('1')", digest)
     text = text.replace("?", "'1'")
