@@ -8,7 +8,8 @@ export default {
     ...base,
     testDir: '..',
     outputDir: '../../build/replay/suite-results',
-    reporter: [['list']],
+    // A line for every passing test buries the failures in a CI job log (MOD-D53)
+    reporter: process.env.CI ? [['dot'], ['github']] : [['list']],
     // A failed test still made its requests; retries would only repeat them.
     retries: 0,
     use: {

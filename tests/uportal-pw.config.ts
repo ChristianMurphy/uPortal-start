@@ -12,7 +12,13 @@ const config: PlaywrightTestConfig = {
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  reporter: [["list"], ["html", { open: "never" }]],
+  // The list reporter prints a line for every passing test, which buries the failures in a CI
+  // job log. On CI the dot reporter prints a character per test and the failures with their
+  // file and line at the end, and the github reporter adds an annotation for each failure.
+  // Locally the list reporter shows each test as it runs.
+  reporter: process.env.CI
+    ? [["dot"], ["github"], ["html", { open: "never" }]]
+    : [["list"], ["html", { open: "never" }]],
   // Warms the portal up before the first test (see global-setup.ts)
   globalSetup: "./global-setup.ts",
   // A failed test is retried so that the retry records a video and a trace,
