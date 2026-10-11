@@ -40,7 +40,7 @@ MOD-D29 items 2 and 8. The full description of the tool is in `docs/http-replay.
 | --- | --- |
 | Roles | guest, student, staff, faculty, admin (plus `developer` in the login checks) |
 | Crawl requests per run | 1386 (146 routes and 134 portlet pages, as each role) |
-| Playwright suite requests replayed | 1003 distinct GET and HEAD requests from 124 tests. Another 428 state-changing requests (25 endpoints) are listed but not replayed |
+| Playwright suite requests replayed | 1007 distinct GET and HEAD requests from 124 tests in the CI recording (1003 locally). Another 428 state-changing requests (25 endpoints) are listed but not replayed |
 | Security matrix | 277 routes, each for all 5 roles |
 | Local accounts checked | 5, each through `/uPortal/Login` and the CAS form, with the right and a wrong password |
 | Header snapshot | 9 representative pages for guest and admin |
@@ -63,8 +63,10 @@ uPortal-start with released uPortal 5.17.9 on Tomcat 8.5.100. The current build 
   * `/api/session.json` reports the built version (20).
   * `portal-analytics.js` has the dropdown fix f301239691 (5).
   * The vendored Portlet MVC's exception class appears in an action redirect (3).
-* **CI**: the replay job needs the fixtures that the record job commits. See "What's left" for
-  the run IDs.
+* **Reference recorded from real `master`** in CI run 38096550769. It ran uPortal-start `master`
+  with uPortal 5.17.9 on Tomcat 8.5, Gradle 6.9.4 and Java 11. The run committed the fixtures as
+  6532d3e: 2393 exchanges (1386 crawl, 1007 suite requests) and 277 matrix routes. Its self-check
+  (the reference replayed against its own recording after a reset) passes.
 
 ### Seeded faults
 
@@ -73,16 +75,16 @@ started, then the replay ran against the stand-in's fixtures. None of them is co
 
 | Fault | What it imitates | Result |
 | --- | --- | --- |
-| `<mvc:path-matching suffix-pattern="false" trailing-slash="false"/>` on `/api` | Spring 6 defaults | **fails**: 30 exchanges and 22 matrix cells. For example, `GET /api/session.json/` changes from 200 to 405 for every role, and `/api/v5-0/people/me.json` and `/people/admin.smith` change from 200 to 404 |
-| `useHttpOnly="false"` in uPortal's `META-INF/context.xml` | a container cookie default change | see "What's left" (the first two attempts did not reach the cookie, see the findings) |
+| `<mvc:path-matching suffix-pattern="false" trailing-slash="false"/>` on `/api` | Spring 6 defaults | **fails**: 30 exchanges and 22 matrix cells. `GET /api/session.json/` changes from 200 to 405 for every role, and `/api/v5-0/people/me.json` and `/people/admin.smith` change from 200 to 404 |
+| `useHttpOnly="false"` in uPortal's `META-INF/context.xml` | the container no longer marking the session cookie HttpOnly | see "What's left" (the first two attempts did not reach the cookie, see the findings) |
 | `@JsonFormat` removed from `PortletList.updatedOn` (rebuilt jar) | a Jackson date default change | **fails**: 4 exchanges. `$[0].updatedOn` changes from `"9999-99-99 99:99:99 +0000"` to `{epoch-ms:number}` in both the crawl and the suite requests |
-| method security off on `/api` (`global-method-security` commented out) | an admin route opened to guests | **fails**: 38 exchanges, 35 matrix cells and the CSRF table. For example, `GET /api/permissions/owners.json` changes from 403 to 200 for guest, student, staff and faculty |
+| method security off on `/api` (`global-method-security` commented out) | an admin route opened to guests | **fails**: 38 exchanges, 35 matrix cells and the CSRF table. `GET /api/permissions/owners.json` changes from 403 to 200 for guest, student, staff and faculty |
 
 ## Findings
 
 1. **5.17 names permission targets ambiguously.** `PermissionsListController` (`/api/permissionAssignments`)
    looks a target's name up by its number. A group (`local.25`) and a portlet (`PORTLET_ID.25`)
-   with the same number can get each other's name, and which one wins differs from run to run.
+   with the same number can get each other's name, and the name each gets differs from run to run.
    The replay masks `targetName` there.
 2. **The JSON error charset changed with Tomcat 9.** It was ISO-8859-1 and is now UTF-8. This is
    registered as intended, and UTF-8 matches the bodies.
@@ -101,9 +103,9 @@ started, then the replay ran against the stand-in's fixtures. None of them is co
 7. **Suffix pattern matching hides a wrong user.** On 5.17, `/api/v5-0/people/admin.smith`
    returns `admin`, because Spring 4.3 cuts the path variable at the dot. Spring 6 changes this
    to 404, which the replay reports. It then needs a registry entry or a fix.
-8. **`/api` has no CSRF protection.** This is 5.17 behaviour, recorded as such.
+8. **`/api` has no CSRF protection.** This is 5.17 behaviour, and the replay records it.
    `PortalCsrfSecurityRequestMatcher` exempts every `/api` path, so state-changing `/api`
-   requests (layout changes, portlet lists, imports, deletes) need no token, and
+   requests (layout changes, portlet lists, imports, deletes) don't need a token, and
    `GET /api/updatePermission` writes through a GET. The CSRF probes record this. A Spring
    Security upgrade that enables CSRF on `/api` fails the replay until it is registered.
 9. **5.17 answers 500 to a portlet-list POST without a name** (`{}`), where 400 is expected.
@@ -120,7 +122,7 @@ started, then the replay ran against the stand-in's fixtures. None of them is co
 * `MOD-I?` (Persistence/API): 5.17's `/api/permissionAssignments` gives a target the name of
   another entity with the same number (finding 1). Upstream candidate.
 * `MOD-I?` (uPortal-start): `dataInit` on a used portal breaks NotificationPortlet (finding 5).
-* `MOD-I?` (Security): Tomcat error pages show the server version (finding 3), and failed
+* `MOD-I?` (Security): the Tomcat error pages show the server version (finding 3), and failed
   portlet actions put exception messages into URLs (finding 4). Both are 5.17 behaviour and
   candidates for hardening.
 * `MOD-I?` (Spring 6 heads-up): suffix pattern matching and trailing-slash matching (finding 7
@@ -130,12 +132,10 @@ started, then the replay ran against the stand-in's fixtures. None of them is co
 
 ## What's left
 
-* CI fixtures from real `master`: the record runs were queued behind the saturated runners. Once
-  the record job commits `tests/replay/fixtures/5.17/`, the next push that touches
-  `tests/replay` runs the replay job against them. Its result and run ID go here.
-* Differences between real `master` and the stand-in (Gradle 6 overlays, HSQLDB 2.5.1) show up in
-  the record job's self-check and in the first CI replay. Register or mask them there.
+* The first CI replay of the current build against the recording from real `master`. Its run
+  ID and result go here. Differences between real `master` and the local stand-in (Gradle 6
+  overlays, HSQLDB 2.5.1) would show up there first.
 * The HttpOnly fault through `META-INF/context.xml` still has to be rerun on the final fixtures.
-* Not covered yet: Firefox or WebKit, other databases (the replay runs on HSQLDB only), portlet
+* Not covered yet: browsers other than Chromium, other databases (the replay runs on HSQLDB only), portlet
   resource URLs other than those the suite requests, and the 428 state-changing suite requests
   (only the CSRF probes replay state changes).
