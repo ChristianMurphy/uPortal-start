@@ -105,6 +105,7 @@ jobs:
             set_name=workstream
           fi
           node tests/db/equivalence/matrix.mjs "$set_name" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Migration equivalence set::$set_name"
       - name: Choose the uPortal repository and ref
         id: source
         env:
@@ -169,6 +170,20 @@ jobs:
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 7
+      # The last lines of the job's log say which uPortal was built, because agents can't read the
+      # job summary (MOD-I307)
+      - name: Say which uPortal was built
+        if: ${{ !cancelled() }}
+        env:
+          UPORTAL: ${{ steps.source.outputs.description }}
+          VERSION: ${{ steps.uportal.outputs.version }}
+          IN_PLACE: ${{ steps.matrix.outputs.in-place }}
+          COPY: ${{ steps.matrix.outputs.copy }}
+        run: |
+          echo "uPortal under test: ${UPORTAL:-none chosen}"
+          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "In place: $IN_PLACE"
+          echo "Copy: $COPY"
 
   in-place:
     name: "In place: ${{ matrix.vendor }}"

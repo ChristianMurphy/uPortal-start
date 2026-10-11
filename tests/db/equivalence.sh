@@ -359,6 +359,7 @@ cleanup
 write_summary
 echo "==== Migration equivalence $NAME summary"
 printf '%s\n' "${TIMINGS[@]+"${TIMINGS[@]}"}"
+github_annotation notice "Migration equivalence $NAME: phase times" "$(printf '%s\n' "${TIMINGS[@]+"${TIMINGS[@]}"}")"
 printf '%s\n' "${RESULTS[@]+"${RESULTS[@]}"}"
 if [ ${#FAILED[@]} -gt 0 ]; then
     printf 'FAILED: %s\n' "${FAILED[@]}"

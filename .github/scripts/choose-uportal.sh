@@ -11,8 +11,8 @@
 # ccr-x-topic-r3 test the older ccr-x-topic when uPortal had no ccr-x-topic-r3, and the whole run
 # tested a uPortal from before the change it was meant to check.
 #
-# The repository, ref and commit that were chosen go to the job summary and to a notice annotation,
-# and to $GITHUB_OUTPUT as repository, ref and sha. The workflows check out the sha, so the commit
+# The repository, ref and commit that were chosen go to the job summary, to a notice annotation and
+# to $GITHUB_OUTPUT as repository, ref, sha and description (one line, for the last step of the job). The workflows check out the sha, so the commit
 # that was reported is the commit that runs. A git failure other than "no such branch", such as a
 # network error, fails the step instead of moving on to the next candidate.
 #
@@ -103,9 +103,13 @@ fi
     echo "- Commit: \`${sha:-not resolved, the checkout uses the ref as given}\`"
     echo "- Why: $reason"
 } > "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
-echo "::notice title=uPortal under test::$repository $ref at ${sha:-an unresolved commit}: $reason"
+description="$repository $ref at ${sha:-an unresolved commit}: $reason"
+# A notice annotation: agents can't read job summaries, but the check run's annotations come back
+# through the API
+echo "::notice title=uPortal under test::$description"
 {
     echo "repository=$repository"
     echo "ref=$ref"
     echo "sha=$sha"
+    echo "description=$description"
 } >> "${GITHUB_OUTPUT:-/dev/stdout}"

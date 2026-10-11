@@ -124,6 +124,7 @@ jobs:
           fi
           echo "replay=$replay" >> "$GITHUB_OUTPUT"
           echo "Replay: $replay" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=HTTP replay::replay=$replay"
       - name: Choose the uPortal repository and ref
         if: ${{ steps.mode.outputs.replay == 'true' }}
         id: source
@@ -195,6 +196,18 @@ jobs:
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 3
+      # The last lines of the job's log say which uPortal was built, because agents can't read the
+      # job summary (MOD-I307)
+      - name: Say which uPortal was built
+        if: ${{ !cancelled() }}
+        env:
+          UPORTAL: ${{ steps.source.outputs.description }}
+          VERSION: ${{ steps.uportal.outputs.version }}
+          REPLAY: ${{ steps.mode.outputs.replay }}
+        run: |
+          echo "uPortal under test: ${UPORTAL:-none chosen}"
+          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "Replay: $REPLAY"
 
   replay:
     name: "Replay against 5.17"

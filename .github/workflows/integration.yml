@@ -98,7 +98,9 @@ jobs:
         id: set
         env:
           SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && 'workstream' || 'push' }}
-        run: echo "set=$SET" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "set=$SET" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Integration set::$SET"
       # Checks the coverage rules too, so a pair list that misses a source or target fails here
       - name: G-migrate pairs
         id: migrate
@@ -175,6 +177,18 @@ jobs:
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 7
+      # The last lines of the job's log say which uPortal was built, because agents can't read the
+      # job summary (MOD-I307)
+      - name: Say which uPortal was built
+        if: ${{ !cancelled() }}
+        env:
+          UPORTAL: ${{ steps.source.outputs.description }}
+          VERSION: ${{ steps.uportal.outputs.version }}
+          SET: ${{ steps.set.outputs.set }}
+        run: |
+          echo "uPortal under test: ${UPORTAL:-none chosen}"
+          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "Integration set: $SET"
 
   playwright:
     name: "Playwright: hsqldb"
