@@ -5,6 +5,7 @@ import {
   logout,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
+import { setUserLocale } from "../utils/user-locale";
 
 /*
  * What the Background Preference channel (fname background-preference) does
@@ -278,4 +279,54 @@ test.describe("Background Preference web component", () => {
     await expect(content.getByText("Mountain", { exact: true })).toBeVisible();
     await expect.poll(() => pageBackground(page)).not.toMatch(CHOSEN);
   });
+});
+
+/*
+ * The component in the user's language (MOD-D49): its texts come from the
+ * portal's Spanish and French messages. The channel is opened on its own at
+ * /p/background-preference, so the developer needs no Customize panel.
+ */
+test.describe("Background Preference in Spanish and French", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, config.users.developer);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await setUserLocale(page, "en_US");
+    await logout(page);
+  });
+
+  for (const { code, language, change, none } of [
+    {
+      code: "es_ES",
+      language: "es",
+      change: "Cambiar la imagen de fondo",
+      none: "Ninguna",
+    },
+    {
+      code: "fr_FR",
+      language: "fr",
+      change: "Changer l'image de fond",
+      none: "Aucune",
+    },
+  ]) {
+    test(`speaks ${language} to a user whose language is ${code}`, async ({
+      page,
+    }) => {
+      await setUserLocale(page, code);
+
+      await page.goto(`${config.url}p/background-preference`);
+      await waitForPortalRequestsToSettle(page);
+      const content = channel(page);
+
+      await expect(content.locator("up-background-preference")).toHaveAttribute(
+        "locale",
+        new RegExp(`^${language}`),
+      );
+      await content.getByRole("button", { name: change }).click();
+      await expect(
+        content.getByRole("button", { name: none, exact: true }),
+      ).toBeVisible();
+    });
+  }
 });
