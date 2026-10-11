@@ -85,11 +85,15 @@ time precision loses fractional seconds: MySQL and MariaDB `DATETIME` under 5.17
 ## One reference for every vendor
 
 5.17.9 recorded the reference once, on HSQLDB. If 5.17 itself stores the fixture differently on a
-vendor, record that difference exactly in `tests/db/equivalence/vendors/<vendor>.diff`. The 5.17
-export on that vendor must then differ from the reference by exactly that diff. The build under
-test must still match the 5.17 export on its own vendor exactly.
+vendor, record that difference exactly in `tests/db/equivalence/vendors/<vendor>.diff`, or in
+`<family>.diff` for every version of a vendor (`mysql`, `mariadb`). The 5.17 export on that vendor
+must then differ from the reference by exactly that diff. The build under test must still match
+the 5.17 export on its own vendor exactly.
 
-VENDOR_RESULTS
+On HSQLDB and PostgreSQL 18, 5.17's export equals the reference. On MySQL and MariaDB, 5.17's
+schema stores timestamps as `DATETIME` without fractional seconds (MOD-I95), so the 5.17 export
+loses the milliseconds of four values: three lifecycle entries and one `lastPasswordChange`.
+`vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that.
 
 ## Reading a failure
 
