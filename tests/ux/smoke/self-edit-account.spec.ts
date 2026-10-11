@@ -45,12 +45,14 @@ import {
  * - The edit form asks for a new password and its confirmation but not for
  *   the current password. (enterPassword.jsp has a Current Password field,
  *   but no flow state uses it.)
- * - A confirmation that differs from the password is not refused: the
- *   password field is saved. The form's script compares the fields only when
- *   the password input's textLength is above 0, and inputs have no
- *   textLength; PersonFormValidator never runs because Web Flow looks for a
- *   bean named after the model, accountFormValidator, and the bean is called
- *   personValidator.
+ *
+ * Changed on purpose (MOD-D18, proposed to the project owner):
+ * - A confirmation that differs from the password is refused with
+ *   "Passwords must match". uPortal 5.17 saved the password field: its
+ *   script compared the fields only when the password input's textLength was
+ *   above 0, and inputs have no textLength; PersonFormValidator never ran
+ *   because Web Flow looks for a bean named after the model,
+ *   accountFormValidator, and the bean is called personValidator.
  * - The form's "Add Preference" link adds an input for any attribute name,
  *   but saving ignores attributes the user may not edit, so nothing it adds
  *   is stored. The tests leave the link alone.
@@ -277,20 +279,22 @@ test.describe("Self edit account", () => {
       await expectLoginRefused(page);
     });
 
-    test("saves the password when the confirmation differs (defect)", async ({
-      page,
-    }) => {
+    test("refuses a confirmation that differs", async ({ page }) => {
       const newPassword = `Pw-${Date.now()}`;
       await openEditForm(page);
       await page.getByLabel("Password", { exact: true }).fill(newPassword);
       await page.getByLabel("Confirm Password").fill(`${newPassword}-typo`);
       await save(page);
+      await expect(page.getByText("Passwords must match")).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: "Account Updated" }),
+        page.getByRole("heading", { name: "Edit My Account" }),
       ).toBeVisible();
 
       await logout(page);
-      await loginViaUrl(page, { ...account, password: newPassword });
+      await openLoginForm(page);
+      await submitLoginForm(page, account.username, newPassword);
+      await expectLoginRefused(page);
+      await loginViaUrl(page, account);
     });
 
     test("a blank password leaves the password as it was", async ({ page }) => {
