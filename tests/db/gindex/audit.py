@@ -7,15 +7,15 @@
 Checks (see docs/g-index.md):
 
   seq-scan         a sequential scan, in a plan the workload really executed, on a table with at
-                   least --min-rows rows (gate)
-  fk-no-index      a foreign key whose columns do not lead any index (gate)
-  duplicate-index  two indexes with the same key columns (gate)
-  redundant-index  an index whose key columns are a left prefix of another index's (gate)
+                   least --min-rows rows (fails)
+  fk-no-index      a foreign key whose columns do not lead any index (fails)
+  duplicate-index  two indexes with the same key columns (fails)
+  redundant-index  an index whose key columns are a left prefix of another index's (fails)
   unused-index     an index no statement of the workload used (report only)
   top-total        the statements with the highest total time (report only)
   top-mean         the statements with the highest mean time (report only)
 
-A gate finding fails the audit unless tests/db/gindex/allowlist.txt lists it with a reason.
+A finding of these four checks fails the audit unless tests/db/gindex/allowlist.txt lists it with a reason.
 Writes findings.json and summary.md to --out, appends summary.md to $GITHUB_STEP_SUMMARY and
 prints one GitHub annotation per failing finding. Exit status: 0 when nothing fails, 1 otherwise,
 2 on a usage or database error.

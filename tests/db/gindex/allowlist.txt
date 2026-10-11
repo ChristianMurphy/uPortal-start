@@ -1,4 +1,4 @@
-# G-index allowlist (MOD-D12): reviewed findings that do not fail the gate.
+# G-index allowlist (MOD-D12): reviewed findings that do not fail the audit.
 #
 #   <check> <subject> [vendor=<postgres|mariadb>] -- <reason>
 #
@@ -23,7 +23,7 @@ seq-scan up_person_attr_values@ca83943e vendor=postgres -- 6.0: R6, a leading-wi
 seq-scan up_person_attr@a8aaea90 vendor=postgres -- 6.0: R1's index has USER_DIR_ID first; a second index on (ATTR_NAME) turns this into an index-only scan (R6); rare (person directory administration)
 
 # Dimensions: 1,440 time rows and one row per day, read whole by the dimension populator (daily)
-seq-scan up_time_dimension@* -- the populator reads every time dimension (1,440 rows, fixed size) once a day
+seq-scan up_time_dimension@* -- 1,440 fixed rows (one per minute of the day): the populator reads them all once a day and the aggregation lookups hash them whole; an index would not help
 seq-scan up_date_dimension@* -- the populator reads the date dimensions of a range of years (one row per day) once a day
 # MariaDB digests have their own statement ids (performance_schema digests)
 seq-scan up_person_attr@e0834b70 vendor=mariadb -- as up_person_attr@a8aaea90 on PostgreSQL: the attribute-name list (R6)
@@ -40,6 +40,22 @@ seq-scan up_person_attr_values@b50d83df vendor=mariadb -- as up_person_attr_valu
 seq-scan up_user@d57a845f vendor=mariadb -- SELECT COUNT(USER_ID) FROM UP_USER counts every user by design (portal statistics); one index pass per call, rare
 seq-scan up_portal_cookies@b27bca69 vendor=mariadb -- the hourly expired-cookie purge, DELETE ... WHERE EXPIRES <= ? AND NOT EXISTS (portlet cookies); MariaDB does not use idx_up_prtl_ck_exp for this delete; re-check at full scale, partition or batch the purge (R3)
 seq-scan up_unique_str_segment__uids@616b1c4e vendor=mariadb -- loading the user names of an open login interval; the primary key leads with UNIQUE_STR_SEGMENT_ID; the digest was too long to EXPLAIN; re-check
+
+# Found by the first PostgreSQL CI runs with executed plans and the whole Playwright suite
+# (run 38100597244, PostgreSQL 18 at 1/100 and 1/20)
+seq-scan up_person_*@c5556ec5 vendor=postgres -- a people-search variant (several attribute conditions), leading-wildcard LIKE (R6)
+seq-scan up_person_attr@3aed9fa4 vendor=postgres -- 6.0: R1, the foreign-key check when an account is deleted (user administration)
+seq-scan up_group_membership@22e17151 vendor=postgres -- 6.0: R12, the groups of a member; PostgreSQL 18 prefers a scan to skip-scanning the (GROUP_ID, ...) primary key
+seq-scan up_group_membership@6955a858 vendor=postgres -- 6.0: R12, as up_group_membership@22e17151 (with MEMBER_SERVICE)
+seq-scan up_group@896e56e4 vendor=postgres -- 6.0: R13, group search by UPPER(GROUP_NAME) = UPPER(?) (groups manager)
+seq-scan up_group@2c7ea75b vendor=postgres -- 6.0: R13, group search by UPPER(GROUP_NAME) LIKE UPPER(?) (groups manager)
+seq-scan up_user@1863ef55 vendor=postgres -- SELECT COUNT(USER_ID) FROM UP_USER counts every user by design (portal statistics); rare
+seq-scan up_user@a7cd9de6 vendor=postgres -- 6.0: R15, user search USER_NAME LIKE ?; the unique index on USER_NAME cannot serve LIKE under a non-C collation, a text_pattern_ops index can (prefix patterns only)
+seq-scan up_portlet_ent@2f93cdee vendor=postgres -- 6.0: R2, a definition's portlet entities by PORTLET_DEF_ID (portlet manager)
+seq-scan up_portlet_ent@a092d7b5 vendor=postgres -- 6.0: R2, as up_portlet_ent@2f93cdee
+seq-scan up_portlet_ent@1ace011b vendor=postgres -- 6.0: R2, the foreign-key check when a portlet definition is deleted
+seq-scan up_portlet_ent@5efe71e5 vendor=postgres -- 6.0: R2, the foreign-key check when portlet preferences are deleted
+seq-scan up_portal_cookies@fe357bf9 vendor=postgres -- the hourly expired-cookie purge, DELETE ... WHERE EXPIRES <= ? AND NOT EXISTS (portlet cookies); not re-planned (a DELETE); re-check at full scale, partition or batch the purge (R3)
 
 # --- Foreign keys without an index --------------------------------------------------------
 
