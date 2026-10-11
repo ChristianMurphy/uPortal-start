@@ -1,7 +1,7 @@
 # Browsers, accessibility and visual snapshots
 
-Three nightly Playwright suites (MOD-D29) on top of the default suite, which runs on Chromium at
-1280 × 720 only. Each has its own config and file suffix, so `npx playwright test
+Nightly Playwright suites for other browsers, accessibility and visual snapshots (MOD-D29) add to the
+default suite, which runs on Chromium at 1280 × 720 only. Each has its own config and file suffix, so `npx playwright test
 --config=tests/uportal-pw.config.ts` does not pick them up. They need a running portal, like
 every Playwright spec (see "Playwright end-to-end tests" in `AGENTS.md`).
 
@@ -21,8 +21,9 @@ npx playwright test --config=tests/browsers-pw.config.ts --project=firefox
 ## Accessibility ratchet: `tests/a11y-pw.config.ts`
 
 `tests/a11y/key-pages.a11y.ts` runs axe-core (`@axe-core/playwright`, WCAG 2.1 A and AA rules) on
-the key pages: the guest welcome page, the home page of each role, the Portlet Manager,
-Permissions, Groups and User Administration admin portlets, and a maximised portlet.
+ten key pages, listed in `KEY_PAGES`: the guest welcome page and each role's home page, four
+admin portlets (Portlet Manager, Permissions, Groups, User Administration), and a maximised
+portlet.
 
 `tests/a11y/baseline.ts` records the violations each page has today, by page, rule and node. A
 node is axe's CSS selector for the element, with every run of digits replaced by `#`, since
@@ -63,4 +64,4 @@ On a machine that matches the runner, `npx playwright test --config=tests/visual
 `.github/workflows/integration.yml` runs the five suites as the nightly `browsers` job matrix
 (`firefox`, `webkit`, `phone`, `a11y`, `visual`) against uPortal built from source, each on its
 own portal on HSQLDB. The job summary shows the failures; new snapshots and observed
-accessibility violations are printed as described above.
+accessibility violations are printed in the log and as annotations.
