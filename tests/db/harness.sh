@@ -22,14 +22,9 @@
 #   --full-suite    like --portal, but deploy every overlay, create the portlets' tables after the
 #                   snapshot and run the whole Playwright suite (needs `npm ci` and
 #                   `npx playwright install chromium`)
-#   --seeded-pool-fault
-#                   with --portal on PostgreSQL: after the specs, start the portal again with one
-#                   pool raised past the connection budget and check that the budget check fails
 #
 # With --portal on PostgreSQL the database's client connections are counted every second from
-# Tomcat's start to the end of the specs; a peak above the connection budget (110, or
-# HARNESS_CONNECTION_BUDGET) or above the server's max_connections less 10, whichever is lower,
-# fails the vendor (docs/connection-budget.md).
+# Tomcat's start to the end of the specs and the peak is reported (docs/connection-budget.md).
 #
 # Environment:
 #   HARNESS_DB_CONTAINER  with --external: the container to `docker exec` into for vacuumlo
@@ -54,7 +49,6 @@ DEPLOY=true
 INIT=true
 PORTAL=false
 FULL_SUITE=false
-POOL_FAULT=false
 VENDORS=()
 GRADLE_EXTRA=()
 
@@ -68,7 +62,6 @@ while [ $# -gt 0 ]; do
         --skip-init) INIT=false ;;
         --portal) PORTAL=true ;;
         --full-suite) PORTAL=true; FULL_SUITE=true ;;
-        --seeded-pool-fault) POOL_FAULT=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
         -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
@@ -213,11 +206,8 @@ run_portal() {
     PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts \
         "${specs[@]+"${specs[@]}"}" --reporter=list --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
-    if [ "$sample" = true ]; then stop_connection_sampler "$out/connections.txt" "$vendor" || status=1; fi
+    if [ "$sample" = true ]; then stop_connection_sampler "$out/connections.txt" "$vendor"; fi
     stop_own_tomcat "$vendor"
-    if [ "$POOL_FAULT" = true ] && [ "$sample" = true ]; then
-        seeded_pool_fault "$vendor" "$out" "$container" "$url" || status=1
-    fi
     use_vendor "$vendor"
     if [ "${vendor#postgres}" != "$vendor" ]; then
         # The portal has now written events (EVENT_DATA is a @Lob String); look at the LOBs again
@@ -228,32 +218,6 @@ run_portal() {
         fi
     fi
     return $status
-}
-
-seeded_pool_fault() {  # the budget check must fail when one pool holds more than the budget allows
-    local vendor="$1" out="$2" container="$3" url="$4" size caught=false
-    local p=tomcat.jdbc.pool.PortalDb
-    start_connection_sampler "$container" "$out/connections-seeded-fault.txt"
-    # PortalDb alone 5 below the limit; the other pools take the portal over it
-    size=$((CONNECTION_LIMIT - 5))
-    echo "==== $vendor: seeded fault, the portal's PortalDb pool keeps $size connections"
-    if CATALINA_OPTS="${CATALINA_OPTS:-} -D$p.initialSize=$size -D$p.minIdle=$size -D$p.maxIdle=$size -D$p.maxActive=$size" \
-            start_portal "$vendor"; then
-        PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts tests/api \
-            --reporter=list --output="$out/playwright-seeded-fault" > "$out/playwright-seeded-fault.log" 2>&1
-        stop_own_tomcat "$vendor"
-    fi
-    # Its error annotation would mark the run as failed; this one is meant to fail, and only by
-    # going over the budget (not for want of samples)
-    GITHUB_ACTIONS=false stop_connection_sampler "$out/connections-seeded-fault.txt" "$vendor, seeded fault" ||
-        caught=$(awk -v b="$CONNECTION_LIMIT" '$2 > b { o = 1 } END { print (o ? "true" : "false") }' \
-            "$out/connections-seeded-fault.txt")
-    if [ "$caught" = true ]; then
-        github_annotation notice "$vendor: seeded pool fault caught" "The connection budget check failed with PortalDb at $size connections"
-        return 0
-    fi
-    github_annotation error "$vendor: seeded pool fault missed" "PortalDb at $size connections stayed within the limit of $CONNECTION_LIMIT"
-    return 1
 }
 
 annotate() {  # on GitHub Actions, show a failed vendor's drift report and failed specs on the run

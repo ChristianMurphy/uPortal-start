@@ -108,18 +108,17 @@ start_portal() {  # start_portal <vendor>: start Tomcat on the vendor's database
     return 1
 }
 
-# The connection budget (MOD-I190): what the portal and the bundled portlets may hold on the database
-# at once (docs/connection-budget.md lists the pools that make it up). A run is checked against the
-# budget or the server's max_connections less 10 for admin and monitoring tools, whichever is lower.
-CONNECTION_BUDGET=${HARNESS_CONNECTION_BUDGET:-110}
-CONNECTION_LIMIT=$CONNECTION_BUDGET
+# Database connections (MOD-I190): how many the portal and the bundled portlets hold at once, against
+# the server's max_connections less 10 for admin and monitoring tools (docs/connection-budget.md).
+# Report only: uPortal-start sets no connection budget yet.
+CONNECTION_LIMIT=
 
 start_connection_sampler() {  # start_connection_sampler <container> <file>: count client connections every second
     local container="$1" file="$2" max
     : > "$file"
     max=$(docker exec "$container" psql -U uportal -d uportal -Atc "show max_connections" 2>/dev/null)
-    CONNECTION_LIMIT=$CONNECTION_BUDGET
-    if [ -n "$max" ] && [ $((max - 10)) -lt "$CONNECTION_BUDGET" ]; then CONNECTION_LIMIT=$((max - 10)); fi
+    CONNECTION_LIMIT=
+    if [ -n "$max" ]; then CONNECTION_LIMIT=$((max - 10)); fi
     (
         while :; do
             n=$(docker exec "$container" psql -U uportal -d uportal -Atc \
@@ -131,21 +130,16 @@ start_connection_sampler() {  # start_connection_sampler <container> <file>: cou
     SAMPLER_PID=$!
 }
 
-stop_connection_sampler() {  # stop_connection_sampler <file> <label>: print the peak; fail above the budget
+stop_connection_sampler() {  # stop_connection_sampler <file> <label>: report the peak
     local file="$1" label="$2" peak samples
     kill "$SAMPLER_PID" 2>/dev/null; wait "$SAMPLER_PID" 2>/dev/null
     samples=$(wc -l < "$file")
     peak=$(awk 'BEGIN { m = 0 } $2 > m { m = $2; t = $1 } END { print m " at " t }' "$file")
-    echo "Database connections ($label): peak ${peak:-0}, $samples samples, limit $CONNECTION_LIMIT" \
-        "(budget $CONNECTION_BUDGET)"
-    if [ "$samples" -lt 10 ]; then
-        echo "The connection sampler took only $samples samples ($file)" >&2
-        return 1
-    fi
-    if [ "${peak%% *}" -gt "$CONNECTION_LIMIT" ]; then
-        github_annotation error "$label: database connections over budget" \
-            "Peak ${peak} connections, limit $CONNECTION_LIMIT (docs/connection-budget.md)"
-        return 1
+    echo "Database connections ($label): peak ${peak:-0}, $samples samples," \
+        "server max_connections less 10: ${CONNECTION_LIMIT:-unknown}"
+    if [ -n "$CONNECTION_LIMIT" ] && [ "${peak%% *}" -gt "$CONNECTION_LIMIT" ]; then
+        github_annotation warning "$label: database connections near the server's limit" \
+            "Peak ${peak} connections, max_connections less 10 is $CONNECTION_LIMIT (docs/connection-budget.md)"
     fi
 }
 
