@@ -14,7 +14,26 @@ import {
 } from "./utils/api-portlet-list-utils";
 import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
 
-const REGEX_TEST_ARRAY = [`TEST spaces`, `TEST!`, `TEST"`, `TEST'`, `TEST&`];
+// A list name is text in any script, without control characters (MOD-D49).
+const NAME_RULE = "must have 1 to 255 characters and no control characters.";
+const NAMES_IN_ANY_SCRIPT = [
+  `TEST spaces`,
+  `TEST!`,
+  `TEST"`,
+  `TEST'`,
+  `TEST&`,
+  `Liste préférée`,
+  `Λίστα`,
+  `收藏列表`,
+  `قائمة`,
+];
+const NOT_NAMES = [`TEST\u0007bell`, `TEST\nnewline`, `TEST\ttab`, "x".repeat(256)];
+// An owner is a user name: no whitespace or control characters (MOD-I270).
+const USER_NAME_RULE = "must have 1 to 100 characters and no spaces.";
+const NOT_USER_NAMES = [`TEST spaces`, `TEST\ttab`, "x".repeat(101)];
+// An entity ID is an fname: ASCII letters, digits, _ and -.
+const WORD_RULE = "must have 1 to 500 of the characters A-Z, a-z, 0-9, _ and -.";
+const NOT_FNAMES = [`TEST spaces`, `TEST!`, `TEST"`, `TEST'`, `TEST&`, `Λίστα`];
 
 test("GET ALL - not logged in", async ({ request }) => {
   const response = await request.get<unknown>(`${config.url}api/portlet-list/`);
@@ -212,10 +231,11 @@ test("POST confirm disallow extra fields", async ({ request }) => {
 
 test("POST name regex", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
-  for (const valueToTest of REGEX_TEST_ARRAY) {
+  for (const valueToTest of NOT_NAMES) {
     await createPortletListFailsWith409(
       request,
       "name",
+      NAME_RULE,
       config.users.admin.username,
       valueToTest,
       [{ entityId: "fname1" }]
@@ -223,12 +243,25 @@ test("POST name regex", async ({ request }) => {
   }
 });
 
+test("POST accepts names in any script", async ({ request }) => {
+  await loginViaApi(request, config.users.admin);
+  const suffix = Date.now();
+  for (const valueToTest of NAMES_IN_ANY_SCRIPT) {
+    const name = `${valueToTest} POST ${suffix}`;
+    const listId = await createPortletList(request, name, [{ entityId: "fname1" }]);
+    const list = await getPortletList(request, listId);
+    expect(list.name).toEqual(name);
+    await removePortletList(request, listId);
+  }
+});
+
 test("POST ownerUsername regex", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
-  for (const valueToTest of REGEX_TEST_ARRAY) {
+  for (const valueToTest of NOT_USER_NAMES) {
     await createPortletListFailsWith409(
       request,
       "ownerUsername",
+      USER_NAME_RULE,
       valueToTest,
       `TESTING_regex`,
       [{ entityId: "fname1" }]
@@ -238,10 +271,11 @@ test("POST ownerUsername regex", async ({ request }) => {
 
 test("POST items entityId regex", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
-  for (const valueToTest of REGEX_TEST_ARRAY) {
+  for (const valueToTest of NOT_FNAMES) {
     await createPortletListFailsWith409(
       request,
       "items > entityId",
+      WORD_RULE,
       config.users.admin.username,
       `TESTING_regex`,
       [{ entityId: valueToTest }]
@@ -310,11 +344,12 @@ test("PUT name regex", async ({ request }) => {
     [{ entityId: "fname1" }]
   );
   const baselineState = await getPortletList(request, listId);
-  for (const valueToTest of REGEX_TEST_ARRAY) {
+  for (const valueToTest of NOT_NAMES) {
     await updatePortletListFailsWith409(
       request,
       listId,
       "name",
+      NAME_RULE,
       config.users.admin.username,
       valueToTest,
       [{ entityId: `fname1` }]
@@ -322,6 +357,23 @@ test("PUT name regex", async ({ request }) => {
     const currentState = await getPortletList(request, listId);
     expect(currentState).toEqual(baselineState);
   }
+});
+
+test("PUT accepts names in any script", async ({ request }) => {
+  await loginViaApi(request, config.users.admin);
+  const suffix = Date.now();
+  const listId = await createPortletList(
+    request,
+    `PUT_portlet-list_names_in_any_script_${suffix}`,
+    [{ entityId: "fname1" }]
+  );
+  for (const valueToTest of NAMES_IN_ANY_SCRIPT) {
+    const name = `${valueToTest} PUT ${suffix}`;
+    await updatePortletList(request, listId, name, [{ entityId: "fname1" }]);
+    const list = await getPortletList(request, listId);
+    expect(list.name).toEqual(name);
+  }
+  await removePortletList(request, listId);
 });
 
 test("PUT ownerUsername regex", async ({ request }) => {
@@ -332,11 +384,12 @@ test("PUT ownerUsername regex", async ({ request }) => {
     [{ entityId: "fname1" }]
   );
   const baselineState = await getPortletList(request, listId);
-  for (const valueToTest of REGEX_TEST_ARRAY) {
+  for (const valueToTest of NOT_USER_NAMES) {
     await updatePortletListFailsWith409(
       request,
       listId,
       "ownerUsername",
+      USER_NAME_RULE,
       valueToTest,
       "Test_regex",
       [{ entityId: `fname1` }]
@@ -354,11 +407,12 @@ test("PUT items entityId regex", async ({ request }) => {
     [{ entityId: "fname1" }]
   );
   const baselineState = await getPortletList(request, listId);
-  for (const valueToTest of REGEX_TEST_ARRAY) {
+  for (const valueToTest of NOT_FNAMES) {
     await updatePortletListFailsWith409(
       request,
       listId,
       "items > entityId",
+      WORD_RULE,
       config.users.admin.username,
       "Test_regex",
       [{ entityId: valueToTest }]
