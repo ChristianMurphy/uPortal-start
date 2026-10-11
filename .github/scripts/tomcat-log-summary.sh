@@ -24,6 +24,26 @@ for f in "${files[@]}"; do
   echo "::endgroup::"
 done
 
+# A web application whose listener failed to start logs the exception after the SEVERE line, as
+# an exception line and "Caused by:" lines between stack frames. Print those lines, without the
+# frames, so the job log names the cause.
+causes() {
+  awk '
+    /SEVERE/ { if (n > 0) print "--"; n = 0; capture = 1; print FILENAME ": " $0; next }
+    capture && /^[[:space:]]*at / { next }
+    capture && /^[[:space:]]*(Caused by: |[[:alnum:]_.$]+(Exception|Error)(: |$))/ {
+      if (n < 20) print "    " $0
+      n++
+      next
+    }
+    capture && /^[0-9]{2}-[A-Za-z]{3}-[0-9]{4} / { capture = 0 }
+  ' "$@"
+}
+
+echo "::group::Exceptions after SEVERE lines"
+causes "${files[@]}" | head -n 300
+echo "::endgroup::"
+
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
   {
     echo "### Tomcat startup errors"
@@ -32,6 +52,12 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
     for f in "${files[@]}"; do
       grep -E -H "$errors" "$f" | head -n 20
     done
+    echo '```'
+    echo
+    echo "### Exceptions after SEVERE lines"
+    echo
+    echo '```'
+    causes "${files[@]}" | head -n 60
     echo '```'
   } >> "$GITHUB_STEP_SUMMARY"
 fi
