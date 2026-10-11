@@ -47,6 +47,13 @@
             "toMatch": "pP_actionException=org\\.apereo\\.portal\\.spring\\.web\\.portlet\\.NoHandlerFoundException",
             "reason": "A portlet action without a handler reports the exception in the redirect; its class is now the vendored Portlet MVC's (uPortal 272a417fb3). The redirect is otherwise the same. That the portal puts an exception message into a URL is 5.17 behaviour (see the http-replay notes).",
             "log": "MOD-D26"
+        },
+        {
+            "id": "skin-css-pinned-compilers",
+            "path": "/uPortal/media/skins/respondr/*.css",
+            "field": "body",
+            "reason": "uPortal-start compiles the Respondr skins. master installs less ^3.13 and sass ^1.77 without a lockfile, so its CSS depends on the versions current on the day it is built. This branch installs the versions package-lock.json pins. The pages that use the CSS are compared on their own.",
+            "log": "MOD-I106"
         }
     ]
 }

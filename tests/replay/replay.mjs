@@ -22,11 +22,13 @@ import {
     currentUser,
     exchangeKey,
     login,
+    nodeIdResolver,
     normaliseCookie,
     normaliseResponse,
     outcome,
+    resolvePath,
     sessionFor,
-    unorder,
+    renormalise,
 } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -42,6 +44,11 @@ const writeJson = (path, value) => writeFileSync(path, `${JSON.stringify(value, 
 // The plan: what is requested, as whom, in which order
 // ---------------------------------------------------------------------------------------------
 
+// Suite requests that are not replayed on another portal: GET /api/updatePermission writes, and
+// a principal key names its entity type by a generated id (14.admin), which differs from machine
+// to machine (see the generated ids in lib.mjs).
+const replayable = (path) => !path.startsWith('/uPortal/api/updatePermission') && !/[?&](principal|principals%5B%5D|principals\[\]|pP_principalKey)=\d+\./.test(path);
+
 function plan(routes, suite) {
     const suiteRoles = [...new Set((suite?.requests ?? []).map((r) => r.role))].filter((r) => !ROLES.includes(r)).sort();
     const items = [];
@@ -51,7 +58,7 @@ function plan(routes, suite) {
         const portlets = ROLES.includes(role)
             ? routes.portlets.flatMap((fname) => routes.portletStates.map((state) => ({ path: `/uPortal/p/${fname}/${state}/render.uP` })))
             : [];
-        const fromSuite = (suite?.requests ?? []).filter((r) => r.role === role);
+        const fromSuite = (suite?.requests ?? []).filter((r) => r.role === role && replayable(r.path));
         const probes = ROLES.includes(role) ? routes.routes.filter((r) => r.probe && forRole(r)) : [];
         for (const route of [...crawl, ...portlets]) items.push({ set: 'crawl', role, method: route.method ?? 'GET', path: route.path, route });
         for (const request of fromSuite) items.push({ set: 'suite', role, method: request.method, path: request.path, headers: request.headers, route: request });
@@ -71,16 +78,19 @@ async function execute(items) {
     const exchanges = [];
     let session;
     let current;
+    let resolver;
     let done = 0;
     for (const item of items) {
         if (item.role !== current) {
             current = item.role;
             session = await sessionFor(origin, item.role);
+            resolver = nodeIdResolver();
         }
         const { route } = item;
         const headers = { ...route.headers };
         if (route.contentType) headers['content-type'] = route.contentType;
-        let url = item.path;
+        // Recorded paths carry the recording portal's layout node ids
+        let url = resolvePath(item.path, resolver);
         if (route.csrfToken) {
             // The token the portal puts into its own action URLs for this session
             const page = await session.send('GET', '/uPortal/f/welcome/normal/render.uP');
@@ -88,6 +98,7 @@ async function execute(items) {
             url += `${url.includes('?') ? '&' : '?'}_csrf=${token}`;
         }
         const response = await session.send(item.method, url, { body: route.body, headers });
+        if (item.set === 'crawl' && item.method === 'GET') resolver.learn(item.path, response.body);
         const exchange = { set: item.set, role: item.role, method: item.method, path: item.path };
         const requestHeaders = item.headers ?? route.headers;
         if (requestHeaders && Object.keys(requestHeaders).length > 0) exchange.headers = requestHeaders;
@@ -311,10 +322,8 @@ async function replay() {
         compared++;
         expectedByKey.delete(itemKey(exchange));
         const unexplained = [];
-        // The sorting rules apply to the recording too, so a rule added later needs no re-record
-        const expectedResponse = recorded.response.body?.kind === 'json'
-            ? { ...recorded.response, body: { ...recorded.response.body, value: unorder(structuredClone(recorded.response.body.value), recorded.path) } }
-            : recorded.response;
+        // The masks and sorting rules apply to the recording too, so a rule added later needs no re-record
+        const expectedResponse = renormalise(recorded.response, recorded.path);
         for (const difference of compare(expectedResponse, exchange.response)) {
             const entry = registry.find((r) => r.matches(exchange, difference));
             if (entry) {
