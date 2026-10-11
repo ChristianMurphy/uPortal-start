@@ -73,7 +73,16 @@ All of them are on the allowlist with reasons. The main findings, by cost:
    * four on `UP_ANALYTICS_EVENTS` and four on `UP_RAW_EVENTS`;
    * `IDX_PORTLET_DEF__TITLE` and five single-column `UP_PERMISSION` indexes;
    * the `*_DTIC` indexes (see "What's left").
-9. The portal and its portlets used all 100 of PostgreSQL's default connections, and the audit's own connection then failed with "too many clients". The G-index database starts with `max_connections=300`. The 6.0 installation guide should give a connection budget: the portal's pool plus each portlet's. Follow-up (MOD-I190): the 5.x pool maximums add up to about 373 connections (uPortal's three pools 100 each, NewsReader 50, Announcements 10, Notification 8, SimpleContent 5, and Bookmarks, Calendar and Feedback with no pool). uPortal-start now caps the total at 80 (docs/connection-budget.md), and the database harness fails a PostgreSQL run above it. Measured with the whole Playwright suite on PostgreSQL 18, the database had 32 connections at the median and 38 at the peak, with the 5.x sizes and with the budget alike. uPortal held 27 of them, all idle, and each portlet 0 to 3. The suite never came near 100, so connection exhaustion is unlikely to explain MOD-I192. In G-index the 16-user driver drives the portal harder than the suite.
+9. The portal and its portlets used all 100 of PostgreSQL's default connections, and the audit's own connection then failed with "too many clients". The G-index database starts with `max_connections=300`. The 6.0 installation guide should give a connection budget: the portal's pool plus each portlet's. Follow-up (MOD-I190): the 5.x pool maximums add up to about 373 connections (uPortal's three pools 100 each, NewsReader 50, Announcements 10, Notification 8, SimpleContent 5, and Bookmarks, Calendar and Feedback with no pool). With the whole Playwright suite on PostgreSQL 18 the database had 32 connections at the median and 38 at the peak. uPortal held 27 of them, all idle, and each portlet 0 to 3. The suite never came near 100, so connection exhaustion is unlikely to explain MOD-I192. Under the G-index driver (16 users for 240 s), `PortalDb` decides it:
+
+   | PortalDb maxActive | "Pool empty" | p50 ms | p95 ms | Peak connections |
+   | --- | ---: | ---: | ---: | ---: |
+   | 100 (5.x, every 5.x pool size) | 0 | 617 to 706 | 2,982 to 3,333 | 127 |
+   | 30 | 215 | 562 | 3,344 | |
+   | 50 | 39 | 737 | 3,592 | 77 |
+   | 60 | 0 | 644 | 3,723 | 87 |
+
+   The 5.x defaults reach 127 connections under this load, so a 5.x portal on PostgreSQL's default of 100 can run out today. A thread dump at 30 showed why: each page keeps a connection open while its portlets render (request threads wait on the portlet workers with the OpenEntityManagerInView session open), and each portlet render opens a transaction to read its cached portlet definition. uPortal-start now caps the total at 110, with `PortalDb` at 60, and recommends `max_connections=150` (docs/connection-budget.md). The database harness fails a PostgreSQL run above 110 or the server's `max_connections` less 10. Keeping fewer connections open per page is MOD-I240 to MOD-I249.
 
 ## CI results
 
