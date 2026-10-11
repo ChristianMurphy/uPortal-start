@@ -80,8 +80,8 @@ Status at the checkpoint (2026-10-11 01:40 UTC). Nothing is green yet.
   got HTTP 400 from unencoded `[]` in the query. The layout check looked for the tab in the
   wrong place. The lock times were read as timestamps.
 * Run 38100770775 (head `9c71a8e`, every job once):
-  * Passed: the firefox, webkit and phone browser jobs (the UI specs on all three), visual (10 snapshots
-    written, recorded in `tests/visual/snapshots`).
+  * Passed: the UI specs on Firefox, WebKit and the phone viewport. The visual job passed too
+    and wrote 10 snapshots, now recorded in `tests/visual/snapshots`.
   * a11y: failed as expected with an empty baseline. The observed violations are recorded in
     `tests/a11y/baseline.ts`.
   * Cluster: both nodes now report their own `portal.home` and server name. `invalidation-layout`
