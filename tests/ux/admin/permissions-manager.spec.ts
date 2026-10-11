@@ -1,6 +1,6 @@
 import { test, expect, Locator, Page } from "@playwright/test";
 import { config } from "../../general-config";
-import { loginViaUrl } from "../utils/ux-general-utils";
+import { loginViaUrl, sessionCsrfHeaders } from "../utils/ux-general-utils";
 import {
   clickToNavigate,
   openPortlet,
@@ -91,6 +91,7 @@ test.describe("Permissions Administration", () => {
     );
     for (const assignment of leftovers) {
       await page.request.post<unknown>(`${config.url}api/deletePermission`, {
+        headers: await sessionCsrfHeaders(page.request),
         form: {
           principal: assignment.principalKey,
           owner: OWNER.fname,
