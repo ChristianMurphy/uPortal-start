@@ -63,14 +63,16 @@ if ! echo "$P6SPY_SHA256  $jar" | sha256sum -c --quiet; then
 fi
 cp "$jar" "$WEBAPP/WEB-INF/lib/"
 
-# Log each statement (only the "statement" category) through slf4j, to the logger "p6spy"
-cat > "$WEBAPP/WEB-INF/classes/spy.properties" <<'EOF'
+# Log each statement (only the "statement" category) through slf4j, to the logger "p6spy". The
+# driver list names only the configured driver: p6spy fails to start on a class it cannot load.
+driver=$(sed -n 's/^hibernate.connection.driver_class=//p' "$TOMCAT/portal/global.properties" | tail -n 1)
+cat > "$WEBAPP/WEB-INF/classes/spy.properties" <<EOF
 # tests/query-budget/run.sh: count uPortal's SQL statements (test only)
 appender=com.p6spy.engine.spy.appender.Slf4JLogger
 logMessageFormat=com.p6spy.engine.spy.appender.CustomLineFormat
 customLogMessageFormat=%(category)|%(sqlSingleLine)
 excludecategories=info,debug,result,resultset,batch,commit,rollback
-driverlist=org.hsqldb.jdbc.JDBCDriver,org.postgresql.Driver,org.mariadb.jdbc.Driver,com.mysql.cj.jdbc.Driver
+driverlist=$driver
 EOF
 
 # <timestamp>|<thread>|<category>|<sql> in logs/portal/sql.log
@@ -93,6 +95,15 @@ rm -f "$SQL_LOG"
 
 use_vendor ''
 gradle tomcatStart || exit 1
+# tomcatStart returns after a timeout even when uPortal did not start
+code=$(curl -s -o /dev/null -w '%{http_code}' -L "http://localhost:$HTTP_PORT/uPortal/f/welcome/normal/render.uP")
+if [ "$code" != 200 ]; then
+    text=$(grep -hE '^(ERROR|SEVERE)' "$TOMCAT/logs/portal/portal.log" "$TOMCAT"/logs/catalina.*.log 2> /dev/null | cut -c1-300 | head -n 20)
+    echo "uPortal did not start with p6spy (HTTP $code):"$'\n'"$text"
+    github_annotation error "query budgets: uPortal did not start with p6spy (HTTP $code)" "$text"
+    gradle tomcatStop || true
+    exit 1
+fi
 node tests/query-budget/query-budget.mjs "$SQL_LOG" "${RECORD[@]+"${RECORD[@]}"}" | tee "$OUT/results.txt"
 status=${PIPESTATUS[0]}
 gradle tomcatStop || true
