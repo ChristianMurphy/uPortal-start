@@ -1,0 +1,3 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="system">
+  <folder hidden="false" immutable="false" name="Root folder" type="root" unremovable="true"/>
+</layout>

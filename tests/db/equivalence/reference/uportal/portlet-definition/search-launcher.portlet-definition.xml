@@ -1,0 +1,52 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Search Launcher</title>
+  <name>SearchLauncher</name>
+  <fname>search-launcher</fname>
+  <desc>Search Launcher to launch the search portlet that searches the portal, directory, and campus web.</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>Search</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Everyone</group>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/actions/system-search.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/search.png</value>
+  </parameter>
+  <parameter>
+    <name>role</name>
+    <value>searchLauncher</value>
+  </parameter>
+  <portlet-preference>
+    <name>autoSuggestResultsProcessor</name>
+    <readOnly>false</readOnly>
+    <value>portletListProcessor</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>prepopulateAutoSuggestUrl</name>
+    <readOnly>false</readOnly>
+    <value>/api/portletList</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>prepopulateUrlPattern</name>
+    <readOnly>false</readOnly>
+    <value>/p/$fname/max</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>searchLaunchFname</name>
+    <readOnly>true</readOnly>
+    <value>search</value>
+  </portlet-preference>
+</portlet-definition>

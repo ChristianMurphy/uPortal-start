@@ -1,0 +1,17 @@
+<permission-owner version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/permission-owner https://source.jasig.org/schemas/uportal/io/permission-owner/permission-owner-4.0.xsd">
+  <name>Fixture Owner — Ünïcödé</name>
+  <fname>FIXTURE_OWNER</fname>
+  <desc>Permissions défined by the migration-equivalence fixture 🔐</desc>
+  <activity>
+    <name>Fixture Activity</name>
+    <fname>FIXTURE_ACT</fname>
+    <desc>Durchführen ✓</desc>
+    <targetProvider>allGroupsTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>Second Activity</name>
+    <fname>FIXTURE_ACT_2</fname>
+    <desc/>
+    <targetProvider>peopleAndGroupsTargetProvider</targetProvider>
+  </activity>
+</permission-owner>

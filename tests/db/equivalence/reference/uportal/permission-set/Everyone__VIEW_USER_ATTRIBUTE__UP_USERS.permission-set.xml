@@ -1,0 +1,38 @@
+<permission-set script="classpath://org/apereo/portal/io/import-permission_set_v5-0.crn">
+  <owner>UP_USERS</owner>
+  <principal-type>org.apereo.portal.groups.IEntityGroup</principal-type>
+  <principal>
+    <group>Everyone</group>
+  </principal>
+  <activity>VIEW_USER_ATTRIBUTE</activity>
+  <target permission-type="GRANT">
+    <literal>department</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>displayName</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>givenName</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>mail</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>organization</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>postalAddress</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>sn</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>telephoneNumber</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>title</literal>
+  </target>
+  <target permission-type="GRANT">
+    <literal>username</literal>
+  </target>
+</permission-set>

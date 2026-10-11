@@ -1,0 +1,11 @@
+<stylesheet-descriptor version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/stylesheet-descriptor https://source.jasig.org/schemas/uportal/io/stylesheet-descriptor/stylesheet-descriptor-4.0.xsd">
+  <name>Respondr</name>
+  <description>Theme for all devices classes based on Twitter Bootstrap and the principals of Responsive Design</description>
+  <uri>classpath:/layout/theme/respondr/respondr.xsl</uri>
+  <stylesheet-parameter>
+    <name>skin</name>
+    <default-value>defaultSkin</default-value>
+    <scope>PERSISTENT</scope>
+    <description>Skin name</description>
+  </stylesheet-parameter>
+</stylesheet-descriptor>
