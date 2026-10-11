@@ -200,7 +200,7 @@ trace_cluster_locks() {  # trace_cluster_locks <node>: log every cluster-lock ch
     grep -q 'ClusterLockServiceImpl" level="TRACE"' "$file" && return 0
     sed -i 's#</configuration>#  <logger name="org.apereo.portal.concurrency.locking.ClusterLockServiceImpl" level="TRACE"/>\n</configuration>#' "$file"
     # JGroups' warnings and each cluster view the node installs, to the portal log
-    sed -i 's#</configuration>#  <logger name="org.jgroups" level="INFO"/>\n  <logger name="org.jgroups.protocols.pbcast.GMS" level="DEBUG"/>\n</configuration>#' "$file"
+    sed -i 's#</configuration>#  <logger name="org.jgroups" level="INFO"/>\n  <logger name="org.jgroups.protocols.pbcast.GMS" level="TRACE"/>\n  <logger name="org.jgroups.protocols.MERGE3" level="DEBUG"/>\n</configuration>#' "$file"
 }
 
 deploy() {
@@ -237,8 +237,23 @@ show_nodes() {  # each node's JVM portal.home and configured server name
     done
 }
 
-two_member_view() {  # two_member_view <node>: the node's JGroups log shows a view of two members
-    grep -qE '\|[0-9]+\] \(2\) \[' "$(node_home "$1")/logs/portal/portal.log" 2> /dev/null
+# JGroups 3 logs through java.util.logging, so its lines land in Tomcat's own logs (catalina.out
+# and catalina.<date>.log), not in the portal log
+jgroups_lines() {  # jgroups_lines <node>: the JGroups lines of all the node's logs
+    grep -hiE 'org\.jgroups|jgroups\.|GMS|installing view|\] \([0-9]+\) \[' \
+        "$(node_home "$1")"/logs/catalina.* "$(node_home "$1")"/logs/portal/portal.log 2> /dev/null
+}
+
+two_member_view() {  # two_member_view <node>: the node logged a cluster view of two members
+    jgroups_lines "$1" | grep -qE '\|[0-9]+\] \(2\) \['
+}
+
+view_state() {  # whether each node has logged a cluster view of two members so far
+    local n out=()
+    for n in a b; do
+        if two_member_view "$n"; then out+=("node $n logged a view of two members"); else out+=("node $n logged no view of two members"); fi
+    done
+    (IFS=','; echo "${out[*]}")
 }
 
 wait_for_cluster() {  # both nodes registered in JGroups' JDBC_PING table, and in one view
@@ -344,7 +359,7 @@ check_portlet_invalidation() {
         elapsed=$(( $(now_ms) - started ))
         record invalidation-portlet PASS "node B showed the new title ${elapsed} ms after the import on node A"
     else
-        record invalidation-portlet FAIL "node B still showed '$(portlet_title_on b "$b")' 30 s after node A imported '$changed' (database: '$(sql "select portlet_title from up_portlet_def where portlet_fname = '$PORTLET_FNAME'")')$(late_by 270 title_is b "$b" "$changed")"
+        record invalidation-portlet FAIL "node B still showed '$(portlet_title_on b "$b")' 30 s after node A imported '$changed' (database: '$(sql "select portlet_title from up_portlet_def where portlet_fname = '$PORTLET_FNAME'")')$(late_by 270 title_is b "$b" "$changed"); $(view_state)"
     fi
     curl -sS -b "$a" -o /dev/null -F "file=@$OUT/portlet-original.xml;type=text/xml" "$(node_url a)/api/import"
 }
@@ -740,12 +755,10 @@ cleanup() {
 }
 
 jgroups_report() {  # the cluster views and JGroups problems each node logged
-    local n f
+    local n
     for n in a b; do
-        f=$(node_home "$n")/logs/portal/portal.log
-        log "node $n JGroups: $(grep -ciE 'jgroups|GMS' "$f" 2> /dev/null) lines in the portal log"
-        grep -hiE 'jgroups|GMS' "$f" 2> /dev/null | grep -E 'view|View|ERROR|WARN' |
-            sed -E 's/ [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:,]+ - / - /' | cut -c1-220 | sort | uniq -c | sort -rn | head -n 12
+        log "node $n JGroups: $(jgroups_lines "$n" | grep -c .) lines; the views, merges and problems:"
+        jgroups_lines "$n" | grep -iE 'view|merg|suspect|SEVERE|WARN|ERROR' | cut -c1-240 | head -n 20
     done
 }
 
