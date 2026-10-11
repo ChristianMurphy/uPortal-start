@@ -82,6 +82,15 @@ uPortal-start with released uPortal 5.17.9 on Tomcat 8.5.100. The current build 
 * **Final reference** recorded from real `master` with normaliser version 2, committed as
   7eb4311. It holds 2387 exchanges, of which 1386 come from the crawl, and its matrix has 277
   routes. Its self-check passes with no differences.
+* **CI replay after the login, CSRF, web component and Hibernate 5.2 merges: green**, run
+  38132735488 (uPortal-start 0811fe5, uPortal f7cd57b964). 2387 exchanges compared, none
+  unexplained. 799 registered differences, 106 changed matrix cells and 75 changes in the
+  logins, CSRF probes and headers, all registered, none a privilege gain. The same day's full CI
+  run 38132724320 passed on every platform. Its commit-message job failed on two messages of
+  this branch, which the coordinator reworded when merging it into ccr-43ba0785-hzlrj5 (f9338d4cd).
+* **Hibernate 5.2 (P2) doesn't change any HTTP answer.** A local replay of uPortal f7cd57b964 (with
+  hibernate-core 5.2.18) on HSQLDB gave the same count for every registry entry as the build
+  before P2, and nothing unexplained.
 * **CI replay with the rules: green**, run 38117263527 (uPortal-start 0bcfb46, uPortal
   968c57dd29). The `rules` job passed its 10 checks. The replay compared 2387 exchanges with none
   unexplained, applied 362 registered differences, and found 35 changed matrix cells, all
@@ -246,8 +255,22 @@ visible entries give the UPGRADING-6.0.md section about them (`upgrading`):
 | `spring-js-resource-servlet-removed` | yes | The /resources/* servlet is gone |
 | `skin-css-pinned-compilers` | no | `where: local`, unused in CI |
 
-MOD-I130 (CSRF protection on every unsafe `/api` request) will change the CSRF probe results.
-Those changes fail until an entry for them cites MOD-I130 and names its UPGRADING-6.0.md section.
+The merges of the login and CSRF fixes (MOD-I130, MOD-I180, MOD-I181) and of the Favorites and
+Popular Portlets web components added these entries, all visible:
+
+| Entry | UPGRADING-6.0.md section |
+| --- | --- |
+| `csrf-api-unsafe-requests`, `csrf-api-probes`, `csrf-update-permission-*`, `csrf-meta-tags` | Unsafe requests to /api need the CSRF token (MOD-I130) |
+| `local-login-link`, `local-login-cas-logins` | uPortal-start signs users in locally; CAS is opt-in |
+| `local-login-deep-links`, `local-login-refused-to-form` | Deep links and failed logins with local login (MOD-I180, MOD-I181) |
+| `favorites-web-component-*`, `web-components-admin-marketplace` | Favorites is a web component |
+| `popular-portlets-web-component*` | Popular Portlets is a web component |
+
+A removeFavorite of an unknown channel (200 on 5.17) and an admin's DELETE of an unknown portlet
+definition (204) lost access, and rule 2 excuses them with the CSRF section: both answer 403
+without a token now. The crawl's setup POST sends the CSRF header, as the portal's scripts do. A
+token-less portlet action still answers 403 with the same page as on 5.17, apart from the Tomcat
+version, so it doesn't need an entry.
 
 ## What's left
 
