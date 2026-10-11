@@ -186,6 +186,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The allowlist's statement ids must survive a Hibernate upgrade (MOD-I240)
+      - name: Test the audit's statement ids
+        run: python3 -B -m unittest discover -s tests/db/gindex -p 'test_*.py'
       - name: Download the uPortal build
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
