@@ -134,7 +134,9 @@ test.describe("User locale web component", () => {
     await waitForPortalRequestsToSettle(page);
     const element = page.locator("up-user-locale");
 
-    await element.getByRole("radio", { name: "French", exact: true }).check();
+    await element
+      .getByRole("radio", { name: "Français (French)", exact: true })
+      .check();
     await element.getByRole("button", { name: "Update", exact: true }).click();
 
     await expect(element.getByRole("alert")).toContainText(
