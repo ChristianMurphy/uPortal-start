@@ -11,7 +11,8 @@
 #   3. target: deploy for it, dataInit, start the portal once (MOD-I92: those portlet tables must
 #      exist before the copy) and stop it;
 #   4. ./gradlew dbMigrate -PsourceDbVendor=<source> -PtargetDbVendor=<target>
-#      -PdbMigrateClearTarget, which copies, positions the generators and verifies every table;
+#      -PdbMigrateClearTarget -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone=UTC, which copies,
+#      positions the generators and verifies every table;
 #   5. with --playwright: start the portal on the migrated target and run the whole Playwright suite
 #      (needs `npx playwright install chromium`).
 #
@@ -111,7 +112,11 @@ migrate() {
     # Only the two vendor files matter here: the source's gradle.args (e.g. its HSQLDB port) must
     # not leak into the target's settings
     use_vendor ''
-    gradle dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget
+    # A copy into 6.0 converts the timestamps 5.17 stored as the JVM's clock time to UTC, from the
+    # source portal's zone (MOD-I141). The build under test filled the source, and it stores those
+    # columns in UTC already, so the zone is UTC whatever this machine's zone is.
+    gradle dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget \
+        -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone=UTC
 }
 
 copy_summary() {  # the copy tool's own summary of this pair (build/db-migrate/<pair>.txt), if any
