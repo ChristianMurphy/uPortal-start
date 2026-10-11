@@ -20,7 +20,9 @@ function headerSearch(page: Page): {
   const header = page.locator("#region-header-right");
   return {
     box: header.getByRole("searchbox", { name: "Search Terms" }),
-    submit: header.getByRole("button", { name: "Search" }),
+    // The Search portlet's button shows only an icon: the skin hides its "Search" text, so
+    // it has no accessible name. It is the only button in the header's right region.
+    submit: header.getByRole("button"),
   };
 }
 
