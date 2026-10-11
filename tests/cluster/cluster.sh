@@ -66,8 +66,8 @@ done
 
 # The checks each seeded fault must make fail
 declare -A FAULT_CHECKS=(
-    [replication-off]="invalidation-portlet permission-session"
-    [lock-ignored]="failover-takeover no-overlap"
+    [replication-off]="invalidation-portlet invalidation-permission"
+    [lock-ignored]="failover-takeover"
     [event-flush-delayed]="events-aggregated"
 )
 # Checks that fail because of a known uPortal problem (docs/cluster-tests.md): reported as
@@ -758,6 +758,15 @@ collect_logs() {  # keep both nodes' logs next to the results
 }
 
 : > "$OUT/results.txt"
+# The overlap check must catch the overlap seeded in tests/cluster/fixtures (lock-ignored rarely
+# makes two nodes run a job at once, so it cannot be relied on to show this)
+if node tests/cluster/lock-overlap.mjs a=tests/cluster/fixtures/overlap-a.log b=tests/cluster/fixtures/overlap-b.log \
+        > "$OUT/lock-overlap-fixture.txt"; then
+    echo "FAILED: tests/cluster/lock-overlap.mjs missed the overlap seeded in tests/cluster/fixtures"
+    github_annotation error "cluster: no-overlap" "lock-overlap.mjs missed the overlap seeded in tests/cluster/fixtures"
+    exit 1
+fi
+log "no-overlap: lock-overlap.mjs catches the overlap seeded in tests/cluster/fixtures"
 log "Two-node cluster test${FAULT:+ with the seeded fault $FAULT}"
 setup_ok=true
 if [ "$DEPLOY" = true ]; then

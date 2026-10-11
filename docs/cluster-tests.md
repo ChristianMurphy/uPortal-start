@@ -79,9 +79,16 @@ seeded fault and passes only if the checks meant to catch it fail:
 
 | Fault | Seeded by | Must fail |
 | --- | --- | --- |
-| `replication-off` | `org.apereo.portal.ehcache.filename=ehcache-no-jgroups.xml` (uPortal's own non-clustered cache file) | `invalidation-portlet`, `permission-session` |
-| `lock-ignored` | `org.apereo.portal.concurrency.locking.ClusterLockDao.abandonedLockAge=PT0S`: a held lock counts as abandoned at once | `failover-takeover`, `no-overlap` |
+| `replication-off` | `org.apereo.portal.ehcache.filename=ehcache-no-jgroups.xml` (uPortal's own non-clustered cache file) | `invalidation-portlet`, `invalidation-permission` |
+| `lock-ignored` | `org.apereo.portal.concurrency.locking.ClusterLockDao.abandonedLockAge=PT0S`: a held lock counts as abandoned at once | `failover-takeover` |
+| (fixture) | `tests/cluster/fixtures/overlap-*.log`: two node logs where the aggregation job runs on both at once, checked before each run | `no-overlap` |
 | `event-flush-delayed` | `org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S`: events are written 120 s after start, as in uPortal 5 | `events-aggregated` |
+
+`lock-ignored` makes node B take a lock node A still holds, but in runs 38110056978 to 38120174431
+node B rarely ran the job while node A was inside it, so `no-overlap` failed under it only once in
+three runs. The overlap check is instead shown to work on the fixture logs. `permission-session`
+has no fault in the matrix: removing the cache clear from uPortal was shown once to make it fail
+(see the handoff note), and `AuthorizationImplCacheTest` in uPortal guards the clear since.
 
 ## Running it
 
