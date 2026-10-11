@@ -10,8 +10,9 @@
 # dataInit, imports the fixture (tests/db/equivalence/fixture), starts once and exports everything
 # (dataExport of uPortal and of News Reader). That export, normalised and with its volatile values
 # masked, must equal tests/db/equivalence/reference, apart from exactly the recorded difference
-# tests/db/equivalence/vendors/<vendor>.diff if the vendor has one. A second export (the first one
-# writes to the database, MOD-I154) is what the build under test must reproduce:
+# tests/db/equivalence/vendors/<vendor>.diff, or <family>.diff (mysql, mariadb, ...), if there is
+# one. A second export (the first one writes to the database, MOD-I154) is what the build under
+# test must reproduce:
 #
 #   in-place  The build under test (NEW_UPORTAL_VERSION) is deployed on the same database, starts
 #             once and exports everything; that export must be identical to 5.17's, unmasked.
@@ -48,7 +49,7 @@ while [ $# -gt 0 ]; do
         --record) RECORD=true ;;
         --keep) KEEP=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,38p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,37p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
         *) ARGS+=("$1") ;;
     esac
@@ -119,6 +120,14 @@ step() {  # step <name> <log> <command...>: run, log and time a step; remember a
 
 family() {  # family <vendor>: the vendor without its version
     echo "${1%%-[0-9]*}"
+}
+
+vendor_diff() {  # vendor_diff <vendor>: the recorded difference of 5.17's export on the vendor
+    if [ -f "$EQ/vendors/$1.diff" ]; then
+        echo "$EQ/vendors/$1.diff"
+    else
+        echo "$EQ/vendors/$(family "$1").diff"
+    fi
 }
 
 # The bundled portlets other than News Reader keep no data that dataExport covers, so only uPortal
@@ -265,7 +274,7 @@ if step "5.17 on $SOURCE: deploy, dataInit" old-init.log create_database "$SOURC
         step "record the reference" record.log gradle dataExportRecord -PnormalizedDir="$ROOT/$OUT/normalized-5.17-masked"
     else
         compare "5.17 on $SOURCE = reference" "$EQ/reference" "$OUT/normalized-5.17-masked" reference,export \
-            "$OUT/reference-report.txt" "$EQ/vendors/$SOURCE.diff"
+            "$OUT/reference-report.txt" "$(vendor_diff "$SOURCE")"
     fi
     OLD_OK=true
 else
