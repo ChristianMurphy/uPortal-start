@@ -106,6 +106,23 @@ jobs:
           echo "commit=$commit" >> "$GITHUB_OUTPUT"
           echo "Mode: record=$record commit=$commit" >> "$GITHUB_STEP_SUMMARY"
 
+  # The replay's rules with seeded violations (tests/replay/evaluate.check.mjs); no portal needed
+  rules:
+    name: "Replay rules"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Run the rule checks
+        run: node --test tests/replay/evaluate.check.mjs
+
   uportal:
     name: "Build uPortal"
     needs: plan
@@ -114,6 +131,8 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.uportal.outputs.version }}
+      repository: ${{ steps.source.outputs.repository }}
+      ref: ${{ steps.source.outputs.ref }}
     steps:
       - name: Choose the uPortal repository and ref
         id: source
@@ -214,6 +233,16 @@ jobs:
         with:
           name: replay-uportal-maven-local
           path: ~/.m2/repository/org/jasig/portal
+      # Registry entries name sections of the built uPortal's UPGRADING-6.0.md, which must exist
+      - name: Checkout uPortal's UPGRADING-6.0.md
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ needs.uportal.outputs.repository }}
+          ref: ${{ needs.uportal.outputs.ref }}
+          path: uportal-docs
+          sparse-checkout: docs/UPGRADING-6.0.md
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Bootstrap gradle.properties for the uPortal build
         env:
           UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
@@ -251,7 +280,7 @@ jobs:
       - name: Start Tomcat
         run: ./gradlew -S tomcatStart && tests/replay/portal.sh wait
       - name: Replay and compare with 5.17
-        run: node tests/replay/replay.mjs replay --origin http://localhost:8080
+        run: node tests/replay/replay.mjs replay --origin http://localhost:8080 --upgrading uportal-docs/docs/UPGRADING-6.0.md
       - name: Upload the report and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -326,7 +355,7 @@ jobs:
       - name: Replay against the reference itself
         run: |
           tests/replay/portal.sh reset reference
-          node tests/replay/replay.mjs replay --origin http://localhost:8080 --report build/replay/self-check.md
+          node tests/replay/replay.mjs replay --origin http://localhost:8080 --report build/replay/self-check.md --self-check true
       - name: Upload the fixtures
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
