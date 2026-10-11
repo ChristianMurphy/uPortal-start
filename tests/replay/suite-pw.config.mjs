@@ -1,6 +1,6 @@
 // Runs the whole Playwright suite (tests/uportal-pw.config.ts) with a network trace for every test,
 // so tests/replay/harvest.mjs can list the requests it makes (docs/http-replay.md). Used only
-// when the oracle is recorded.
+// when the reference is recorded.
 import base from '../uportal-pw.config.ts';
 
 export default {

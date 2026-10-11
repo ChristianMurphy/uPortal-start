@@ -325,6 +325,9 @@ const UNORDERED = [
     // marketplace entries and their categories (MarketplaceRESTController, Sets)
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets', '*', 'categories']],
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets']],
+    // the portlet lists a user can see (PortletListRESTController); lists created in the same
+    // second have no fixed order
+    [/^\/uPortal\/api\/portlet-list\/(\?|$)/, []],
 ];
 
 // Values that 5.17 itself returns differently from run to run for the same data.
@@ -357,8 +360,14 @@ const sortArray = (array) => (Array.isArray(array) ? array.toSorted((a, b) => JS
 function unorder(value, path) {
     const replace = (v) => (Array.isArray(v) ? `{unstable:${v.length} items}` : '{unstable}');
     for (const [pattern, keys] of UNSTABLE) if (pattern.test(path)) visit(value, keys, replace);
-    for (const [pattern, keys] of UNORDERED) if (pattern.test(path)) visit(value, keys, sortArray);
-    return value;
+    let result = value;
+    for (const [pattern, keys] of UNORDERED) {
+        if (!pattern.test(path)) continue;
+        // An empty key list means the document itself is the array
+        if (keys.length === 0) result = sortArray(result);
+        else visit(result, keys, sortArray);
+    }
+    return result;
 }
 
 // Lengths are compared in buckets of 64 bytes: a changed byte count from a different build date

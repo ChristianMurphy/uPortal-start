@@ -47,7 +47,7 @@ The requests come from two sources.
    * the CSRF probes, which run last. These are state-changing endpoints called without a token,
      from another origin, or with an unusual method. They use unknown ids and empty or invalid
      bodies, so on 5.17 they change nothing.
-2. **The Playwright suite**. When the oracle is recorded, the whole suite runs against it with a
+2. **The Playwright suite**. When the reference is recorded, the whole suite runs against 5.17 with a
    network trace (`tests/replay/suite-pw.config.mjs`). `tests/replay/harvest.mjs` then lists every
    request it made to the portal's host, with the role that was logged in at the time, the
    `Accept`, `X-Requested-With` and `Content-Type` headers, and the number of tests that made it.
@@ -92,7 +92,7 @@ Nothing else is masked. Generated database ids, layout node ids and portlet wind
 deterministic on a freshly initialised portal, so they are compared too. A change in how ids are
 generated (for example a different Hibernate ID generator) shows up as a difference.
 
-When recording, the oracle replays its own recording against itself after another reset. That
+When recording, the 5.17 portal replays its own recording against itself after another reset. That
 self-check must show no differences; when it does, a value needs a mask.
 
 ## Security checks
@@ -159,9 +159,9 @@ minutes. Requests run one after another, because some of them change state that 
 Tomcat and waits for the portal. Run it before every replay, because a replay changes state (it
 logs users in, and the Playwright requests render portlets).
 
-## Recording the oracle
+## Recording the reference
 
-The oracle is uPortal-start `master`: the released uPortal 5.17 (`uPortalVersion` in its
+The reference is uPortal-start `master`: the released uPortal 5.17 (`uPortalVersion` in its
 `gradle.properties.example`) on Tomcat 8.5, Gradle 6.9.4 and Java 11. Recording is never run
 implicitly. To re-record, do either of these:
 
@@ -172,20 +172,20 @@ implicitly. To re-record, do either of these:
 
 The record job:
 
-1. checks out `master` (or `oracle-ref`) next to this checkout, and runs `portalInit` and
+1. checks out `master` (or `reference-ref`) next to this checkout, and runs `portalInit` and
    `tomcatStart` there;
 2. runs this checkout's whole Playwright suite against it with network traces, and harvests the
    requests;
-3. resets the oracle, then records the crawl, the suite's requests and the security checks into
+3. resets that portal, then records the crawl, the suite's requests and the security checks into
    `tests/replay/fixtures/5.17/`;
-4. resets the oracle again and replays the recording against it (the self-check, whose report is
+4. resets it again and replays the recording against it (the self-check, whose report is
    kept as `self-check.md`);
 5. uploads the fixtures as the `replay-fixtures-5.17` artifact.
 
 Re-record after changing `routes.json` or a normaliser in `lib.mjs` (then bump
 `NORMALISER_VERSION`; a replay refuses fixtures from another version), or when the Playwright
 suite gains specs whose requests should be covered. Review the fixture diff like code: a
-recording replaces the oracle.
+recording replaces the reference.
 
 To record locally against a 5.17 portal of your own (for example uPortal-start `master` on port
 8080):
