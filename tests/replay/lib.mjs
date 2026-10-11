@@ -6,7 +6,7 @@
 // changes what is compared: bump NORMALISER_VERSION and re-record (see docs/http-replay.md).
 import { createHash } from 'node:crypto';
 
-export const NORMALISER_VERSION = 1;
+export const NORMALISER_VERSION = 2;
 
 // The quickstart roles, each with its local account (data/base/user, data/quickstart/user; the
 // password of every quickstart account is its user name). Guest is the anonymous session.
@@ -130,6 +130,23 @@ export async function sessionFor(origin, role) {
 // ---------------------------------------------------------------------------------------------
 
 const STRING_MASKS = [
+    // Generated ids. uPortal imports the files of one entity type in parallel, in the order the
+    // file system lists them (JaxbPortalDataHandlerService with ConcurrentDirectoryScanner), so
+    // user, group, portlet and portlet-type ids differ from machine to machine. The node part of a
+    // layout node id (l1n210) comes from the fragment's data; the user part (u26) does not.
+    // Inside generated names such as rateThisPortletu26l1n7 the whole id varies (the node is the
+    // one the marketplace subscribes the portlet to), so all of it is masked there.
+    [/(?<=[A-Za-z])u\d+l\d+[ns]\d+(?!\d)/g, '{node}'],
+    [/u\d+(l\d+[ns]\d+)(?!\d)/g, 'u{id}$1'],
+    // Pluto namespaces carry the portlet entity and window ids: Pluto_43_u26l1n210_11_
+    [/\bPluto_\d+_/g, 'Pluto_{id}_'],
+    [/(l\d+n\d+|ctf\{n\})_\d+_/g, '$1_{id}_'],
+    // group keys (local.14), principal keys (12.local.14) and portlet ids (PORTLET_ID.25)
+    [/\blocal\.\d+/g, 'local.{id}'],
+    [/\bPORTLET_ID\.\d+/g, 'PORTLET_ID.{id}'],
+    [/\bgroup_local__\d+/g, 'group_local__{id}'],
+    // the entity type in a principal key (12.local.3, 13.pags.Authenticated Users)
+    [/\b\d+\.(local|pags)\./g, '{type}.$1.'],
     // Session ids are random per session (Tomcat's SecureRandom); URL rewriting embeds them.
     [/(;jsessionid=)[0-9A-Za-z._-]+/gi, '$1{session}'],
     [/(JSESSIONID=)[0-9A-Za-z._-]+/g, '$1{session}'],
@@ -141,7 +158,7 @@ const STRING_MASKS = [
     [/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '{uuid}'],
     // Transient portlet subscribe ids (search.ctf1) count up per session in the order portlets are
     // first rendered, and portlets render on parallel worker threads.
-    [/\.ctf\d+\b/g, '.ctf{n}'],
+    [/(?<![A-Za-z])ctf\d+(?=\b|_)/g, 'ctf{n}'],
     // The portal's own host and port, also inside other URLs (CAS service=, encoded or not)
     [/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/g, '{origin}'],
     [/https?%3A%2F%2F(localhost|127\.0\.0\.1)(%3A\d+)?/gi, '{origin}'],
@@ -221,7 +238,10 @@ function normaliseHeaderValue(name, value) {
     // ETags are hashes: of the body for /api (ShallowEtagHeaderFilter), so they follow every masked
     // value in it, or of the size and modification time of a deployed file. Only whether the tag
     // is weak and how long its hash is are compared; the body is compared on its own.
-    if (name === 'etag') return value.replace(/"[^"]*"/, (tag) => `"{hash:${tag.length - 2}}"`);
+    if (name === 'etag') {
+        if (value.includes('{hash')) return value;
+        return value.includes('"') ? value.replace(/"[^"]*"/, (tag) => `"{hash:${tag.length - 2}}"`) : '{hash}';
+    }
     return maskString(value);
 }
 
@@ -283,7 +303,9 @@ export function normaliseBody(buffer, contentType, origin, path = '') {
             // not JSON after all; fall through
         }
     }
-    if (type.includes('html')) return { kind: 'html', outline: htmlOutline(text(), origin) };
+    // An error page can come with the content type of the API it replaces (a 500 from a JSON route)
+    const looksHtml = /^\s*(<!--[\s\S]*?-->\s*)*<(!doctype html|html)/i.test(text().slice(0, 4096));
+    if (type.includes('html') || looksHtml) return { kind: 'html', outline: htmlOutline(text(), origin) };
     // Entity exports are XML without a Content-Type; they are text as far as masks go.
     const xml = /^\s*<\?xml/.test(text().slice(0, 64));
     if (xml || type.startsWith('text/') || type.includes('xml') || type.includes('javascript')) {
@@ -340,6 +362,9 @@ const UNSTABLE = [
     // many related portlets there are is compared.
     [/^\/uPortal\/api\/marketplace\/entries/, ['portlets', '*', 'relatedPortlets']],
     [/^\/uPortal\/api\/marketplace\/entry\//, ['relatedPortlets']],
+    // The calendar demo's events are placed relative to today, and the suite asks for the day it
+    // ran on, so the whole answer depends on the day of the run.
+    [/\/p\/calendar\.[^/]*\/[^/]+\/[^/]*\.resource\.uP/, []],
 ];
 
 function visit(node, keys, action) {
@@ -363,8 +388,12 @@ export function unorder(value, path) {
         if (typeof v === 'string' && v.startsWith('{unstable')) return v;
         return Array.isArray(v) ? `{unstable:${v.length} items}` : '{unstable}';
     };
-    for (const [pattern, keys] of UNSTABLE) if (pattern.test(path)) visit(value, keys, replace);
     let result = value;
+    for (const [pattern, keys] of UNSTABLE) {
+        if (!pattern.test(path)) continue;
+        if (keys.length === 0) result = replace(result);
+        else visit(result, keys, replace);
+    }
     for (const [pattern, keys] of UNORDERED) {
         if (!pattern.test(path)) continue;
         // An empty key list means the document itself is the array
@@ -386,14 +415,26 @@ const EPOCH_MS_MAX = 4_102_444_800_000;
 // Keys whose values are measurements or random per session, not data: the health checks'
 // response times and memory figures, and the session key in /api/session.json.
 const MEASUREMENT = /Response Time|Memory|^sessionKey$/;
+// Keys whose numeric values are generated ids (see the generated ids in STRING_MASKS)
+const ID_KEYS = /^(id|chanID|channelId|typeId|typeID|fragment|portletId|entityTypeId)$/;
 
 export function maskJson(value, origin) {
-    if (Array.isArray(value)) return value.map((v) => maskJson(v, origin));
+    if (Array.isArray(value)) {
+        const masked = value.map((v) => maskJson(v, origin));
+        // 5.17 orders many lists (portlets, categories, groups, layout nodes from fragments) by
+        // generated ids, which differ from machine to machine, so the order of objects in an
+        // array is not compared. Arrays of plain values keep their order.
+        return masked.every((v) => v && typeof v === 'object') ? sortArray(masked) : masked;
+    }
     if (value && typeof value === 'object') {
         const sorted = {};
         for (const key of Object.keys(value).sort()) {
             const v = value[key];
-            sorted[key] = MEASUREMENT.test(key) && (typeof v === 'number' || typeof v === 'string') ? `{measured:${typeof v}}` : maskJson(v, origin);
+            // (a value masked before stays as it is: the recording is masked again when compared)
+            if (typeof v === 'string' && /^\{(measured|id):/.test(v)) sorted[key] = v;
+            else if (MEASUREMENT.test(key) && (typeof v === 'number' || typeof v === 'string')) sorted[key] = `{measured:${typeof v}}`;
+            else if (ID_KEYS.test(key) && (typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v)))) sorted[key] = `{id:${typeof v}}`;
+            else sorted[key] = maskJson(v, origin);
         }
         return sorted;
     }
@@ -568,7 +609,9 @@ function compareBody(expected, actual, add) {
         jsonDiff(expected.value, actual.value, '$', paths);
         if (paths.length > 0) add('body', null, null, paths);
     } else if (expected.kind === 'html') {
-        const lines = outlineDiff(expected.outline, actual.outline);
+        // Order is not compared: 5.17 merges fragments and lists portlets in an order that
+        // depends on generated ids. Each element, with its attributes and depth, still is.
+        const lines = outlineDiff(expected.outline.toSorted(), actual.outline.toSorted());
         if (lines.length > 0) add('body', null, null, lines);
     } else if (stable(expected) !== stable(actual)) {
         add('body', expected, actual);
@@ -646,4 +689,90 @@ export function outcome(response) {
     return 'allowed';
 }
 
-export const exchangeKey = (exchange) => `${exchange.role} ${exchange.method} ${exchange.path}`;
+/**
+ * Applies the current masks to a recorded response again. Masks are idempotent, so a mask added
+ * after a recording applies to it without a re-record.
+ */
+export function renormalise(response, path) {
+    const result = { ...response };
+    if (result.location) result.location = maskString(result.location);
+    if (result.headers) {
+        result.headers = Object.fromEntries(Object.entries(result.headers).map(([k, v]) => [k, normaliseHeaderValue(k, v)]));
+    }
+    const body = result.body;
+    if (body?.kind === 'json') result.body = { ...body, value: unorder(maskJson(structuredClone(body.value)), path) };
+    else if (body?.kind === 'html') result.body = { ...body, outline: body.outline.map((line) => maskString(line)) };
+    return result;
+}
+
+/** A request path without the machine-specific user part of its layout node ids. */
+export const templatePath = (path) => path.replaceAll(/(?<![A-Za-z0-9])u\d+(l\d+[ns]\d+)/g, 'u{id}$1');
+
+export const exchangeKey = (exchange) => `${exchange.role} ${exchange.method} ${templatePath(exchange.path)}`;
+
+// ---------------------------------------------------------------------------------------------
+// Layout node ids of the portal at hand
+// ---------------------------------------------------------------------------------------------
+
+const NODE_ID = /(?<![A-Za-z0-9])u(\d+)(l\d+[ns]\d+)/g;
+
+/**
+ * Learns, for one role, the user part of the layout node ids this portal gave the role's layout,
+ * from responses the role's crawl gets anyway: layout.json (portlet nodes with their fname) and
+ * the welcome page (portlet wrappers with their fname as a class, folder links). It sends no
+ * request of its own, because any extra request changes the session's state (the
+ * UrlCanonicalizingFilter redirect counter alternates redirects and pages).
+ */
+export function nodeIdResolver() {
+    const byFname = new Map();
+    const bySuffix = new Map();
+    const note = (user, suffix, fname) => {
+        if (fname) byFname.set(`${fname}|${suffix}`, user);
+        if (!bySuffix.has(suffix)) bySuffix.set(suffix, new Set());
+        bySuffix.get(suffix).add(user);
+    };
+    const walk = (node) => {
+        if (Array.isArray(node)) node.forEach(walk);
+        else if (node && typeof node === 'object') {
+            const match = typeof node.ID === 'string' && /^u(\d+)(l\d+[ns]\d+)$/.exec(node.ID);
+            if (match) note(match[1], match[2], node.fname);
+            Object.values(node).forEach(walk);
+        }
+    };
+    return {
+        byFname,
+        bySuffix,
+        learn(path, body) {
+            const text = body.toString('utf8');
+            if (path === '/uPortal/api/v4-3/dlm/layout.json') {
+                try {
+                    walk(JSON.parse(text));
+                } catch {
+                    // a role without a layout document
+                }
+            } else if (path === '/uPortal/f/welcome/normal/render.uP') {
+                for (const match of text.matchAll(/id="portlet_u(\d+)(l\d+n\d+)"\s+class="([^"]*)"/g)) {
+                    for (const fname of match[3].split(/\s+/)) note(match[1], match[2], fname);
+                }
+                for (const match of text.matchAll(NODE_ID)) note(match[1], match[2]);
+            }
+        },
+    };
+}
+
+/** Puts this portal's user part into the layout node ids of a recorded path. */
+export function resolvePath(path, resolver) {
+    if (!resolver) return path;
+    let owner;
+    // portlet nodes first: their fname says which one is meant
+    let resolved = path.replaceAll(/([\w-]+)\.u(\d+)(l\d+n\d+)/g, (all, fname, user, suffix) => {
+        const unique = resolver.bySuffix.get(suffix);
+        owner = resolver.byFname.get(`${fname}|${suffix}`) ?? (unique?.size === 1 ? [...unique][0] : user);
+        return `${fname}.u${owner}${suffix}`;
+    });
+    resolved = resolved.replaceAll(/(?<![A-Za-z0-9.])u(\d+)(l\d+[ns]\d+)/g, (all, user, suffix) => {
+        const unique = resolver.bySuffix.get(suffix);
+        return `u${unique?.size === 1 ? [...unique][0] : (owner ?? user)}${suffix}`;
+    });
+    return resolved;
+}
