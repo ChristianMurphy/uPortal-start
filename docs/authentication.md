@@ -8,7 +8,7 @@ Gradle property:
 | `local` (default) | uPortal's own login form (`/p/login`)    | nothing beyond the portal                |
 | `cas`             | the CAS server at `casServerUrl`         | a CAS server: the bundled CAS 8 container, or yours |
 
-Local login is the default for demos and development: a fresh checkout signs users in with no
+Local login is the default for demos and development. A fresh checkout signs users in with no
 setup. A production portal should sign users in through the institution's single sign-on, with
 `authMode=cas` or its own SSO configuration. uPortal's own `security.properties` defaults are
 unchanged.
@@ -99,7 +99,17 @@ authMode=cas
 casServerUrl=https://cas.example.edu/cas
 ```
 
-Do not run `casStart`. On the CAS side:
+Do not run `casStart`. If nobody signs in with a password stored in the portal, turn the local
+password check off in production, in `etc/portal/uPortal.properties`:
+
+```properties
+org.apereo.portal.security.provider.SimpleSecurityContextFactory.enabled=false
+```
+
+The URL login that scripts and the Playwright specs use needs it, so keep it on in development and
+test portals.
+
+On the CAS side:
 
 * register the portal as a CAS service matching `https://portal.example.edu/uPortal/Login`, the
   `service` the portal sends. With proxy tickets, the service must match the portlets' URLs too;
