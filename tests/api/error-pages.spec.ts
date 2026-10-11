@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, APIRequestContext } from "@playwright/test";
 import { config } from "../general-config";
 
 /*
@@ -14,28 +14,46 @@ import { config } from "../general-config";
 
 const root = new URL("/", config.url).href;
 
-const PAGES: Record<string, { url: string; status: number }> = {
-  "404 in uPortal": { url: `${config.url}e2e-no-such-page`, status: 404 },
-  "404 outside every webapp": {
-    url: `${root}e2e-no-such-webapp/`,
-    status: 404,
-  },
-  // Invalid percent-encoding: the connector answers before uPortal runs.
-  "400 from the connector": { url: `${config.url}%zz`, status: 400 },
-  // Outside a portlet request <portlet:defineObjects/> throws, and the
-  // pluto-testsuite webapp has no error-page.
-  "500 in a webapp without an error-page": {
-    url: `${root}pluto-testsuite/jsp/test_results.jsp`,
-    status: 500,
-  },
-};
+/* A page and its status; `webapp` names the webapp it needs, if not uPortal */
+const PAGES: Record<string, { url: string; status: number; webapp?: string }> =
+  {
+    "404 in uPortal": { url: `${config.url}e2e-no-such-page`, status: 404 },
+    "404 outside every webapp": {
+      url: `${root}e2e-no-such-webapp/`,
+      status: 404,
+    },
+    // Invalid percent-encoding: the connector answers before uPortal runs.
+    "400 from the connector": { url: `${config.url}%zz`, status: 400 },
+    // Outside a portlet request <portlet:defineObjects/> throws, and the
+    // pluto-testsuite webapp has no error-page.
+    "500 in a webapp without an error-page": {
+      url: `${root}pluto-testsuite/jsp/test_results.jsp`,
+      status: 500,
+      webapp: "pluto-testsuite",
+    },
+  };
 
 const VERSION = /(?:\d{1,4}\.){2}\d{1,4}/;
 
-for (const [name, { url, status }] of Object.entries(PAGES)) {
+/* Whether the webapp the page needs answers (uPortal itself always does) */
+async function isDeployed(
+  request: APIRequestContext,
+  webapp: string | undefined,
+): Promise<boolean> {
+  if (webapp === undefined) return true;
+  const response = await request.get<unknown>(`${root}${webapp}/`);
+  return response.status() !== 404;
+}
+
+for (const [name, { url, status, webapp }] of Object.entries(PAGES)) {
   test(`${name} does not show the server's name or version`, async ({
     request,
   }) => {
+    // The DB harness deploys uPortal alone, without pluto-testsuite.
+    test.skip(
+      !(await isDeployed(request, webapp)),
+      `${webapp ?? ""} is not deployed`,
+    );
     const response = await request.get<unknown>(url, { maxRedirects: 0 });
     expect(response.status()).toBe(status);
     const body = await response.text();
