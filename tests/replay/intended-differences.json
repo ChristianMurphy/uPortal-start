@@ -280,6 +280,26 @@
             "upgrading": "The user locale selector is a web component"
         },
         {
+            "id": "session-timeout-web-component-page",
+            "path": "/uPortal/*",
+            "field": "body",
+            "detail": "^(- .*(script\\[src=/uPortal/scripts/session-timeout\\.js\\]$|_session-timeout-dlg$|h4\\.modal-title \"Session expiration\"$|button\\.btn\\.btn-secondary\\.refresh-session\\[type=button\\] \"Yes, keep me signed in\"$|button\\.btn\\.btn-primary\\.logout\\[type=button\\] \"No, log me out\"$)|\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-session-timeout-[^\\]]+\\.js\\]$)",
+            "reason": "The Session Timeout channel, in the header region of every signed-in page, renders <up-session-timeout>: the portlet's warning dialog (heading and two buttons) and the page's scripts/session-timeout.js are gone from the outline, and the page loads the component's module. The component builds its dialog when the warning is due.",
+            "log": "uPortal-start ccbdf89",
+            "visible": true,
+            "upgrading": "Session Timeout is a web component"
+        },
+        {
+            "id": "session-timeout-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "(webComponent\\.(moduleUrl|tagName): added .*up-session-timeout|webComponent\\.preferenceAttributes: added .*\"enabled=en|portletName: \"SessionTimeout\" -> \"WebComponent\")",
+            "reason": "The layout and portlet registry APIs describe Session Timeout as a Web Component channel: its portletName becomes WebComponent and the webComponent parameters are added, including the preference attributes for enabled, the dialog's display seconds and the logout URL.",
+            "log": "uPortal-start ccbdf89",
+            "visible": true,
+            "upgrading": "Session Timeout is a web component"
+        },
+        {
             "id": "web-components-admin-marketplace",
             "path": "/uPortal/api/marketplace/entries.json",
             "roles": [
