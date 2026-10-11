@@ -108,6 +108,42 @@ start_portal() {  # start_portal <vendor>: start Tomcat on the vendor's database
     return 1
 }
 
+# The connection budget (MOD-I190): what the portal and the bundled portlets may hold on the database
+# at once, below PostgreSQL's default max_connections=100 so admin and monitoring tools still get
+# in. docs/connection-budget.md lists the pools that make it up.
+CONNECTION_BUDGET=${HARNESS_CONNECTION_BUDGET:-80}
+
+start_connection_sampler() {  # start_connection_sampler <container> <file>: count client connections every second
+    local container="$1" file="$2"
+    : > "$file"
+    (
+        while :; do
+            n=$(docker exec "$container" psql -U uportal -d uportal -Atc \
+                "select count(*) from pg_stat_activity where backend_type = 'client backend' and pid <> pg_backend_pid()" \
+                2>/dev/null) && echo "$(date -u +%H:%M:%S) $n" >> "$file"
+            sleep 1
+        done
+    ) &
+    SAMPLER_PID=$!
+}
+
+stop_connection_sampler() {  # stop_connection_sampler <file> <label>: print the peak; fail above the budget
+    local file="$1" label="$2" peak samples
+    kill "$SAMPLER_PID" 2>/dev/null; wait "$SAMPLER_PID" 2>/dev/null
+    samples=$(wc -l < "$file")
+    peak=$(awk 'BEGIN { m = 0 } $2 > m { m = $2; t = $1 } END { print m " at " t }' "$file")
+    echo "Database connections ($label): peak ${peak:-0}, $samples samples, budget $CONNECTION_BUDGET"
+    if [ "$samples" -lt 10 ]; then
+        echo "The connection sampler took only $samples samples ($file)" >&2
+        return 1
+    fi
+    if [ "${peak%% *}" -gt "$CONNECTION_BUDGET" ]; then
+        github_annotation error "$label: database connections over budget" \
+            "Peak ${peak} connections, budget $CONNECTION_BUDGET (docs/connection-budget.md)"
+        return 1
+    fi
+}
+
 github_annotation() {  # github_annotation <level> <title> <text>: on GitHub Actions only
     [ "${GITHUB_ACTIONS:-}" = true ] || return 0
     local title="$2" text="$3"
