@@ -68,10 +68,30 @@ async function open(page: Page, keyPage: KeyPage): Promise<void> {
     await page.goto(`${config.url}${keyPage.path}`);
   } else {
     await loginViaUrl(page, config.users[keyPage.user]);
-    if (keyPage.path === "") return;
-    await page.goto(`${config.url}${keyPage.path}`);
+    if (keyPage.path !== "") await page.goto(`${config.url}${keyPage.path}`);
   }
   await waitForPortalRequestsToSettle(page);
+  await notificationIconRendered(page);
+}
+
+/*
+ * The Notification portlet's notification-icon draws its button in its
+ * own shadow DOM. The button's only text is the count of notifications,
+ * and until /NotificationPortlet/api/v2/notifications answers, the count
+ * is a hidden "0" and the button has no name. axe then reports
+ * button-name on #dropdownMenuButton or not depending on timing. Waiting
+ * for the visible count runs axe on the finished button every time. The
+ * test users all have notifications. For a user without any, the count
+ * stays hidden and the button never gets a name (a fault in the
+ * Notification portlet).
+ */
+async function notificationIconRendered(page: Page): Promise<void> {
+  const icon = page.locator("notification-icon");
+  if ((await icon.count()) === 0) return;
+  await expect(
+    icon.locator("#dropdownMenuButton .count:not(.hidden)"),
+    "notification-icon never showed its count: the notifications request failed, or the user has none",
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 async function observe(page: Page): Promise<Record<string, string[]>> {
