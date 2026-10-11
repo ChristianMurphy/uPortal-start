@@ -151,6 +151,19 @@ A partial index for unaggregated events doesn't help. The aggregator binds the f
 
 `INCLUDE` has no candidate yet. After R1 the login lookups are index scans over a few rows. Revisit it when the reporting queries are part of the workload.
 
+## Statement ids (MOD-I240)
+
+Until Hibernate 5.2 (P2) a sequential-scan finding was keyed by an md5 of the statement's text on PostgreSQL and by the server's digest on MariaDB. Hibernate 5.2 renumbered its column aliases (`USER_DIR4_13_1_` became `USER_DIR4_11_1_`), so three R1 entries stopped matching and every branch built on it failed (run 38130071085). `audit.py` now keys a statement by an md5 of its text in lower case, without quoting, spacing or Hibernate's numbered aliases, on both vendors. `tests/db/gindex/test_audit.py` checks that a Hibernate 4 to 5.2 alias change keeps the id and that other changes don't.
+
+The allowlist was re-recorded from one nightly run (38136856147, PostgreSQL 18 and MariaDB 12.3 at 1/20). For that run an entry also matched a finding by its old id, and the summary listed each such entry with its new subject:
+
+* 28 entries moved by that list, one for one (18 PostgreSQL, 10 MariaDB).
+* 4 entries whose old ids were already stale after Hibernate 5.2 moved to the statement they describe. `up_person_dir` follows the R1 login select. The two R2 `up_portlet_ent` entries follow the loads by `PORTLET_DEF_ID`, and the MariaDB people-search variant is now `up_person_*@74f3e592`.
+* 2 entries removed because their statements didn't run in that workload: the PostgreSQL cookie purge and the MariaDB `UP_UNIQUE_STR_SEGMENT__UIDS` load. If they come back, the audit fails and they are reviewed again.
+* 2 entries added for findings that run showed first: the PostgreSQL event-session purge (`up_event_session@904ee510`, the planner prefers a scan although `idx_up_event_session_date` exists) and the MariaDB cookie purge without its portlet-cookie condition (`up_portal_cookies@2d30de14`).
+
+The same `SELECT COUNT(USER_ID) FROM UP_USER` now has one id on both vendors (`up_user@c5a1238d`).
+
 ## What's left
 
 * The reporting queries (statistics portlet) aren't in the workload yet. Until they are, keep the `*_DTIC` and `*_DTI` indexes and `idx_up_search_req_trm` (R11 leaves them out), and keep the `UP_PERMISSION` single-column indexes until the permissions-manager plans are reviewed.
