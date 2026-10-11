@@ -27,8 +27,8 @@ const WARNING_OPENS_AFTER_MS = SESSION_TIMEOUT_MS - WARNING_LEAD_MS;
 
 const REMAINING = /Your session will expire\s+in (\d+) seconds\./;
 
-function warning(page: Page): Locator {
-  return page.getByRole("dialog").filter({ hasText: "Session expiration" });
+function warning(page: Page, title = "Session expiration"): Locator {
+  return page.getByRole("dialog").filter({ hasText: title });
 }
 
 async function remainingSeconds(dialog: Locator): Promise<number> {
@@ -39,12 +39,15 @@ async function remainingSeconds(dialog: Locator): Promise<number> {
 }
 
 /** Runs the clock to just before the warning, checks it is not shown, then opens it. */
-async function runUntilWarning(page: Page): Promise<Locator> {
+async function runUntilWarning(
+  page: Page,
+  title = "Session expiration",
+): Promise<Locator> {
   await page.clock.fastForward(WARNING_OPENS_AFTER_MS - 5 * SECOND);
   await page.clock.runFor(2 * SECOND);
-  await expect(warning(page)).toBeHidden();
+  await expect(warning(page, title)).toBeHidden();
   await page.clock.runFor(4 * SECOND);
-  const dialog = warning(page);
+  const dialog = warning(page, title);
   await expect(dialog).toBeVisible();
   return dialog;
 }
@@ -293,3 +296,57 @@ test.describe("Session timeout web component", () => {
     expect(saved - now).toBeLessThanOrEqual(SESSION_TIMEOUT_MS - 30 * SECOND);
   });
 });
+
+/*
+ * The warning in the user's own locale. The renderer passes the locale the
+ * user chose in the User Locales Selector to the element, which asks the
+ * portal for its messages in that locale. The locale is stored for the user,
+ * so these tests sign in as developer, whom no other spec uses, and set it
+ * back to en_US at the end of each test.
+ */
+const developer = {
+  username: "developer",
+  // eslint-disable-next-line sonarjs/no-hardcoded-credentials
+  password: "developer",
+  displayName: "Developer User",
+};
+
+async function chooseLocale(page: Page, code: string): Promise<void> {
+  await page.goto(`${config.url}p/user-locales-selector/max/render.uP`);
+  await page.locator(`input[name="locale"][value="${code}"]`).check();
+  await page.locator('input[name="_eventId_updateLocale"]').click();
+  await page.waitForLoadState("load");
+}
+
+for (const { code, title, remaining } of [
+  {
+    code: "es_ES",
+    title: "Caducidad de la sesión",
+    remaining: /Su sesión expirará en (\d+) segundos\./,
+  },
+  {
+    code: "fr_FR",
+    title: "Expiration de la session",
+    remaining: /Votre session expirera dans (\d+) secondes\./,
+  },
+]) {
+  test(`Session timeout warning in ${code}`, async ({ page }) => {
+    await loginViaUrl(page, developer);
+    try {
+      await chooseLocale(page, code);
+      await page.clock.install();
+      await page.goto(config.url);
+      await expect(page.locator("up-session-timeout")).toHaveAttribute(
+        "locale",
+        code.replace("_", "-"),
+      );
+
+      const dialog = await runUntilWarning(page, title);
+
+      await expect(dialog).toContainText(remaining);
+    } finally {
+      await chooseLocale(page, "en_US");
+      await logout(page);
+    }
+  });
+}
