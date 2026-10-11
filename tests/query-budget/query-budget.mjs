@@ -77,7 +77,9 @@ const REQUESTS = [
   },
 ];
 
-const COUNTED_THREAD = /^(http-nio-\d+-exec-\d+|uP-PortletExec-\d+)$/;
+// uPortal appends the user (and for portlets the phase and fname) to the thread name, as in
+// http-nio-8080-exec-3-student and uP-PortletExec-12-student-RENDER-[calendar]
+const COUNTED_THREAD = /^(http-nio-\d+-exec-\d+|uP-PortletExec-\d+)(-|$)/;
 
 class Session {
   cookies = new Map();
