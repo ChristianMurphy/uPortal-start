@@ -38,17 +38,14 @@ test("finds a group by part of its name in another case", async ({
 });
 
 /*
- * The intended behaviour, marked as failing until MOD-I203 is fixed:
- * PortletDefinitionSearcher handles DISCRETE, STARTS_WITH, ENDS_WITH and
- * CONTAINS only, and throws GroupsException("Unknown search type") for the
- * CONTAINS_CI the entity selector asks for, so the search answers HTTP 500.
- * Once it is fixed, Playwright reports this test as unexpectedly passing:
- * remove the test.fail() line then.
+ * PortletDefinitionSearcher maps the _CI search methods to its searches that
+ * ignore case. Before MOD-I203 it threw GroupsException("Unknown search
+ * type") for the CONTAINS_CI the entity selector asks for, and the search
+ * answered HTTP 500, as it does in 5.17.
  */
 test("finds a portlet by part of its name in another case", async ({
   request,
 }) => {
-  test.fail(true, "MOD-I203: portlet searches answer HTTP 500");
   await loginViaApi(request, config.users.admin);
   const response = await request.get<EntitySearch>(
     entitiesUrl("portlet", "oOKMARK"),
