@@ -1,0 +1,11 @@
+--- reference/uportal/portlet-definition/feedback-admin.portlet-definition.xml
++++ export/uportal/portlet-definition/feedback-admin.portlet-definition.xml
+@@ -10,7 +10,7 @@
+     <up:portletName>AdminFeedbackPortlet</up:portletName>
+   </portlet-descriptor>
+   <lifecycle>
+-    <entry name="PUBLISHED" user="admin">2017-08-24T21:42:51.015Z</entry>
++    <entry name="PUBLISHED" user="admin">2017-08-24T21:42:51.017Z</entry>
+   </lifecycle>
+   <category>Administration</category>
+   <group>Portal Administrators</group>

@@ -11,7 +11,8 @@
 #   3. target: deploy for it, dataInit, start the portal once (MOD-I92: those portlet tables must
 #      exist before the copy) and stop it;
 #   4. ./gradlew dbMigrate -PsourceDbVendor=<source> -PtargetDbVendor=<target>
-#      -PdbMigrateClearTarget, which copies, positions the generators and verifies every table;
+#      -PdbMigrateClearTarget -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone=UTC, which copies,
+#      positions the generators and verifies every table;
 #   5. with --playwright: start the portal on the migrated target and run the whole Playwright suite
 #      (needs `npx playwright install chromium`).
 #
@@ -72,16 +73,14 @@ OUT="build/db-migrate/$PAIR"
 mkdir -p "$OUT"
 FAILED_STEP=
 FAILED_LOG=
-TIMINGS=()
 
-step() {  # step <name> <log> <command...>: run, log, time; remember the first failure
-    local name="$1" log="$OUT/$2" started status
+step() {  # step <name> <log> <command...>: run, log, time (see phase_begin); remember the first failure
+    local name="$1" log="$OUT/$2" status
     shift 2
-    echo "==== $PAIR: $name"
-    started=$(date +%s)
+    phase_begin "$name"
     "$@" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
-    TIMINGS+=("$(printf '%-44s %5ss  %s' "$name" "$(( $(date +%s) - started ))" "$([ "$status" -eq 0 ] && echo ok || echo FAILED)")")
+    phase_end "$status"
     if [ "$status" -ne 0 ] && [ -z "$FAILED_STEP" ]; then FAILED_STEP=$name; FAILED_LOG=$log; fi
     return "$status"
 }
@@ -101,7 +100,7 @@ run_specs() {  # run_specs <vendor> <output dir> [spec paths]: Playwright agains
     shift 2
     start_portal "$vendor" || return 1
     PORTAL_BASE_URL="http://localhost:$HTTP_PORT/uPortal/" npx playwright test \
-        --config=tests/uportal-pw.config.ts "$@" --reporter=list --output="$output"
+        --config=tests/uportal-pw.config.ts "$@" "$(playwright_reporter)" --output="$output"
     status=$?
     stop_own_tomcat "$vendor"
     return $status
@@ -111,7 +110,11 @@ migrate() {
     # Only the two vendor files matter here: the source's gradle.args (e.g. its HSQLDB port) must
     # not leak into the target's settings
     use_vendor ''
-    gradle dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget
+    # A copy into 6.0 converts the timestamps 5.17 stored as the JVM's clock time to UTC, from the
+    # source portal's zone (MOD-I141). The build under test filled the source, and it stores those
+    # columns in UTC already, so the zone is UTC whatever this machine's zone is.
+    gradle dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget \
+        -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone=UTC
 }
 
 copy_summary() {  # the copy tool's own summary of this pair (build/db-migrate/<pair>.txt), if any
@@ -123,15 +126,15 @@ copy_summary() {  # the copy tool's own summary of this pair (build/db-migrate/<
 
 cleanup() {
     if [ "$KEEP" = false ]; then
-        stop_database "$SOURCE"
-        stop_database "$TARGET"
+        timed "stop the $SOURCE database" stop_database "$SOURCE"
+        timed "stop the $TARGET database" stop_database "$TARGET"
     fi
 }
 
 echo "==== Copy migration $SOURCE ($(prop "$SOURCE" vendor.name)) -> $TARGET ($(prop "$TARGET" vendor.name))"
 rm -f "build/db-migrate/$PAIR.json" "build/db-migrate/$PAIR.txt"
 # Both databases start first: Oracle and SQL Server need a while before they accept connections
-if ! start_database "$SOURCE" || ! start_database "$TARGET"; then
+if ! timed "start the $SOURCE database" start_database "$SOURCE" || ! timed "start the $TARGET database" start_database "$TARGET"; then
     cleanup
     exit 1
 fi
@@ -154,8 +157,8 @@ if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
 fi
 cleanup
 
+phase_summary "Copy migration $PAIR phases"
 echo "==== Copy migration $PAIR summary"
-printf '%s\n' "${TIMINGS[@]}"
 if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
     echo "FAILED: ${FAILED_STEP:-starting the databases} ${FAILED_LOG:+(see $FAILED_LOG)}"
     if [ -f "$FAILED_LOG" ]; then
@@ -172,4 +175,5 @@ if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
     exit 1
 fi
 echo "OK: $SOURCE copied to $TARGET and verified$([ "$PLAYWRIGHT" = true ] && echo ', Playwright suite passed on the target')"
-github_annotation notice "G-migrate $PAIR: OK" "$(copy_summary)"$'\n'"$(printf '%s\n' "${TIMINGS[@]}")"
+text=$(copy_summary)
+github_annotation notice "G-migrate $PAIR: OK" "${text:-$SOURCE copied to $TARGET and verified}"

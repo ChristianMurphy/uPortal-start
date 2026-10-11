@@ -71,6 +71,7 @@ export async function loginViaPage(
   page: Page,
   user: Record<string, string>
 ): Promise<void> {
+  await trackPortalRequests(page);
   // Navigate to uPortal welcome page prior to login
   const landingPageUrl = `${config.url}f/welcome/normal/render.uP`;
   await page.goto(landingPageUrl);
@@ -84,6 +85,10 @@ export async function loginViaPage(
   await expect(loggedInUserDisplay).toHaveText(
     `You are signed in as ${user.displayName}`
   );
+  // As loginViaUrl does: a /p/ page opened next while the landing page's
+  // portlets still have *.uP requests in flight renders without its
+  // portlet (MOD-I56)
+  await waitForPortalRequestsToSettle(page);
 }
 
 /*

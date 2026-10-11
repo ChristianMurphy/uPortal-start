@@ -33,7 +33,8 @@ The vendor names are the files in `tests/db/vendors`. Every vendor but HSQLDB ne
 5. The build under test (`uPortalVersion`, or `NEW_UPORTAL_VERSION`) reads the data:
    * **In place:** it is deployed on the same database without `dataInit` and starts once.
    * **Copy:** it creates the target database with `dataInit`, `dbMigrate` copies the 5.17 database
-     into it, and it starts once on the copy.
+     into it with `--target-profile 6.0` and `--source-zone` (see "Time zones"), and it starts once
+     on the copy.
 6. The build under test exports everything. Its export must equal 5.17's second export with
    nothing masked.
 
@@ -73,6 +74,9 @@ changes with its reason.
   a portlet's categories, groups, permissions and parameters, PAGS test groups, tests and members,
   permission owner activities, and layout structure attributes. Layout nodes, preference values
   and attribute values keep their order, because uPortal stores it.
+* **Timestamps with an offset** are printed as the same instant in UTC. uPortal prints an
+  `xs:dateTime` with the offset of the JVM's zone, and a run in another zone (see "Time zones")
+  must still match the reference, which was recorded in UTC.
 * **One mask** applies, and only in the comparison with the reference. `dataInit` stamps a
   PUBLISHED lifecycle entry (user `system`) on each portlet definition that has no
   `<lifecycle>`. Its date is the time the job ran.
@@ -93,7 +97,9 @@ the 5.17 export on its own vendor exactly.
 On HSQLDB and PostgreSQL 18, 5.17's export equals the reference. On MySQL and MariaDB, 5.17's
 schema stores timestamps as `DATETIME` without fractional seconds (MOD-I95), so the 5.17 export
 loses the milliseconds of four values: three lifecycle entries and one `lastPasswordChange`.
-`vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that.
+`vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that. On SQL Server, 5.17 stores them
+as `datetime`, in steps of 1/300 s: the one value in the reference that isn't on such a step,
+feedback-admin's PUBLISHED date, comes back 2 ms later. `vendors/sqlserver.diff` records that.
 
 ## SQL Server: the fixture in windows-1252
 
@@ -106,11 +112,13 @@ fixture as it is.
 
 When the 5.17 side of a run is SQL Server (in place, or the source of a copy), `equivalence.sh`
 converts the fixture and the reference with `tests/db/equivalence/code_page.py` before it starts.
-The same function, `to_code_page`, converts both: each character outside windows-1252 becomes one
-`?`, in file contents, numeric character references and file names. It leaves text already in
-windows-1252 unchanged. Both comparisons are exact: 5.17's export must equal the converted
-reference, and the export of the build under test must equal 5.17's. A copy into SQL Server uses
-the fixture unchanged, so it shows whether 6.0 on SQL Server keeps text outside windows-1252.
+The same function, `to_code_page`, converts both. Each character outside windows-1252 becomes one
+`_`, whether it is in a file's text or a file name, and so does a numeric character reference to
+one. It leaves text already in windows-1252 unchanged. It writes `_` rather than SQL Server's `?`
+because 5.17 names exported files after group names, and `?` is not allowed in a GitHub Actions
+artifact. Both comparisons are exact: 5.17's export must equal the converted reference, and the
+export of the build under test must equal 5.17's. A copy into SQL Server uses the fixture unchanged,
+so it shows whether 6.0 on SQL Server keeps text outside windows-1252.
 
 The conversion changes these fixture fields:
 
@@ -136,6 +144,34 @@ The conversion changes these fixture fields:
 
 `python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'` tests the conversion. The
 plan job of `migration-equivalence.yml` runs it.
+
+## Oracle: no 5.17 export
+
+uPortal 5.17's `dataExport` fails for every layout profile on Oracle (MOD-I200). Its
+`export-profile.crn` passes the profile's ids to Java methods that take a `long` or an `int`, and
+Oracle returns its `NUMBER` columns as `BigDecimal`, which Groovy doesn't convert. 6.0 converts
+them, but 5.17's export on Oracle can't be the comparison. When the 5.17 side of a run is Oracle
+(in place, or the source of a copy), `equivalence.sh` skips 5.17's export. The export of the build
+under test, masked like the reference, must then equal the reference, apart from
+`vendors/oracle.diff` if 5.17 stores the fixture differently on Oracle.
+
+## Time zones
+
+uPortal 5.17 stored seven timestamp columns as the clock time of the portal JVM's zone, and 6.0
+stores them in UTC (MOD-I141). Both export the instant the value stands for. A copy into 6.0
+converts those columns from the zone given as `--source-zone`. The exports
+show two of them: the portlets' lifecycle entries (`UP_PORTLET_LIFECYCLE`) and the password change
+of `fixture-zoe` (`UP_PERSON_DIR`).
+
+Every JVM of a run (5.17's, the build under test's and the copy tool's) runs in one zone,
+`EQUIVALENCE_ZONE` (default UTC). `equivalence.sh` exports it as `TZ` and passes it to the copy as
+`--source-zone`. In UTC the conversion leaves the values unchanged. In another zone, 5.17 stores
+local clock times, and the export of the build under test equals 5.17's only if the copy converted
+them with the right offset. The copy from MariaDB 11.4 to PostgreSQL 18 in the push set runs in
+America/New_York for that reason (`zone` in `matrix.json`).
+
+An in-place run accepts UTC only. In place, the build under test reads 5.17's local clock times as
+UTC, and 6.0 upgrades by copying only (MOD-D11).
 
 ## Reading a failure
 
@@ -169,9 +205,9 @@ same way `integration.yml` builds it. `tests/db/equivalence/matrix.json` lists t
 
 * **Push set** (a manual run without `nightly`, and every push to a `ccr-*` branch in this
   prototype, MOD-I74): in place on HSQLDB, PostgreSQL 18 and MariaDB 12.3. Copies from PostgreSQL 16
-  to MariaDB 12.3 and from MariaDB 11.4 to PostgreSQL 18.
+  to MariaDB 12.3 and, in America/New_York, from MariaDB 11.4 to PostgreSQL 18.
 * **Workstream branches** (prototype only, MOD-D30): in place on PostgreSQL 18 and the copy from
-  MariaDB 11.4 to PostgreSQL 18.
+  MariaDB 11.4 to PostgreSQL 18, in America/New_York.
 * **Nightly:** in place on every 6.0 runtime server, and one copy per vendor from its oldest source
   into the next vendor's runtime server. Each vendor is copied from once and into once.
 

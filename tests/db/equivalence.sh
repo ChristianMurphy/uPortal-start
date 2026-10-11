@@ -14,13 +14,16 @@
 # one. A second export (the first one writes to the database, MOD-I154) is what the build under
 # test must reproduce. On SQL Server, where 5.17 keeps only windows-1252 text (MOD-I196), the
 # fixture and the reference are first converted to that code page (tests/db/equivalence/code_page.py).
+# On Oracle, where 5.17 can't export layout profiles (MOD-I200), 5.17 doesn't export: the build
+# under test's export, masked, must equal the reference apart from the vendor's recorded diff.
 #
 #   in-place  The build under test (NEW_UPORTAL_VERSION) is deployed on the same database, starts
 #             once and exports everything; that export must be identical to 5.17's, unmasked.
 #   copy      The build under test creates <target> with dataInit, dbMigrate copies <source> into
-#             it, and the build under test starts on <target> and exports; identical to 5.17's
-#             export of <source>, unmasked. Timestamps compare in whole seconds when one side keeps
-#             less precision than the other (MySQL/MariaDB DATETIME, SQL Server datetime: MOD-I95).
+#             it (--target-profile 6.0, --source-zone of the run's zone: MOD-I141), and the build
+#             under test starts on <target> and exports; identical to 5.17's export of <source>,
+#             unmasked. Timestamps compare in whole seconds when one side keeps less precision than
+#             the other (MySQL/MariaDB DATETIME, SQL Server datetime: MOD-I95).
 #
 # Options:
 #   --record   in-place only: write the masked 5.17 export as the new reference instead of comparing
@@ -32,6 +35,9 @@
 #   NEW_UPORTAL_VERSION   the build under test (default: uPortalVersion in gradle.properties)
 #   EQUIVALENCE_CODE_PAGE the code page to convert the fixture to (default: cp1252 when the 5.17
 #                         side is SQL Server, else none); e.g. cp1252 to try SQL Server's on hsqldb
+#   EQUIVALENCE_ZONE      the time zone of every JVM the run starts (default UTC); 5.17 stores some
+#                         timestamps in it, and the copy converts them from it. Copy only, for any
+#                         zone but UTC: 6.0 reads those timestamps as UTC (MOD-I141)
 #
 # Needs Docker for every vendor but hsqldb, and the build under test's uPortal-db-migrate for copy.
 # Everything a run produces is in build/db-equivalence/<in-place-vendor|source-to-target>/. On GitHub
@@ -52,7 +58,7 @@ while [ $# -gt 0 ]; do
         --record) RECORD=true ;;
         --keep) KEEP=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,46p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
         *) ARGS+=("$1") ;;
     esac
@@ -87,6 +93,20 @@ if [ "$RECORD" = true ] && [ "${OLD%%.*}" != 5 ]; then
     exit 2
 fi
 
+# 5.17 stores some timestamps as the JVM's local clock time; the build under test stores them in
+# UTC and a copy into 6.0 converts them (MOD-I141). Every JVM of the run (5.17's, the build under
+# test's, the copy tool's) runs in one zone, which the copy is told as --source-zone
+ZONE=${EQUIVALENCE_ZONE:-UTC}
+if [ ! -f "/usr/share/zoneinfo/$ZONE" ]; then
+    echo "Unknown time zone EQUIVALENCE_ZONE=$ZONE (no /usr/share/zoneinfo/$ZONE)" >&2
+    exit 2
+fi
+if [ "$MODE" = in-place ] && [ "$ZONE" != UTC ]; then
+    echo "EQUIVALENCE_ZONE=$ZONE works with copy only: in place, the build under test reads 5.17's local times as UTC, and 6.0 upgrades by copying (MOD-D11)" >&2
+    exit 2
+fi
+export TZ="$ZONE"
+
 HTTP_PORT=8080
 for arg in "${GRADLE_EXTRA[@]+"${GRADLE_EXTRA[@]}"}"; do
     case "$arg" in -PtomcatHttpPort=*) HTTP_PORT="${arg#-PtomcatHttpPort=}" ;; esac
@@ -107,16 +127,14 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 FAILED=()
 RESULTS=()
-TIMINGS=()
 
-step() {  # step <name> <log> <command...>: run, log and time a step; remember a failure
-    local name="$1" log="$OUT/$2" started status
+step() {  # step <name> <log> <command...>: run, log and time a step (see phase_begin); remember a failure
+    local name="$1" log="$OUT/$2" status
     shift 2
-    echo "==== $NAME: $name"
-    started=$(date +%s)
+    phase_begin "$name"
     "$@" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
-    TIMINGS+=("$(printf '%-58s %5ss  %s' "$name" "$(( $(date +%s) - started ))" "$([ "$status" -eq 0 ] && echo ok || echo FAILED)")")
+    phase_end "$status"
     if [ "$status" -ne 0 ]; then FAILED+=("$name (see $log)"); fi
     return "$status"
 }
@@ -180,6 +198,8 @@ show_reports() {  # show_reports <import|export>
         cp "$report" "$OUT/$report"
         echo "==== $report"
         head -n 40 "$report"
+        # A stack trace's cause comes after its first 40 lines
+        grep -E '^(Caused by|[[:space:]]*[A-Za-z0-9_.$]+(Exception|Error):)' "$report" | sort -u | head -n 10
     done < <(find overlays/*/build/data-"$1"-reports -type f 2>/dev/null | sort)
 }
 
@@ -265,8 +285,8 @@ report_result() {  # report_result <title> <report> <status>: log, summary and a
 
 cleanup() {
     if [ "$KEEP" = false ]; then
-        stop_database "$SOURCE"
-        if [ "$TARGET" != "$SOURCE" ]; then stop_database "$TARGET"; fi
+        timed "stop the $SOURCE database" stop_database "$SOURCE"
+        if [ "$TARGET" != "$SOURCE" ]; then timed "stop the $TARGET database" stop_database "$TARGET"; fi
     fi
 }
 
@@ -274,7 +294,7 @@ write_summary() {
     {
         echo "### Migration equivalence: $NAME"
         echo
-        echo "uPortal $OLD wrote the data; the build under test is uPortal $NEW."
+        echo "uPortal $OLD wrote the data; the build under test is uPortal $NEW. Time zone: $ZONE."
         echo
         echo "| Check | Result | Files |"
         echo "| --- | --- | --- |"
@@ -299,32 +319,51 @@ if [ "$MODE" = copy ] && [ "$(family "$SOURCE")" != "$(family "$TARGET")" ]; the
     esac
 fi
 
-echo "==== Migration equivalence $NAME: uPortal $OLD writes, uPortal $NEW reads"
-if ! start_database "$SOURCE" || { [ "$TARGET" != "$SOURCE" ] && ! start_database "$TARGET"; }; then
+echo "==== Migration equivalence $NAME: uPortal $OLD writes, uPortal $NEW reads, in $ZONE"
+if ! timed "start the $SOURCE database" start_database "$SOURCE" ||
+    { [ "$TARGET" != "$SOURCE" ] && ! timed "start the $TARGET database" start_database "$TARGET"; }; then
     FAILED+=("starting the databases")
     cleanup
     write_summary
     exit 1
 fi
 
+# 5.17's dataExport fails for every layout profile on Oracle (MOD-I200), so its export can't be
+# compared there: the build under test's export is compared with the reference instead
+OLD_EXPORTS=true
+if [ "$(family "$SOURCE")" = oracle ]; then
+    if [ "$RECORD" = true ]; then
+        echo "Record the reference on hsqldb: 5.17 can't export on $SOURCE (MOD-I200)" >&2
+        exit 2
+    fi
+    OLD_EXPORTS=false
+fi
+
+old_exports() {  # 5.17 exports twice, where it can
+    [ "$OLD_EXPORTS" = false ] && return 0
+    step "5.17 on $SOURCE: dataExport" old-export.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17-first" &&
+        step "normalise the 5.17 export, masked" old-normalize-masked.log normalize "$OUT/export-5.17-first" "$OUT/normalized-5.17-masked" -PmaskVolatile &&
+        # Exporting layouts writes a default profile for every user without one (MOD-I154), so the
+        # first export changed the database. The build under test is compared with a second export,
+        # of the database it will read; the reference with the first, of the database 5.17 left.
+        step "5.17 on $SOURCE: dataExport again" old-export-again.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17" &&
+        step "normalise the second 5.17 export" old-normalize.log normalize "$OUT/export-5.17" "$OUT/normalized-5.17" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"
+}
+
 # 1. uPortal 5.17 writes the data, runs once, and exports it
 if { [ -z "$CODE_PAGE" ] || step "convert the fixture and the reference to $CODE_PAGE" code-page.log convert_to_code_page; } &&
     step "5.17 on $SOURCE: deploy, dataInit" old-init.log create_database "$SOURCE" "$OLD" &&
     step "5.17 on $SOURCE: import the fixture" old-import.log import_fixture "$SOURCE" "$OLD" &&
     step "5.17 on $SOURCE: start once" old-start.log start_once "$SOURCE" &&
-    step "5.17 on $SOURCE: dataExport" old-export.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17-first" &&
-    step "normalise the 5.17 export, masked" old-normalize-masked.log normalize "$OUT/export-5.17-first" "$OUT/normalized-5.17-masked" -PmaskVolatile &&
-    # Exporting layouts writes a default profile for every user without one (MOD-I154), so the
-    # first export changed the database. The build under test is compared with a second export,
-    # of the database it will read; the reference with the first, of the database 5.17 left.
-    step "5.17 on $SOURCE: dataExport again" old-export-again.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17" &&
-    step "normalise the second 5.17 export" old-normalize.log normalize "$OUT/export-5.17" "$OUT/normalized-5.17" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; then
+    old_exports; then
     if [ "$RECORD" = true ]; then
         use_vendor ''
         step "record the reference" record.log gradle dataExportRecord -PnormalizedDir="$ROOT/$OUT/normalized-5.17-masked"
-    else
+    elif [ "$OLD_EXPORTS" = true ]; then
         compare "5.17 on $SOURCE = reference" "$REFERENCE" "$OUT/normalized-5.17-masked" reference,export \
             "$OUT/reference-report.txt" "$(vendor_diff "$SOURCE")"
+    else
+        RESULTS+=("| 5.17 on $SOURCE = reference | not exported (MOD-I200) | |")
     fi
     OLD_OK=true
 else
@@ -338,19 +377,31 @@ if [ "$RECORD" = false ] && [ "$OLD_OK" = true ]; then
     else
         migrate() {
             use_vendor ''
-            gradle -PuPortalVersion="$NEW" dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget
+            gradle -PuPortalVersion="$NEW" dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget \
+                -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone="$ZONE"
         }
         prepare() {
             step "$NEW on $TARGET: deploy, dataInit" new-init.log create_database "$TARGET" "$NEW" &&
                 step "dbMigrate $SOURCE to $TARGET (copy, verify)" db-migrate.log migrate
         }
     fi
+    if [ "$OLD_EXPORTS" = true ]; then
+        normalize_current() { normalize "$OUT/export-current" "$OUT/normalized-current" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; }
+    else
+        # Compared with the reference, so masked the same way
+        normalize_current() { normalize "$OUT/export-current" "$OUT/normalized-current" -PmaskVolatile "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; }
+    fi
     if prepare &&
         step "$NEW on $TARGET: start once" new-start.log start_once "$TARGET" &&
         step "$NEW on $TARGET: dataExport" new-export.log export_all "$TARGET" "$NEW" "$OUT/export-current" &&
-        step "normalise the export of the build under test" new-normalize.log normalize "$OUT/export-current" "$OUT/normalized-current" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; then
-        compare "$NEW on $TARGET = 5.17 on $SOURCE" "$OUT/normalized-5.17" "$OUT/normalized-current" 5.17,current \
-            "$OUT/equivalence-report.txt"
+        step "normalise the export of the build under test" new-normalize.log normalize_current; then
+        if [ "$OLD_EXPORTS" = true ]; then
+            compare "$NEW on $TARGET = 5.17 on $SOURCE" "$OUT/normalized-5.17" "$OUT/normalized-current" 5.17,current \
+                "$OUT/equivalence-report.txt"
+        else
+            compare "$NEW on $TARGET = reference" "$REFERENCE" "$OUT/normalized-current" reference,current \
+                "$OUT/equivalence-report.txt" "$(vendor_diff "$SOURCE")"
+        fi
     fi
 fi
 
@@ -358,6 +409,7 @@ cleanup
 write_summary
 echo "==== Migration equivalence $NAME summary"
 printf '%s\n' "${TIMINGS[@]+"${TIMINGS[@]}"}"
+github_annotation notice "Migration equivalence $NAME: phase times" "$(printf '%s\n' "${TIMINGS[@]+"${TIMINGS[@]}"}")"
 printf '%s\n' "${RESULTS[@]+"${RESULTS[@]}"}"
 if [ ${#FAILED[@]} -gt 0 ]; then
     printf 'FAILED: %s\n' "${FAILED[@]}"

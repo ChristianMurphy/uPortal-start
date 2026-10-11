@@ -1,0 +1,418 @@
+name: HTTP replay
+#
+# HTTP differential replay and security matrix (MOD-D29 items 2 and 8; docs/http-replay.md).
+#
+# replay (every push): builds uPortal from source the way integration.yml does, starts the portal
+#   on HSQLDB with the quickstart data, replays every request in tests/replay/fixtures/5.17 (the
+#   route crawl and the requests the Playwright suite makes, as guest, student, staff, faculty and
+#   admin), and compares status, redirect, selected headers, cookie attributes and the normalised
+#   JSON and HTML with what uPortal 5.17 answered. It also asserts the security matrix, that every
+#   local account still logs in, the CSRF behaviour and the security header snapshot. Differences
+#   that tests/replay/intended-differences.json does not list fail the job; the job summary shows
+#   them.
+#
+# record (never implicit): records the fixtures from real uPortal 5.17, that is uPortal-start
+#   master (released uPortalVersion, Tomcat 8.5, Gradle 6.9.4, Java 11). Run it with
+#   workflow_dispatch and record=true, or push a commit whose message contains [replay-record].
+#   The fixtures are uploaded as an artifact; with commit=true (or [replay-record commit]) they
+#   are also committed to the branch the run is for, unless that is the default branch.
+#
+on:
+  push:
+    branches:
+      # Prototype only (MOD-I74): run on the modernization branches. Drop before upstreaming.
+      - 'ccr-*'
+  workflow_dispatch:
+    inputs:
+      record:
+        description: 'Record the 5.17 fixtures from uPortal-start master instead of replaying'
+        type: boolean
+        required: false
+        default: false
+      commit:
+        description: 'With record: commit the recorded fixtures to this branch'
+        type: boolean
+        required: false
+        default: false
+      reference-ref:
+        description: 'With record: the uPortal-start ref that runs the reference (5.17)'
+        required: false
+        default: 'master'
+      uportal-repository:
+        description: 'uPortal repository (owner/name) to build for the replay; empty means <this owner>/uPortal'
+        required: false
+        default: ''
+      uportal-ref:
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch ccr-43ba0785-hzlrj5, else master'
+        required: false
+        default: ''
+permissions:
+  contents: read
+env:
+  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # writes the cache only on the default branch by default, and none of our work branches is that
+  # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
+  # Prototype only (MOD-D53): the first job of a key to finish saves its Gradle cache, and an entry
+  # is never replaced. So one job per runner OS and set of build files saves it, the one whose
+  # Gradle work is the broadest, and the other jobs of the key only read (this variable). On the
+  # default branch and in pull requests every job keeps the action's default.
+  GRADLE_CACHE_READ_ONLY_SHARED: ${{ github.event.repository.default_branch != github.ref_name }}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
+  # cancels the older run.
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+
+jobs:
+  # The replay's rules with seeded violations (tests/replay/evaluate.check.mjs); no portal needed
+  rules:
+    name: "Replay rules"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Run the rule checks
+        run: node --test tests/replay/evaluate.check.mjs
+
+  uportal:
+    name: "Build uPortal"
+    # Not a record run: those use the record job. Whether a push to a workstream branch changes the
+    # replay is decided by the first steps below, not by a job the build waits for (MOD-I303).
+    if: ${{ !((github.event_name == 'workflow_dispatch' && inputs.record == true) || (github.event_name != 'workflow_dispatch' && (contains(github.event.head_commit.message, '[replay-record commit]') || contains(github.event.head_commit.message, '[replay-record]')))) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.uportal.outputs.version }}
+      repository: ${{ steps.source.outputs.repository }}
+      ref: ${{ steps.source.outputs.ref }}
+      sha: ${{ steps.source.outputs.sha }}
+      replay: ${{ steps.mode.outputs.replay }}
+    steps:
+      # Prototype only (MOD-D30): on a workstream branch (ccr-43ba0785-hzlrj5-<topic>) the replay
+      # runs only when the push changes the replay itself; the integration branch replays on every
+      # push. A new branch (no previous commit to compare with) replays. The checkout also brings
+      # the script that chooses the uPortal to build (MOD-I307), on every kind of run.
+      - name: Checkout the history to compare
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          fetch-depth: 0
+          filter: blob:none
+          path: plan
+      - name: Does the push change the replay
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          replay=true
+          if [ "$WORKSTREAM" = true ] && [ "$EVENT" = push ] && git -C plan cat-file -e "$BEFORE^{commit}" 2> /dev/null; then
+            if ! git -C plan diff --no-renames --name-only "$BEFORE" "$AFTER" | grep -qE '^(tests/replay/|\.github/workflows/replay\.yml$)'; then
+              replay=false
+            fi
+          fi
+          echo "replay=$replay" >> "$GITHUB_OUTPUT"
+          echo "Replay: $replay" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=HTTP replay::replay=$replay"
+      - name: Choose the uPortal repository and ref
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        id: source
+        env:
+          INPUT_REPOSITORY: ${{ inputs.uportal-repository }}
+          INPUT_REF: ${{ inputs.uportal-ref }}
+          OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ github.ref_name }}
+        run: plan/.github/scripts/choose-uportal.sh
+      - name: Checkout uPortal
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.source.outputs.repository }}
+          ref: ${{ steps.source.outputs.sha || steps.source.outputs.ref }}
+          persist-credentials: false
+      - name: Read uPortal's JDK
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        id: jdk
+        run: |
+          sdk=$(sed -n 's/^java=//p' .sdkmanrc | tr -d '\r')
+          version=${sdk%%.*}
+          case "${sdk##*-}" in
+            amzn) distribution=corretto ;;
+            zulu) distribution=zulu ;;
+            *) distribution=temurin ;;
+          esac
+          if ! [[ "$version" =~ ^[0-9]+$ ]]; then
+            echo "Cannot read the JDK from uPortal's .sdkmanrc ('$sdk')" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "distribution=$distribution" >> "$GITHUB_OUTPUT"
+      - name: Setup Java
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: ${{ steps.jdk.outputs.distribution }}
+          java-version: ${{ steps.jdk.outputs.version }}
+      - name: Setup Gradle
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
+      - name: Build and install uPortal
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        run: ./gradlew --no-daemon --no-parallel -PquietCompile install
+      - name: Read the uPortal version
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        id: uportal
+        env:
+          REPOSITORY: ${{ steps.source.outputs.repository }}
+          REF: ${{ steps.source.outputs.ref }}
+        run: |
+          version=$(sed -n 's/^version=//p' gradle.properties | tr -d '\r')
+          if ! [[ "$version" =~ ^[0-9A-Za-z._+-]+$ ]]; then
+            echo "Unexpected uPortal version '$version'" >&2
+            exit 1
+          fi
+          ls ~/.m2/repository/org/jasig/portal/uPortal-webapp/"$version"/
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Built uPortal $version from $REPOSITORY@$REF ($(git rev-parse HEAD))" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the uPortal build
+        if: ${{ steps.mode.outputs.replay == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: replay-uportal-maven-local
+          path: ~/.m2/repository/org/jasig/portal/
+          if-no-files-found: error
+          retention-days: 3
+      # The last lines of the job's log say which uPortal was built, because agents can't read the
+      # job summary (MOD-I307)
+      - name: Say which uPortal was built
+        if: ${{ !cancelled() }}
+        env:
+          UPORTAL: ${{ steps.source.outputs.description }}
+          VERSION: ${{ steps.uportal.outputs.version }}
+          REPLAY: ${{ steps.mode.outputs.replay }}
+        run: |
+          echo "uPortal under test: ${UPORTAL:-none chosen}"
+          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "Replay: $REPLAY"
+
+  replay:
+    name: "Replay against 5.17"
+    needs: uportal
+    if: ${{ needs.uportal.outputs.replay == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the uPortal build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: replay-uportal-maven-local
+          path: ~/.m2/repository/org/jasig/portal
+      # Registry entries name sections of the built uPortal's UPGRADING-6.0.md, which must exist
+      - name: Checkout uPortal's UPGRADING-6.0.md
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ needs.uportal.outputs.repository }}
+          ref: ${{ needs.uportal.outputs.sha || needs.uportal.outputs.ref }}
+          path: uportal-docs
+          sparse-checkout: docs/UPGRADING-6.0.md
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Bootstrap gradle.properties for the uPortal build
+        env:
+          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
+        run: |
+          cp gradle.properties.example gradle.properties
+          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
+          grep '^uPortalVersion=' gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
+      - name: Initialize portal
+        run: ./gradlew portalInit
+      - name: Check the deployed uPortal version
+        env:
+          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
+        run: ls -l ".gradle/tomcat/webapps/uPortal/WEB-INF/lib/uPortal-core-$UPORTAL_VERSION.jar"
+      - name: Start Tomcat
+        run: ./gradlew tomcatStart && tests/replay/portal.sh wait
+      - name: Replay and compare with 5.17
+        run: node tests/replay/replay.mjs replay --origin http://localhost:8080 --upgrading uportal-docs/docs/UPGRADING-6.0.md
+      - name: Upload the report and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: replay-report
+          path: |
+            build/replay/
+            .gradle/tomcat/logs/
+          include-hidden-files: true
+      - name: Stop Tomcat
+        if: always()
+        run: ./gradlew tomcatStop
+
+  record:
+    name: "Record the 5.17 reference"
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.record == true) || (github.event_name != 'workflow_dispatch' && (contains(github.event.head_commit.message, '[replay-record commit]') || contains(github.event.head_commit.message, '[replay-record]'))) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      recorded: ${{ steps.record.outputs.recorded }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The reference: uPortal-start master runs the released uPortal 5.17 on Tomcat 8.5 (Gradle 6.9.4, Java 11)
+      - name: Checkout the reference
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.reference-ref || 'master' }}
+          path: reference
+          persist-credentials: false
+      - name: Bootstrap the reference's gradle.properties
+        working-directory: reference
+        run: |
+          cp gradle.properties.example gradle.properties
+          grep -E '^(uPortalVersion|tomcatVersion)=' gradle.properties | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 11
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Initialize and start the reference
+        working-directory: reference
+        run: ./gradlew portalInit && ./gradlew tomcatStart && ../tests/replay/portal.sh wait
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Find the Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      # The suite's failures do not matter here: a failed test made its requests too
+      - name: Run the Playwright suite with network traces
+        run: npx playwright test --config=tests/replay/suite-pw.config.mjs || echo "::warning title=HTTP replay::Some Playwright specs failed against the reference"
+      - name: List the requests the suite made
+        run: node tests/replay/harvest.mjs build/replay/suite-results build/replay/suite-requests.json http://localhost:8080
+      - name: Record
+        id: record
+        run: |
+          tests/replay/portal.sh reset reference
+          node tests/replay/replay.mjs record --origin http://localhost:8080 --suite build/replay/suite-requests.json --label "$(sed -n 's/^uPortalVersion=/uPortal /p' reference/gradle.properties) on uPortal-start master"
+          echo "recorded=true" >> "$GITHUB_OUTPUT"
+      # The masks must hide everything that differs between two runs of the same portal
+      - name: Replay against the reference itself
+        run: |
+          tests/replay/portal.sh reset reference
+          node tests/replay/replay.mjs replay --origin http://localhost:8080 --report build/replay/self-check.md --self-check true
+      - name: Upload the fixtures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: replay-fixtures-5.17
+          path: |
+            tests/replay/fixtures/5.17/
+            build/replay/self-check.md
+            reference/.gradle/tomcat/logs/
+          include-hidden-files: true
+      - name: Stop the reference
+        if: always()
+        working-directory: reference
+        run: ./gradlew tomcatStop
+
+  commit:
+    name: "Commit the recorded fixtures"
+    needs: record
+    # Also when the self-check failed: its report is committed with the fixtures for review
+    if: ${{ always() && needs.record.outputs.recorded == 'true' && ((github.event_name == 'workflow_dispatch' && inputs.record == true && inputs.commit == true) || (github.event_name != 'workflow_dispatch' && contains(github.event.head_commit.message, '[replay-record commit]'))) && github.ref_name != github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the fixtures
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: replay-fixtures-5.17
+          path: build/recorded
+      - name: Commit and push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          rm -rf tests/replay/fixtures/5.17
+          mkdir -p tests/replay/fixtures
+          cp -r build/recorded/tests/replay/fixtures/5.17 tests/replay/fixtures/5.17
+          cp build/recorded/build/replay/self-check.md tests/replay/fixtures/5.17/self-check.md || true
+          git add tests/replay/fixtures/5.17
+          if git diff --cached --quiet; then
+            echo "The fixtures did not change" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "test(e2e): record the 5.17 http replay fixtures" -m "Recorded by $RUN_URL" -m "[skip ci]"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          # Commits pushed to the branch while the recording ran are kept: the fixtures go on top
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch -q "https://github.com/$REPOSITORY.git" "refs/heads/$BRANCH"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            rebase -q FETCH_HEAD
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push "https://github.com/$REPOSITORY.git" "HEAD:refs/heads/$BRANCH"
+          echo "Committed the fixtures to $BRANCH as $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"

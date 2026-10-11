@@ -3,8 +3,8 @@ name: Integration
 # Tests uPortal-start against uPortal built from source, instead of the released uPortalVersion
 # in gradle.properties.example (MOD-D16):
 #
-#   1. builds uPortal (by default the branch of the same name in <owner>/uPortal; for a workstream
-#      branch such as ccr-x-topic without one, its parent ccr-x; else master)
+#   1. builds uPortal (by default the branch of the same name in <owner>/uPortal, else its
+#      integration branch ccr-43ba0785-hzlrj5, else master; the job summary says which, MOD-I307)
 #      with the JDK its .sdkmanrc names and its own Gradle wrapper, and installs it into
 #      ~/.m2, which is uploaded as an artifact;
 #   2. runs the full Playwright suite on HSQLDB against that build, with local login, and the auth
@@ -49,11 +49,21 @@ on:
         required: false
         default: ''
       uportal-ref:
-        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else its nearest parent branch (ccr-x-topic -> ccr-x), else master'
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch ccr-43ba0785-hzlrj5, else master'
         required: false
         default: ''
 permissions:
   contents: read
+env:
+  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # writes the cache only on the default branch by default, and none of our work branches is that
+  # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
+  # Prototype only (MOD-D53): the first job of a key to finish saves its Gradle cache, and an entry
+  # is never replaced. So one job per runner OS and set of build files saves it, the one whose
+  # Gradle work is the broadest, and the other jobs of the key only read (this variable). On the
+  # default branch and in pull requests every job keeps the action's default.
+  GRADLE_CACHE_READ_ONLY_SHARED: ${{ github.event.repository.default_branch != github.ref_name }}
 concurrency:
   # Manual and scheduled runs get their own group, so a newer push doesn't cancel them.
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
@@ -67,7 +77,37 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.uportal.outputs.version }}
+      set: ${{ steps.set.outputs.set }}
+      migrate: ${{ steps.migrate.outputs.matrix }}
     steps:
+      # The planning of the database jobs (MOD-I303) runs first in this job, not in a job of its
+      # own that the build would wait for: which set this event runs, and the G-migrate pairs. It
+      # needs only the matrix files of this repository.
+      - name: Checkout the plan files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+            tests/db/migrate
+            tests/db/vendors
+          path: plan
+      # nightly: the schedule or a manual nightly run; workstream (prototype only, MOD-D30): a
+      # push to a ccr-43ba0785-hzlrj5-<topic> branch; push: everything else, manual runs included
+      - name: Choose the set
+        id: set
+        env:
+          SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && 'workstream' || 'push' }}
+        run: |
+          echo "set=$SET" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Integration set::$SET"
+      # Checks the coverage rules too, so a pair list that misses a source or target fails here
+      - name: G-migrate pairs
+        id: migrate
+        env:
+          SET: ${{ steps.set.outputs.set }}
+        working-directory: plan
+        run: node tests/db/migrate/matrix.mjs "$SET" >> "$GITHUB_OUTPUT"
       - name: Choose the uPortal repository and ref
         id: source
         env:
@@ -75,33 +115,12 @@ jobs:
           INPUT_REF: ${{ inputs.uportal-ref }}
           OWNER: ${{ github.repository_owner }}
           BRANCH: ${{ github.ref_name }}
-        run: |
-          repository="${INPUT_REPOSITORY:-$OWNER/uPortal}"
-          ref="$INPUT_REF"
-          # A workstream branch (MOD-D30) such as ccr-x-topic uses uPortal's ccr-x-topic if it
-          # exists, else drops one -suffix at a time until a uPortal branch matches (ccr-x).
-          candidate="$BRANCH"
-          while [ -z "$ref" ] && [ -n "$candidate" ]; do
-            if git ls-remote --exit-code --heads "https://github.com/$repository" "refs/heads/$candidate" > /dev/null; then
-              ref="$candidate"
-            elif [[ "$candidate" == *-* ]]; then
-              candidate="${candidate%-*}"
-            else
-              candidate=""
-            fi
-          done
-          ref="${ref:-master}"
-          if ! [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "$ref" =~ ^[A-Za-z0-9_./-]+$ ]]; then
-            echo "Unexpected repository '$repository' or ref '$ref'" >&2
-            exit 1
-          fi
-          echo "repository=$repository" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+        run: plan/.github/scripts/choose-uportal.sh
       - name: Checkout uPortal
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ steps.source.outputs.repository }}
-          ref: ${{ steps.source.outputs.ref }}
+          ref: ${{ steps.source.outputs.sha || steps.source.outputs.ref }}
           persist-credentials: false
       # uPortal's CI matrix includes the JDK its .sdkmanrc pins (java=25.0.4-tem, or
       # java=11.0.30-amzn on a Gradle 6 ref); build with that major version and vendor.
@@ -130,10 +149,13 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY }}
       # `install` publishes to ~/.m2 on every uPortal build (an alias of publishToMavenLocal
-      # since Gradle 9); the tests already ran in uPortal's own CI
+      # since Gradle 9); the tests already ran in uPortal's own CI. -PquietCompile (uPortal's
+      # build.gradle, ignored by a ref without it) leaves the compiler warnings out of the log
+      # and keeps every compile error.
       - name: Build and install uPortal
-        run: ./gradlew -S --stacktrace --no-daemon --no-parallel install
+        run: ./gradlew --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
         id: uportal
         env:
@@ -155,32 +177,18 @@ jobs:
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 7
-
-  plan:
-    name: "Plan the database jobs"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      set: ${{ steps.set.outputs.set }}
-      migrate: ${{ steps.migrate.outputs.matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # nightly: the schedule or a manual nightly run; workstream (prototype only, MOD-D30): a
-      # push to a ccr-43ba0785-hzlrj5-<topic> branch; push: everything else, manual runs included
-      - name: Choose the set
-        id: set
+      # The last lines of the job's log say which uPortal was built, because agents can't read the
+      # job summary (MOD-I307)
+      - name: Say which uPortal was built
+        if: ${{ !cancelled() }}
         env:
-          SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && 'workstream' || 'push' }}
-        run: echo "set=$SET" >> "$GITHUB_OUTPUT"
-      # Checks the coverage rules too, so a pair list that misses a source or target fails here
-      - name: G-migrate pairs
-        id: migrate
-        env:
+          UPORTAL: ${{ steps.source.outputs.description }}
+          VERSION: ${{ steps.uportal.outputs.version }}
           SET: ${{ steps.set.outputs.set }}
-        run: node tests/db/migrate/matrix.mjs "$SET" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "uPortal under test: ${UPORTAL:-none chosen}"
+          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "Integration set: $SET"
 
   playwright:
     name: "Playwright: hsqldb"
@@ -216,10 +224,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          cache: npm
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
@@ -227,13 +237,13 @@ jobs:
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Initialize portal
-        run: ./gradlew -i -S portalInit
+        run: ./gradlew -i portalInit
       - name: Check the deployed uPortal version
         env:
           UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
         run: ls -l ".gradle/tomcat/webapps/uPortal/WEB-INF/lib/uPortal-core-$UPORTAL_VERSION.jar"
       - name: Start Tomcat
-        run: ./gradlew -i -S tomcatStart
+        run: ./gradlew -i tomcatStart
       - name: Wait for portal
         run: |
           for i in $(seq 1 60); do
@@ -248,6 +258,14 @@ jobs:
           exit 1
       - name: Install npm dependencies
         run: npm ci
+      - name: Find the Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
@@ -266,7 +284,7 @@ jobs:
             .gradle/tomcat/logs/
       - name: Stop Tomcat
         if: always()
-        run: ./gradlew -i -S tomcatStop
+        run: ./gradlew -i tomcatStop
 
   # The opt-in CAS mode (-PauthMode=cas, docs/authentication.md, MOD-Q3) on the uPortal build: the
   # auth and proxy ticket specs against the development CAS 8 container, then once more with CAS
@@ -309,21 +327,23 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          cache: npm
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Start CAS
-        run: ./gradlew -i -S casStart
+        run: ./gradlew -i casStart
       - name: Initialize portal
-        run: ./gradlew -i -S portalInit
+        run: ./gradlew -i portalInit
       - name: Start Tomcat
-        run: ./gradlew -i -S tomcatStart
+        run: ./gradlew -i tomcatStart
       - name: Wait for portal
         run: |
           for i in $(seq 1 60); do
@@ -338,6 +358,14 @@ jobs:
           exit 1
       - name: Install npm dependencies
         run: npm ci
+      - name: Find the Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Run the auth and proxy ticket specs against CAS
@@ -345,14 +373,30 @@ jobs:
       - name: CAS log
         if: always()
         run: docker compose --file docker/cas/compose.yaml --project-name uportal-cas-8090 logs --no-color | tail -n 200 || true
+      # The auth spec must fail because CAS is down, at CAS's login form, and for no other reason
+      # (MOD-I241): the portal still answers, the run has no setup errors, only the auth spec fails
       - name: "Seeded fault: the auth spec fails with CAS stopped"
         run: |
+          # Playwright resolves a relative report path against the config's directory (tests/)
+          report="$GITHUB_WORKSPACE/build/cas-stopped.json"
           ./gradlew -q casStop
-          if npx playwright test --config=tests/uportal-pw.config.ts --retries=0 --reporter=line tests/ux/auth; then
+          if curl -s -o /dev/null http://localhost:8090/cas/login; then
+            echo "::error::CAS still answers on port 8090 after casStop"
+            exit 1
+          fi
+          if ! curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/uPortal/ | grep -qE "200|302"; then
+            echo "::error::The portal doesn't answer, so the seeded fault can't be told apart from it"
+            exit 1
+          fi
+          if PLAYWRIGHT_JSON_OUTPUT_NAME="$report" npx playwright test --config=tests/uportal-pw.config.ts \
+              --retries=0 --reporter=line,json tests/ux/auth; then
             echo "::error::The auth spec passed with the CAS server stopped"
             exit 1
           fi
-          echo "The auth spec failed with CAS stopped, as it should" >> "$GITHUB_STEP_SUMMARY"
+          # Chromium shows chrome-error://chromewebdata when the redirect to CAS's login is refused
+          python3 .github/scripts/check-expected-failure.py "$report" ux/auth/ \
+            "Sign In opens the login form of the portal's authMode" 'chrome-error://chromewebdata'
+          echo "The auth spec failed at CAS's login form with CAS stopped, as it should" >> "$GITHUB_STEP_SUMMARY"
       - name: Show Tomcat startup errors
         if: failure()
         run: .github/scripts/tomcat-log-summary.sh
@@ -368,8 +412,8 @@ jobs:
       - name: Stop Tomcat and CAS
         if: always()
         run: |
-          ./gradlew -i -S tomcatStop
-          ./gradlew -i -S casStop
+          ./gradlew -i tomcatStop
+          ./gradlew -i casStop
 
   # The in-place upgrade harness (G-db) on every 6.0 runtime database (MOD-D25). The scripts
   # start each database themselves (MySQL and MariaDB need server options that a service container
@@ -413,10 +457,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          cache: npm
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
@@ -447,14 +493,14 @@ jobs:
   # database: PostgreSQL 18 and MariaDB 12.3 on every push, MySQL 9.7 nightly as well.
   playwright-database:
     name: "Playwright: ${{ matrix.vendor }}"
-    needs: [uportal, plan]
+    needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       # Prototype only (MOD-D30): a workstream branch runs PostgreSQL 18 only
       matrix:
-        vendor: ${{ fromJSON(needs.plan.outputs.set == 'workstream' && '["postgres-18"]' || needs.plan.outputs.set == 'nightly' && '["postgres-18", "mariadb-12.3", "mysql-9.7"]' || '["postgres-18", "mariadb-12.3"]') }}
+        vendor: ${{ fromJSON(needs.uportal.outputs.set == 'workstream' && '["postgres-18"]' || needs.uportal.outputs.set == 'nightly' && '["postgres-18", "mariadb-12.3", "mysql-9.7"]' || '["postgres-18", "mariadb-12.3"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -484,10 +530,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          cache: npm
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
@@ -496,6 +544,14 @@ jobs:
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Install npm dependencies
         run: npm ci
+      - name: Find the Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Start the database, deploy everything, dataInit, compare, then run every spec
@@ -516,15 +572,15 @@ jobs:
 
   # G-migrate (MOD-D11, MOD-D25): a used 5.17 portal's database on an old server, copied with
   # dbMigrate into a current server and verified; for some pairs the whole Playwright suite then
-  # runs on the migrated portal. The pairs come from tests/db/migrate/matrix.json (plan job).
+  # runs on the migrated portal. The pairs come from tests/db/migrate/matrix.json (the first steps of the uPortal job).
   migrate:
     name: "G-migrate: ${{ matrix.source }} to ${{ matrix.target }}"
-    needs: [uportal, plan]
+    needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.migrate) }}
+      matrix: ${{ fromJSON(needs.uportal.outputs.migrate) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -554,10 +610,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          cache: npm
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
@@ -566,6 +624,16 @@ jobs:
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Install npm dependencies
         run: npm ci
+      - name: Find the Playwright version
+        id: playwright
+        if: ${{ matrix.playwright }}
+        run: echo "version=$(npx playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        if: ${{ matrix.playwright }}
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Playwright browsers
         if: ${{ matrix.playwright }}
         run: npx playwright install --with-deps chromium
@@ -589,3 +657,117 @@ jobs:
           path: |
             build/db-migrate/
             .gradle/tomcat/logs/
+
+  # MOD-D29: the UI specs on Firefox, WebKit and a phone viewport, the axe-core accessibility
+  # ratchet and the visual snapshots of the key pages, nightly, on HSQLDB
+  # (docs/browser-a11y-tests.md).
+  browsers:
+    name: "Browsers: ${{ matrix.suite }}"
+    needs: [uportal]
+    if: ${{ needs.uportal.outputs.set == 'nightly' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: firefox
+            browser: firefox
+            args: --config=tests/browsers-pw.config.ts --project=firefox
+          - suite: webkit
+            browser: webkit
+            args: --config=tests/browsers-pw.config.ts --project=webkit
+          - suite: phone
+            browser: chromium
+            args: --config=tests/browsers-pw.config.ts --project=phone
+          - suite: a11y
+            browser: chromium
+            args: --config=tests/a11y-pw.config.ts
+          - suite: visual
+            browser: chromium
+            args: --config=tests/visual-pw.config.ts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the uPortal build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: uportal-maven-local
+          path: ~/.m2/repository/org/jasig/portal
+      - name: Bootstrap gradle.properties for the uPortal build
+        env:
+          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
+        run: |
+          cp gradle.properties.example gradle.properties
+          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
+          grep '^uPortalVersion=' gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
+      - name: Initialize portal
+        run: ./gradlew -S portalInit
+      - name: Start Tomcat
+        run: ./gradlew -S tomcatStart
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Install the browser
+        env:
+          BROWSER: ${{ matrix.browser }}
+        run: npx playwright install --with-deps "$BROWSER"
+      - name: Run ${{ matrix.suite }}
+        env:
+          ARGS: ${{ matrix.args }}
+        run: |
+          read -r -a args <<< "$ARGS"
+          npx playwright test "${args[@]}" --reporter=list 2>&1 | tee build-playwright.log
+          exit "${PIPESTATUS[0]}"
+      - name: Report failures and new snapshots
+        if: always()
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: |
+          {
+            echo "### Browsers: $SUITE"
+            echo '```'
+            sed -n '/^  [0-9]* \(passed\|failed\|flaky\|skipped\)/,$p' build-playwright.log 2> /dev/null | head -n 60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # The accessibility ratchet prints what it observed; keep it where the run shows it
+          grep -o 'observed={.*}' build-playwright.log 2> /dev/null | sort -u | head -n 10 |
+            while read -r line; do echo "::warning title=a11y observed::${line:0:4000}"; done
+          # A snapshot written by this run (none existed) is printed in the log as base64, between
+          # markers, so it can be committed (tests/visual/fetch-snapshots.sh)
+          if [ "$SUITE" = visual ]; then
+            git status --porcelain --untracked-files=all tests/visual/snapshots | sed 's/^?? //' |
+              while read -r file; do
+                echo "::notice title=new visual snapshot::$file"
+                echo "=== BEGIN SNAPSHOT $file"
+                base64 -w 0 "$file"
+                echo
+                echo "=== END SNAPSHOT $file"
+              done
+          fi
+      - name: Stop Tomcat
+        if: always()
+        run: ./gradlew -S tomcatStop
