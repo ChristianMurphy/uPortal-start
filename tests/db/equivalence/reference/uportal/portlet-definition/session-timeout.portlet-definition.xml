@@ -3,14 +3,26 @@
   <name>Session Timeout</name>
   <fname>session-timeout</fname>
   <desc>Provides an alert that will appear before a session timeout, giving the user the opportunity to refresh their session.</desc>
-  <type>Portlet</type>
+  <type>Web Component</type>
   <timeout>30000</timeout>
   <portlet-descriptor>
     <up:isFramework>true</up:isFramework>
-    <up:portletName>SessionTimeout</up:portletName>
+    <up:portletName>WebComponent</up:portletName>
   </portlet-descriptor>
   <lifecycle>
     <entry name="PUBLISHED" user="system">‹masked›</entry>
   </lifecycle>
   <group>Authenticated Users</group>
+  <parameter>
+    <name>webComponent.moduleUrl</name>
+    <value>up-session-timeout</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.preferenceAttributes</name>
+    <value>enabled=enabled\ndialog-display-seconds=dialogDisplaySeconds\nlogout-url=logoutURLFragment</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.tagName</name>
+    <value>up-session-timeout</value>
+  </parameter>
 </portlet-definition>
