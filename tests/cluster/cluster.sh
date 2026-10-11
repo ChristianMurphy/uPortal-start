@@ -6,6 +6,9 @@
 # default cluster configuration (Ehcache 2 replication over JGroups, JDBC_PING discovery in the
 # shared database, UP_MUTEX cluster locks for the clustered jobs), and checks:
 #
+#   cluster-join             node B joins node A's JGroups cluster when it starts: both nodes
+#                            install the same view of two members within 30 s of node B's
+#                            channel starting
 #   invalidation-portlet     a portlet definition changed on one node shows on the other
 #   invalidation-layout      a user's layout changed on one node shows in a new session on the
 #                            other
@@ -25,7 +28,8 @@
 # A check listed in KNOWN_FAILURES fails because of a known uPortal problem: its failure is
 # reported as a warning and does not fail the run.
 #
-#   tests/cluster/cluster.sh [--fault <fault>] [--keep] [--no-deploy] [-- <extra Gradle arguments>]
+#   tests/cluster/cluster.sh [--fault <fault>] [--join-starts <n>] [--keep] [--no-deploy]
+#                            [-- <extra Gradle arguments>]
 #
 # Options:
 #   --fault F    seed a fault and expect the checks that should catch it to fail (exit 0 when
@@ -35,6 +39,10 @@
 #                                   (abandonedLockAge=PT0S), so another node can take it
 #                  event-flush-delayed  the nodes write their portal events only 120 s after
 #                                   they start, as uPortal 5 did (flushInitialDelay=PT120S)
+#                  join-gives-up    node B waits 1 ms for an answer to its JOIN and tries once
+#                                   (GMS join_timeout=1, max_join_attempts=1)
+#   --join-starts N  only measure joins: start node A, then start and stop node B N times and
+#                count how often cluster-join passed (build/cluster/join-starts.txt)
 #   --keep       leave the nodes and the database running afterwards
 #   --no-deploy  reuse the database and the nodes deployed by an earlier --keep run
 #
@@ -49,16 +57,18 @@ cd "$(dirname "$0")/../.." || exit 1
 ROOT=$(pwd)
 
 FAULT=
+JOIN_STARTS=0
 KEEP=false
 DEPLOY=true
 GRADLE_EXTRA=()
 while [ $# -gt 0 ]; do
     case "$1" in
         --fault) FAULT="$2"; shift ;;
+        --join-starts) JOIN_STARTS="$2"; shift ;;
         --keep) KEEP=true ;;
         --no-deploy) DEPLOY=false ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,38p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,52p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
     shift
@@ -69,6 +79,7 @@ declare -A FAULT_CHECKS=(
     [replication-off]="invalidation-portlet invalidation-permission"
     [lock-ignored]="failover-takeover"
     [event-flush-delayed]="events-aggregated"
+    [join-gives-up]="cluster-join"
 )
 # Checks that fail because of a known uPortal problem (docs/cluster-tests.md): reported as
 # warnings, they do not fail the run. Remove an entry once uPortal is fixed.
@@ -234,6 +245,11 @@ deploy() {
     sed -i "s/^portal.server=localhost:$HTTP_PORT/portal.server=localhost:$B_HTTP_PORT/" "$B_HOME/portal/global.properties"
     sed -i 's/^org.apereo.portal.PortalInfoProvider.serverName=node-a$/org.apereo.portal.PortalInfoProvider.serverName=node-b/' \
         "$B_HOME/portal/uPortal.properties"
+    if [ "$FAULT" = join-gives-up ]; then
+        sed -i -E 's#(<pbcast\.GMS [^>]*)join_timeout="[0-9]+"([^>]*)max_join_attempts="[0-9]+"#\1join_timeout="1"\2max_join_attempts="1"#' \
+            "$B_HOME/webapps/uPortal/WEB-INF/classes/properties/jgroups.xml"
+        grep -q 'join_timeout="1" max_join_attempts="1"' "$B_HOME/webapps/uPortal/WEB-INF/classes/properties/jgroups.xml" || return 1
+    fi
     grep -q "port=\"$B_HTTP_PORT\"" "$B_HOME/conf/server.xml" &&
         grep -q 'serverName=node-b' "$B_HOME/portal/uPortal.properties"
 }
@@ -251,6 +267,34 @@ show_nodes() {  # each node's JVM portal.home and configured server name
 jgroups_lines() {  # jgroups_lines <node>: the JGroups lines of all the node's logs
     grep -hiE 'org\.jgroups|jgroups\.|GMS|installing view|\] \([0-9]+\) \[' \
         "$(node_home "$1")"/logs/catalina.* "$(node_home "$1")"/logs/portal/portal.log 2> /dev/null
+}
+
+JOIN_BOUND_S=30
+
+log_clock_ms() {  # now in the logs' clock: local time read as UTC, in ms (cluster-join.mjs)
+    echo $(( $(TZ=UTC date -d "$(date '+%F %T')" +%s) * 1000 ))
+}
+
+join_outcome() {  # join_outcome <since ms>: cluster-join.mjs on both nodes' Tomcat logs
+    node tests/cluster/cluster-join.mjs \
+        "a=$(printf "%s," "$A_HOME"/logs/catalina.*.log)" \
+        "b=$(printf "%s," "$B_HOME"/logs/catalina.*.log)" \
+        --since "$1" --bound "$JOIN_BOUND_S"
+}
+
+check_cluster_join() {  # check_cluster_join <since ms>: node B joined node A's cluster
+    local out rc
+    for _ in $(seq 1 $(( JOIN_BOUND_S + 30 ))); do
+        out=$(join_outcome "$1")
+        rc=$?
+        [ "$rc" -ne 2 ] && break
+        sleep 1
+    done
+    case "$rc" in
+        0) record cluster-join PASS "${out#PASS: }" ;;
+        1) record cluster-join FAIL "${out#FAIL: }" ;;
+        *) record cluster-join FAIL "still undecided $(( JOIN_BOUND_S + 30 )) s after node B answered: ${out#UNDECIDED: }" ;;
+    esac
 }
 
 two_member_view() {  # two_member_view <node>: the node logged a cluster view of two members
@@ -805,7 +849,41 @@ if [ "$DEPLOY" = true ]; then
 fi
 if [ "$setup_ok" = true ]; then
     use_vendor "$VENDOR"
-    { start_node a && start_node b && B_STARTED=$(date +%s) && wait_for_cluster; } || setup_ok=false
+    start_node a || setup_ok=false
+fi
+
+if [ "$setup_ok" = true ] && [ "$JOIN_STARTS" -gt 0 ]; then
+    # Join measurement only: node B started and stopped again and again against node A
+    : > "$OUT/join-starts.txt"
+    for i in $(seq 1 "$JOIN_STARTS"); do
+        since=$(log_clock_ms)
+        start_node b || { echo "start $i: node B did not start" >> "$OUT/join-starts.txt"; stop_node b; continue; }
+        out=$(join_outcome "$since")
+        rc=$?
+        for _ in $(seq 1 $(( JOIN_BOUND_S + 30 ))); do
+            [ "$rc" -ne 2 ] && break
+            sleep 1
+            out=$(join_outcome "$since")
+            rc=$?
+        done
+        echo "start $i: $out" | tee -a "$OUT/join-starts.txt"
+        stop_node b
+        sleep 5
+    done
+    joined=$(grep -c ': PASS:' "$OUT/join-starts.txt")
+    echo "==== cluster-join: node B joined within $JOIN_BOUND_S s on $joined of $JOIN_STARTS starts"
+    collect_logs
+    cleanup
+    exit 0
+fi
+
+if [ "$setup_ok" = true ]; then
+    since=$(log_clock_ms)
+    { start_node b && B_STARTED=$(date +%s); } || setup_ok=false
+fi
+if [ "$setup_ok" = true ]; then
+    check_cluster_join "$since"
+    wait_for_cluster || setup_ok=false
 fi
 
 if [ "$setup_ok" = true ]; then
