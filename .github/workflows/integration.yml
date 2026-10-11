@@ -648,7 +648,7 @@ jobs:
   browsers:
     name: "Browsers: ${{ matrix.suite }}"
     needs: [uportal]
-    if: ${{ needs.uportal.outputs.set == 'nightly' || github.ref_name == 'ccr-43ba0785-hzlrj5-test-suites' }}
+    if: ${{ needs.uportal.outputs.set == 'nightly' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
