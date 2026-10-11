@@ -1,0 +1,3 @@
+TRACE [uP-LockExec-1] o.a.p.c.locking.ClusterLockServiceImpl 2026-10-11 08:00:04,000 - acquired db lock for: events.aggr.PortalRawEventsAggregator.AGGREGATION_LOCK
+TRACE [uP-LockExec-1] o.a.p.c.locking.ClusterLockServiceImpl 2026-10-11 08:00:09,000 - released db lock for: events.aggr.PortalRawEventsAggregator.AGGREGATION_LOCK
+TRACE [uP-LockExec-1] o.a.p.c.locking.ClusterLockServiceImpl 2026-10-11 08:00:09,001 - released local lock for: events.aggr.PortalRawEventsAggregator.AGGREGATION_LOCK
