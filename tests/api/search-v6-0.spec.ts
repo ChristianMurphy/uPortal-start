@@ -72,6 +72,33 @@ test("search people", async ({ request }) => {
   ]);
 });
 
+/** Accented letters, a non-Latin script and a four-byte character (MOD-D50). */
+const UNICODE_QUERY = "Zoë Ñandú 李小龍 😀";
+
+test("answers a Unicode query intact", async ({ request }) => {
+  await loginViaApi(request, config.users.admin);
+  // Playwright encodes the parameter once, as UTF-8, as a browser does
+  const response = await request.get<SearchBody>(SEARCH_API, {
+    params: { q: UNICODE_QUERY },
+  });
+  expect(response.status()).toEqual(200);
+  const body = await response.json();
+  expect(body.query).toBe(UNICODE_QUERY);
+});
+
+test("counts the 200 character limit in characters", async ({ request }) => {
+  await loginViaApi(request, config.users.admin);
+  // An emoji is one character and two UTF-16 units
+  const atLimit = await request.get<unknown>(SEARCH_API, {
+    params: { q: "a".repeat(199) + "😀" },
+  });
+  expect(atLimit.status()).toEqual(200);
+  const overLimit = await request.get<unknown>(SEARCH_API, {
+    params: { q: "a".repeat(200) + "😀" },
+  });
+  expect(overLimit.status()).toEqual(400);
+});
+
 test("refuses a blank query", async ({ request }) => {
   await loginViaApi(request, config.users.admin);
   const response = await request.get<{ message: string }>(
