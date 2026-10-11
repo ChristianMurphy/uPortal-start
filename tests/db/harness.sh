@@ -17,7 +17,7 @@
 #   --keep          leave the database container running afterwards
 #   --no-deploy     reuse the Tomcat + uPortal already deployed in this checkout for this vendor
 #   --skip-init     do not run dataInit; snapshot the database as it is (e.g. after an upgrade)
-#   --portal        also deploy CAS, start Tomcat against the database and run the Playwright
+#   --portal        also start Tomcat against the database and run the Playwright
 #                   API specs (needs `npm ci`); on PostgreSQL the LOB report is taken again after
 #   --full-suite    like --portal, but deploy every overlay, create the portlets' tables after the
 #                   snapshot and run the whole Playwright suite (needs `npm ci` and
@@ -135,8 +135,6 @@ run_vendor() {
         tasks+=(tomcatInstall tomcatDeploy)
     elif [ "$DEPLOY" = true ]; then
         tasks+=(tomcatInstall :overlays:uPortal:tomcatDeploy)
-        # The API specs log out through CAS (logout.redirect)
-        if [ "$PORTAL" = true ]; then tasks+=(:overlays:cas:tomcatDeploy); fi
     else
         tasks+=(tomcatConfig)
     fi

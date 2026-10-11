@@ -19,9 +19,19 @@ declare global {
 }
 
 const SEL_UPORTAL_LOGIN = "#portalCASLoginLink";
-const SEL_UPORTAL_LOGIN_USERNAME = "#username";
-const SEL_UPORTAL_LOGIN_PASSWORD = "#password";
-const SEL_UPORTAL_LOGIN_SUBMIT = ".btn-submit";
+// The login form for each authMode:  uPortal's 'login' portlet, or CAS 8's login page
+const LOGIN_FORM = {
+  local: {
+    usernameInput: 'form[action$="/Login"] input[name="userName"]',
+    secretInput: 'form[action$="/Login"] input[name="password"]',
+    submit: 'form[action$="/Login"] input[type="submit"]',
+  },
+  cas: {
+    usernameInput: "#username",
+    secretInput: "#password",
+    submit: 'button[name="submitBtn"]',
+  },
+};
 
 /*
  * Log into uPortal via an APIRequestContext
@@ -39,13 +49,17 @@ export async function loginViaApi(
 
 /*
  * Log out of uPortal via an APIRequestContext
+ *
+ * In both authModes the logout ends on the portal's guest page:  directly, or
+ * by way of CAS's logout, which redirects back to the portal.
  */
 export async function logoutViaApi(request: APIRequestContext): Promise<void> {
   const url = `${config.url}Logout`;
   const response = await request.get<unknown>(url);
   expect(response.status()).toEqual(200);
+  expect(response.url().startsWith(config.url)).toBe(true);
   const responseText = await response.text();
-  expect(responseText).toContain("Logout successful");
+  expect(responseText).toContain('id="portalCASLoginLink"');
   // confirm known endpoint is unavailable for guest user
   await request.get<unknown>(`${config.url}api/portlet-list/`);
   expect(response.status()).toEqual(200);
@@ -61,24 +75,87 @@ export async function loginViaPage(
   const landingPageUrl = `${config.url}f/welcome/normal/render.uP`;
   await page.goto(landingPageUrl);
 
-  // Launch CAS Login via UX
-  const uportalSignin = page.locator(SEL_UPORTAL_LOGIN);
-  await expect(uportalSignin).toHaveText("Sign In");
-  await page.click(SEL_UPORTAL_LOGIN);
-
-  // Fill in username and password, and submit
-  await page.waitForSelector(SEL_UPORTAL_LOGIN_USERNAME);
-  await page.fill(SEL_UPORTAL_LOGIN_USERNAME, user.username);
-  await page.waitForSelector(SEL_UPORTAL_LOGIN_PASSWORD);
-  await page.fill(SEL_UPORTAL_LOGIN_PASSWORD, user.password);
-  await page.waitForSelector(SEL_UPORTAL_LOGIN_SUBMIT);
-  await page.click(SEL_UPORTAL_LOGIN_SUBMIT);
+  // Open the login form through the Sign In button, and submit it
+  await openLoginForm(page);
+  await submitLoginForm(page, user.username, user.password);
 
   // Confirm user is logged in
   const loggedInUserDisplay = page.locator("div.user-name");
   await expect(loggedInUserDisplay).toHaveText(
     `You are signed in as ${user.displayName}`
   );
+}
+
+/*
+ * Click the portal's Sign In button and wait for the login form of the
+ * configured authMode:  uPortal's own form, or the CAS server's.
+ */
+export async function openLoginForm(page: Page): Promise<void> {
+  const uportalSignin = page.locator(SEL_UPORTAL_LOGIN);
+  await expect(uportalSignin).toHaveText("Sign In");
+  await page.click(SEL_UPORTAL_LOGIN);
+  await expectLoginForm(page);
+}
+
+/*
+ * Confirm the page shows the login form of the configured authMode
+ */
+export async function expectLoginForm(page: Page): Promise<void> {
+  if (config.authMode === "cas") {
+    await expect(page).toHaveURL((url) =>
+      url.href.startsWith(`${config.casUrl}login`)
+    );
+  }
+  await expect(
+    page.locator(LOGIN_FORM[config.authMode].usernameInput)
+  ).toBeVisible();
+}
+
+/*
+ * Fill in and submit the open login form (see openLoginForm)
+ */
+export async function submitLoginForm(
+  page: Page,
+  username: string,
+  password: string
+): Promise<void> {
+  const form = LOGIN_FORM[config.authMode];
+  await page.fill(form.usernameInput, username);
+  await page.fill(form.secretInput, password);
+  await page.click(form.submit);
+}
+
+/*
+ * Confirm the page is the portal's guest view:  on the portal (not CAS), with
+ * the Sign In button and nobody signed in
+ */
+export async function expectSignedOut(page: Page): Promise<void> {
+  await expect(page).toHaveURL((url) => url.href.startsWith(config.url));
+  await expect(page.locator(SEL_UPORTAL_LOGIN)).toHaveText("Sign In");
+  await expect(page.locator("div.user-name")).toHaveCount(0);
+}
+
+/*
+ * Confirm the login form rejected the credentials submitted by
+ * submitLoginForm.  CAS stays on its form with an error.  uPortal goes back
+ * to the guest page without saying why; its login form shows the error when
+ * it is opened again.
+ */
+export async function expectLoginRefused(page: Page): Promise<void> {
+  if (config.authMode === "cas") {
+    await expect(page).toHaveURL((url) =>
+      url.href.startsWith(`${config.casUrl}login`)
+    );
+    await expect(page.locator("#loginErrorsPanel")).toContainText(
+      "Authentication attempt has failed"
+    );
+  } else {
+    await expectSignedOut(page);
+    await openLoginForm(page);
+    await expect(page.locator(".portlet-msg-error")).toContainText(
+      "Invalid username or password"
+    );
+  }
 }
 
 const trackedPages = new WeakSet<Page>();
@@ -190,7 +267,7 @@ export async function waitForPortalRequestsToSettle(page: Page): Promise<void> {
 }
 
 /*
- * Log into uPortal via URL-based login (faster than CAS form for smoke tests)
+ * Log into uPortal via URL-based login (faster than the login form for smoke tests)
  *
  * Returns once the landing page's own portal requests have finished, so
  * that a test's next page.goto() cannot race with them.
@@ -214,7 +291,7 @@ export async function loginViaUrl(
 export async function logout(page: Page): Promise<void> {
   await page.goto(`${config.url}Logout`);
   // Navigate back to the portal so the next test's loginViaUrl starts
-  // from a known state instead of the CAS logout page
+  // from a known state
   await page.goto(config.url);
 }
 
