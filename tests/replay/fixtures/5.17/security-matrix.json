@@ -390,7 +390,7 @@
   "faculty": "200 allowed",
   "admin": "200 allowed"
  },
- "GET /uPortal/api/entities/group/local.0.json": {
+ "GET /uPortal/api/entities/group/pags.Authenticated%20Users.json": {
   "guest": "403 forbidden",
   "student": "403 forbidden",
   "staff": "403 forbidden",
@@ -691,7 +691,7 @@
   "faculty": "403 forbidden",
   "admin": "200 allowed"
  },
- "GET /uPortal/api/assignments/principal/local.0.json": {
+ "GET /uPortal/api/assignments/principal/pags.Authenticated%20Users.json": {
   "guest": "403 forbidden",
   "student": "403 forbidden",
   "staff": "403 forbidden",
@@ -705,14 +705,14 @@
   "faculty": "403 forbidden",
   "admin": "200 allowed"
  },
- "GET /uPortal/api/assignments/target/local.0.json": {
+ "GET /uPortal/api/assignments/target/pags.Authenticated%20Users.json": {
   "guest": "403 forbidden",
   "student": "403 forbidden",
   "staff": "403 forbidden",
   "faculty": "403 forbidden",
   "admin": "500 server-error"
  },
- "GET /uPortal/api/permissionAssignmentMap?principals[]=local.0&owner=UP_PORTLET_SUBSCRIBE&activity=BROWSE&target=local.0": {
+ "GET /uPortal/api/permissionAssignmentMap?principals[]=pags.Authenticated%20Users&owner=UP_PORTLET_SUBSCRIBE&activity=BROWSE&target=pags.Authenticated%20Users": {
   "guest": "400 client-error",
   "student": "400 client-error",
   "staff": "400 client-error",

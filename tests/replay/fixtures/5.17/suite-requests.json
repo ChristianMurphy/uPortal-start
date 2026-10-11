@@ -373,24 +373,17 @@
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/actions/go-top.png",
-   "headers": {},
-   "tests": 2
+   "headers": {
+    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+   },
+   "tests": 38
   },
   {
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/actions/go-top.png",
-   "headers": {
-    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
-   },
-   "tests": 38
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/actions/view-refresh.png",
    "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
@@ -404,14 +397,30 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/internet-group-chat.png",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/actions/view-refresh.png",
    "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/apps/internet-group-chat.png",
+   "headers": {
+    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+   },
+   "tests": 38
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/internet-group-chat.png",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/preferences-desktop-locale.png",
    "headers": {
     "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
    },
@@ -422,23 +431,7 @@
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/apps/preferences-desktop-locale.png",
    "headers": {},
-   "tests": 2
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/preferences-desktop-locale.png",
-   "headers": {
-    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
-   },
-   "tests": 38
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/preferences-system-windows.png",
-   "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
@@ -452,14 +445,30 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/system-users.png",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/preferences-system-windows.png",
    "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/apps/system-users.png",
+   "headers": {
+    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+   },
+   "tests": 38
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/apps/system-users.png",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/categories/applications-development.png",
    "headers": {
     "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
    },
@@ -470,23 +479,7 @@
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/categories/applications-development.png",
    "headers": {},
-   "tests": 2
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/categories/applications-development.png",
-   "headers": {
-    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
-   },
-   "tests": 38
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/categories/applications-internet.png",
-   "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
@@ -500,14 +493,30 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/categories/preferences-desktop.png",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/categories/applications-internet.png",
    "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/categories/preferences-desktop.png",
+   "headers": {
+    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+   },
+   "tests": 38
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/categories/preferences-desktop.png",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/devices/drive-harddisk.png",
    "headers": {
     "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
    },
@@ -518,23 +527,7 @@
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/devices/drive-harddisk.png",
    "headers": {},
-   "tests": 2
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/devices/drive-harddisk.png",
-   "headers": {
-    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
-   },
-   "tests": 38
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/emblems/emblem-readonly.png",
-   "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
@@ -548,9 +541,9 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/mimetypes/text-html.png",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/emblems/emblem-readonly.png",
    "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
@@ -560,6 +553,13 @@
     "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
    },
    "tests": 38
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/mimetypes/text-html.png",
+   "headers": {},
+   "tests": 1
   },
   {
    "role": "admin",
@@ -568,7 +568,7 @@
    "headers": {
     "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
    },
-   "tests": 39
+   "tests": 38
   },
   {
    "role": "admin",
@@ -581,13 +581,22 @@
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/status/dialog-warning.png",
-   "headers": {},
-   "tests": 2
+   "headers": {
+    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+   },
+   "tests": 38
   },
   {
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/status/dialog-warning.png",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/resource-server/rs/tango/0.8.90/32x32/status/software-update-available.png",
    "headers": {
     "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
    },
@@ -598,16 +607,7 @@
    "method": "GET",
    "path": "/resource-server/rs/tango/0.8.90/32x32/status/software-update-available.png",
    "headers": {},
-   "tests": 2
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/resource-server/rs/tango/0.8.90/32x32/status/software-update-available.png",
-   "headers": {
-    "accept": "image/jxl,image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
-   },
-   "tests": 38
+   "tests": 1
   },
   {
    "role": "admin",
@@ -824,14 +824,14 @@
    "headers": {
     "accept": "*/*"
    },
-   "tests": 5
+   "tests": 4
   },
   {
    "role": "admin",
    "method": "GET",
    "path": "/resource-server/webjars/ckeditor4/styles.js?t=N5UC",
    "headers": {},
-   "tests": 1
+   "tests": 2
   },
   {
    "role": "admin",
@@ -1191,14 +1191,14 @@
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
-   "tests": 38
+   "tests": 33
   },
   {
    "role": "admin",
    "method": "GET",
    "path": "/uPortal/api/cookiecheck",
    "headers": {},
-   "tests": 1
+   "tests": 6
   },
   {
    "role": "admin",
@@ -1266,7 +1266,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/people.json?searchTerms%5B%5D=givenName&searchTerms%5B%5D=sn&searchTerms%5B%5D=username&givenName=e2e-user-1791687071833&sn=e2e-user-1791687071833&username=e2e-user-1791687071833&_=0",
+   "path": "/uPortal/api/people.json?searchTerms%5B%5D=givenName&searchTerms%5B%5D=sn&searchTerms%5B%5D=username&givenName=e2e-user-1791689275542&sn=e2e-user-1791689275542&username=e2e-user-1791689275542&_=0",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1325,7 +1325,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/01fbe795-5307-4969-930d-66db16446bee",
+   "path": "/uPortal/api/portlet-list/12501baa-e468-450c-ad99-a637e4bd06c8",
    "headers": {
     "accept": "*/*"
    },
@@ -1334,7 +1334,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/55fc4fdb-9ffa-4e6b-a738-85df5c07f8a0",
+   "path": "/uPortal/api/portlet-list/1523510c-cbf2-4c15-a6b5-43a4fa76e97b",
    "headers": {
     "accept": "*/*"
    },
@@ -1343,7 +1343,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/6210e198-3073-4c4d-ae1e-4f933a216071",
+   "path": "/uPortal/api/portlet-list/94c79f36-0610-4a66-b949-1907f27bc52e",
    "headers": {
     "accept": "*/*"
    },
@@ -1352,7 +1352,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/a046c9fb-93d7-4aef-b882-ca15af6d4f95",
+   "path": "/uPortal/api/portlet-list/b0d7bd41-8f4d-4256-8d3d-2cf3e33c6589",
    "headers": {
     "accept": "*/*"
    },
@@ -1361,7 +1361,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/aca8e947-f750-4a2a-98e3-923cc774e108",
+   "path": "/uPortal/api/portlet-list/c8858d63-ead3-4ad9-b68d-216952b271d2",
    "headers": {
     "accept": "*/*"
    },
@@ -1370,7 +1370,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/fa0e1aed-9329-475f-863c-eb8e5e980acd",
+   "path": "/uPortal/api/portlet-list/f671beec-8e32-4852-9670-0c20e2b7a7b7",
    "headers": {
     "accept": "*/*"
    },
@@ -1418,7 +1418,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/api/v4-3/dlm/layout.json",
+   "path": "/uPortal/api/v4-3/dlm/portletRegistry.json?category=Administration",
    "headers": {},
    "tests": 1
   },
@@ -1429,7 +1429,7 @@
    "headers": {
     "accept": "*/*"
    },
-   "tests": 39
+   "tests": 38
   },
   {
    "role": "admin",
@@ -1439,6 +1439,13 @@
     "accept": "*/*"
    },
    "tests": 39
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/uPortal/api/v4-3/dlm/portletRegistry.json?category=Quicklinks",
+   "headers": {},
+   "tests": 2
   },
   {
    "role": "admin",
@@ -1470,6 +1477,13 @@
   {
    "role": "admin",
    "method": "GET",
+   "path": "/uPortal/api/v5-1/userinfo",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
    "path": "/uPortal/css/search/autosuggest.css",
    "headers": {
     "accept": "text/css,*/*;q=0.1"
@@ -1481,7 +1495,7 @@
    "method": "GET",
    "path": "/uPortal/css/search/autosuggest.css",
    "headers": {},
-   "tests": 2
+   "tests": 1
   },
   {
    "role": "admin",
@@ -1567,7 +1581,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=084a9753-98ec-425c-8a4e-286f8c63815d",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=024ffc58-e6c2-47cf-92b5-4acd415f7281",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1577,7 +1591,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=146c2d40-d209-4453-b2f5-185909d10ff3",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=054a330a-7f81-4fab-80a5-ef72f680bfea",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1587,7 +1601,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=18d421be-3994-403a-80d0-9b37e4ef5caa",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=161ba106-182f-43c5-8e4e-112ee364c858",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1597,7 +1611,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=29f9c240-23a8-4d33-ad79-356db397d15c",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=1bab3851-7350-4a16-b5f0-36aa479e9b5c",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1607,7 +1621,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2d0922f9-aeae-44d7-8ffe-fb629aa87346",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=25835e2b-4374-4d13-bcc3-02f9660ac7a2",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1617,7 +1631,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2d78e1f5-7e63-420f-a76b-09d73b5ab50e",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=295d3184-269f-4b56-9005-0e89c83a1a77",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1627,7 +1641,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2e70c583-55f9-4845-a355-631ad85ae9d4",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=33a574cf-b41b-4cd9-b4ae-dd2a73d6adda",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1637,7 +1651,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2eaf70ef-ac7b-47a3-a471-cf6724142018",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=38555f3b-7d9f-4d51-873d-b6b429945e67",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1647,7 +1661,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=301a17a0-47dc-4f90-86ca-8a359e0c1f3f",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=3f12e225-667d-4698-95ad-070eea32081f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1657,7 +1671,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=340e1524-4501-410d-8a4d-42ede666051c",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=40e9edf4-0b36-4405-b926-a08262a596a6",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1667,7 +1681,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=3432f411-88a4-4b3e-921d-46af2b8ea3cd",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=479b74ff-64cc-4ef5-b5af-a9be33bd7eb9",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1677,7 +1691,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=40a35770-2dda-44e1-b1cc-fed2218877de",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=4aa64634-1f60-4b7c-871a-5e34ea09d01a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1687,7 +1701,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=418b89de-b545-469f-99da-9498903ba34b",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=4f15bfb4-208f-4456-b3ff-2e19972080e1",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1697,7 +1711,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5bfbfaac-49eb-4f3d-9989-599852d50951",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5a542ca6-c874-4694-a7f6-32148c95a8ab",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1707,7 +1721,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=614b841c-79e4-47f6-8d86-499ebd544901",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=67615960-b8bb-4194-a0d6-a8a8fd1fa071",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1717,7 +1731,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=637d5224-350a-4c45-8f24-815196255679",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=73b843da-e8e8-412f-b0b4-7381a33fe5a0",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1727,7 +1741,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=64210ded-ffbc-42d7-877c-9ad531466ce1",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=7a8ab5fb-7f02-4af5-86d9-5ca32f0a348e",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1737,7 +1751,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=64f5c8e9-1bd2-4949-b879-1201897e42aa",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=90dbb581-92f5-4b39-ad20-beaaebf54068",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1747,7 +1761,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=662e3b47-b286-40cf-86c9-051248e2af18",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=964f6b0a-ae62-4e9d-8b56-e627171b513e",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1757,7 +1771,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=66c92ef0-3628-4c0a-9319-8a4feafe347c",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=97826829-9f25-4684-8a07-5ce21f85292d",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1767,7 +1781,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=7ac9f9ba-59ab-4c3c-be0e-8c61ae4f560f",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=9c6daaaa-06c5-4205-8e77-990736efb2e5",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1777,7 +1791,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=7bce0444-49ec-4b83-bf3a-1c9af1ca7fd6",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a40ffbd9-e35b-4871-b1a9-183e8a762b40",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1787,7 +1801,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=7e9fea4e-c677-4cc0-bd7c-51cca3291166",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a9101b4f-94a3-4117-a412-f38c67e70754",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1797,7 +1811,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=95578f17-97b0-45a5-9850-33c89366d665",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ad1efce5-dcfc-424f-857f-320f19db4c4f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1807,7 +1821,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=96126e17-3695-42f9-a668-723794093874",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=adf30960-a0a3-4aa2-9160-f7f7f8085d43",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1817,7 +1831,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=991cd14d-f783-48d4-85ed-d2fa7067e180",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b1670793-6923-40ae-be78-96f8c9909d4b",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1827,7 +1841,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=9a1ec0d1-3e22-4ed9-a7f7-1095ee8709cb",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b3a8d756-ce5a-47f1-aa32-a946956cd1a0",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1837,7 +1851,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a995e907-2647-459f-99e2-ec98119eb0ca",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ba2a5f93-6044-4b0d-a09f-8b9f0e2de9bb",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1847,7 +1861,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b637be66-19aa-483d-b811-aa1354844a85",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c369467c-3da0-42b5-9e86-90fb73303dec",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1857,7 +1871,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b7a1e2be-b7e9-4814-9e2a-75fddb14c326",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c520fb34-60fd-40dd-a18c-2ee0e3acf111",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1867,7 +1881,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b86af229-0f4f-4fc9-b533-5b2a5cef38a6",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c5ff3f01-b6a6-466a-ba43-125d7d699d22",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1877,7 +1891,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=bcbc97d8-3d10-407a-abdc-a3fece92ee12",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c61b73f1-5da7-424a-b529-a7b65d164ba1",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1887,7 +1901,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=bd3b99a3-c913-41f3-ba75-782a4ae31bb7",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c69124f8-cea1-4f12-a221-da1ce6fdf830",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1897,7 +1911,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c9675c30-b37b-4fbf-ab43-b26648863b17",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d06aeb32-6a3c-4ea2-8d5b-43f0c04985b5",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1907,7 +1921,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cbbcd899-9d93-46c8-b93f-25732abcec19",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=dae2fa03-1a26-4852-a2bc-a33278cdb836",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1917,7 +1931,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d1bcf9e7-3d59-43e8-812b-48fdbf96b0ba",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=dfa9608d-055c-44b5-a666-14d909214962",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1927,7 +1941,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=f660898e-d404-46ec-a8fb-c93a1734549c",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e0a7c339-4cbf-47b6-979e-a23627e216b1",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1937,7 +1951,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=f702e5ed-091c-4f09-86c6-4541fe104c30",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ea3dc5f5-0d70-43a7-97ed-9bfbb93f4261",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -1947,7 +1961,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=fa20dc0d-29ef-4400-b5e8-30fa14dc67e2",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ef70e9ce-0eec-4215-b791-b4622dc88a4f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -2192,7 +2206,14 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=2d0922f9-aeae-44d7-8ffe-fb629aa87346",
+   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=38555f3b-7d9f-4d51-873d-b6b429945e67",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=40e9edf4-0b36-4405-b926-a08262a596a6",
    "headers": {
     "accept": "*/*"
    },
@@ -2201,7 +2222,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=9a1ec0d1-3e22-4ed9-a7f7-1095ee8709cb",
+   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=c5ff3f01-b6a6-466a-ba43-125d7d699d22",
    "headers": {
     "accept": "*/*"
    },
@@ -2210,16 +2231,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=b7a1e2be-b7e9-4814-9e2a-75fddb14c326",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=bd3b99a3-c913-41f3-ba75-782a4ae31bb7",
+   "path": "/uPortal/p/calendar.ctf3/max/10102026-7.resource.uP?_csrf=dae2fa03-1a26-4852-a2bc-a33278cdb836",
    "headers": {
     "accept": "*/*"
    },
@@ -2250,14 +2262,7 @@
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
-   "tests": 1
-  },
-  {
-   "role": "admin",
-   "method": "GET",
-   "path": "/uPortal/p/campus-news/max/render.uP",
-   "headers": {},
-   "tests": 1
+   "tests": 2
   },
   {
    "role": "admin",
@@ -2280,7 +2285,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/e2e-import-1791687051546.ctf4/max/render.uP",
+   "path": "/uPortal/p/e2e-import-1791689255656.ctf4/max/render.uP",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -2289,7 +2294,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/e2e-import-1791687051546/max/render.uP",
+   "path": "/uPortal/p/e2e-import-1791689255656/max/render.uP",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -2298,7 +2303,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/e2e-portlet-1791687065820.ctf5/max/render.uP",
+   "path": "/uPortal/p/e2e-portlet-1791689268799.ctf5/max/render.uP",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -2307,7 +2312,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/e2e-portlet-1791687065820/max/render.uP",
+   "path": "/uPortal/p/e2e-portlet-1791689268799/max/render.uP",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -2757,13 +2762,6 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/portlet-admin/max/render.uP",
-   "headers": {},
-   "tests": 1
-  },
-  {
-   "role": "admin",
-   "method": "GET",
    "path": "/uPortal/p/uportal-links.ctf3/max/render.uP?pCm=config",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
@@ -2809,7 +2807,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/user-administration.ctf3/max/render.uP?pP_execution=e2s2&pP__eventId=select&pP_username=e2e-user-1791687071833",
+   "path": "/uPortal/p/user-administration.ctf3/max/render.uP?pP_execution=e2s2&pP__eventId=select&pP_username=e2e-user-1791689275542",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -2845,7 +2843,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/user-administration.ctf3/max/render.uP?pP_execution=e3s2&pP__eventId=select&pP_username=e2e-user-1791687071833",
+   "path": "/uPortal/p/user-administration.ctf3/max/render.uP?pP_execution=e3s2&pP__eventId=select&pP_username=e2e-user-1791689275542",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -2854,7 +2852,7 @@
   {
    "role": "admin",
    "method": "GET",
-   "path": "/uPortal/p/user-administration.ctf3/max/render.uP?pP_execution=e3s4&pP__eventId=select&pP_username=e2e-user-1791687071833",
+   "path": "/uPortal/p/user-administration.ctf3/max/render.uP?pP_execution=e3s4&pP__eventId=select&pP_username=e2e-user-1791689275542",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -2876,6 +2874,13 @@
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/uPortal/p/user-administration/max/render.uP",
+   "headers": {},
    "tests": 1
   },
   {
@@ -2935,11 +2940,25 @@
   {
    "role": "admin",
    "method": "GET",
+   "path": "/uPortal/scripts/portal-analytics.js",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
    "path": "/uPortal/scripts/search/autosuggestHandler.js",
    "headers": {
     "accept": "*/*"
    },
    "tests": 39
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/uPortal/scripts/search/autosuggestHandler.js",
+   "headers": {},
+   "tests": 1
   },
   {
    "role": "admin",
@@ -2953,11 +2972,25 @@
   {
    "role": "admin",
    "method": "GET",
+   "path": "/uPortal/scripts/session-timeout.js",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "GET",
    "path": "/uPortal/webjars/jstree/dist/jstree.min.js",
    "headers": {
     "accept": "*/*"
    },
    "tests": 39
+  },
+  {
+   "role": "admin",
+   "method": "GET",
+   "path": "/uPortal/webjars/jstree/dist/jstree.min.js",
+   "headers": {},
+   "tests": 1
   },
   {
    "role": "faculty",
@@ -3713,17 +3746,10 @@
    "role": "faculty",
    "method": "GET",
    "path": "/uPortal/api/cookiecheck",
-   "headers": {},
-   "tests": 1
-  },
-  {
-   "role": "faculty",
-   "method": "GET",
-   "path": "/uPortal/api/cookiecheck",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
-   "tests": 2
+   "tests": 3
   },
   {
    "role": "faculty",
@@ -3792,7 +3818,7 @@
   {
    "role": "faculty",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5bf8766a-12fe-4ef1-9c63-5c716f42b472",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=37e035f6-0926-45f5-8388-b78b280f84a7",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -3802,7 +3828,7 @@
   {
    "role": "faculty",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=737352c4-f865-4ed1-80d1-572fecd0df80",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5c583745-3296-4843-858e-7dcb35be49a4",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -3812,7 +3838,7 @@
   {
    "role": "faculty",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8b8b998f-f8c1-41af-a4c5-a72ee5015247",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=94f1add8-ac90-44a6-889a-ae96a803a3d2",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -3840,7 +3866,7 @@
   {
    "role": "faculty",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=5bf8766a-12fe-4ef1-9c63-5c716f42b472",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=37e035f6-0926-45f5-8388-b78b280f84a7",
    "headers": {
     "accept": "*/*"
    },
@@ -3849,7 +3875,7 @@
   {
    "role": "faculty",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=737352c4-f865-4ed1-80d1-572fecd0df80",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=5c583745-3296-4843-858e-7dcb35be49a4",
    "headers": {
     "accept": "*/*"
    },
@@ -3858,7 +3884,7 @@
   {
    "role": "faculty",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=8b8b998f-f8c1-41af-a4c5-a72ee5015247",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=94f1add8-ac90-44a6-889a-ae96a803a3d2",
    "headers": {
     "accept": "*/*"
    },
@@ -3977,18 +4003,14 @@
    "role": "guest",
    "method": "GET",
    "path": "/BookmarksPortlet/css/bookmarks.css",
-   "headers": {
-    "accept": "text/css,*/*;q=0.1"
-   },
+   "headers": {},
    "tests": 1
   },
   {
    "role": "guest",
    "method": "GET",
    "path": "/BookmarksPortlet/script/bookmarks.min.js",
-   "headers": {
-    "accept": "*/*"
-   },
+   "headers": {},
    "tests": 1
   },
   {
@@ -4606,33 +4628,26 @@
    "role": "guest",
    "method": "GET",
    "path": "/uPortal/",
-   "headers": {},
-   "tests": 7
+   "headers": {
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+   },
+   "tests": 40
   },
   {
    "role": "guest",
    "method": "GET",
    "path": "/uPortal/",
-   "headers": {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
-   },
-   "tests": 39
-  },
-  {
-   "role": "guest",
-   "method": "GET",
-   "path": "/uPortal/api/cookiecheck",
-   "headers": {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
-   },
-   "tests": 7
-  },
-  {
-   "role": "guest",
-   "method": "GET",
-   "path": "/uPortal/api/cookiecheck",
    "headers": {},
-   "tests": 1
+   "tests": 3
+  },
+  {
+   "role": "guest",
+   "method": "GET",
+   "path": "/uPortal/api/cookiecheck",
+   "headers": {
+    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+   },
+   "tests": 8
   },
   {
    "role": "guest",
@@ -4646,7 +4661,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/api/entity/portlet-definition/e2e-import-1791687051546",
+   "path": "/uPortal/api/entity/portlet-definition/e2e-import-1791689255656",
    "headers": {
     "accept": "*/*"
    },
@@ -4655,7 +4670,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/api/entity/portlet-definition/e2e-portlet-1791687065820",
+   "path": "/uPortal/api/entity/portlet-definition/e2e-portlet-1791689268799",
    "headers": {
     "accept": "*/*"
    },
@@ -4673,7 +4688,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/api/entity/user/e2e-user-1791687071833",
+   "path": "/uPortal/api/entity/user/e2e-user-1791689275542",
    "headers": {
     "accept": "*/*"
    },
@@ -4723,14 +4738,14 @@
    "headers": {
     "accept": "*/*"
    },
-   "tests": 46
+   "tests": 45
   },
   {
    "role": "guest",
    "method": "GET",
    "path": "/uPortal/api/v4-3/dlm/layout.json",
    "headers": {},
-   "tests": 1
+   "tests": 2
   },
   {
    "role": "guest",
@@ -4748,13 +4763,6 @@
    "headers": {
     "accept": "*/*"
    },
-   "tests": 1
-  },
-  {
-   "role": "guest",
-   "method": "GET",
-   "path": "/uPortal/api/v4-3/dlm/portletRegistry.json?category=Quicklinks",
-   "headers": {},
    "tests": 1
   },
   {
@@ -4787,7 +4795,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=046254c2-efa6-43bc-9173-f44cd3be9c26",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=0323663b-afb3-411c-bad2-0a63d5b5fc1e",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4797,7 +4805,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=07e3ee08-ac61-4ff0-8f07-e4ecba1988e4",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=0a9fe352-6e68-449e-952d-729e449d987d",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4807,7 +4815,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=111b779d-f811-482d-b401-727c2c7a59ca",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=113adea4-1b74-4a25-a446-bd15d74e2604",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4817,7 +4825,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=121ac3af-a4ad-46cf-8771-152b110f8c2a",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=135d4760-00ab-4db0-b7a9-9000028b361a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4827,7 +4835,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=12abe0e8-b963-4589-bb47-3c96cf473e15",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=1b6ae4e4-f6f1-4cf3-963d-7404c90b694b",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4837,7 +4845,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=38da837f-4a25-4bbe-b421-34e89f6104e6",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=1cbf5c53-beba-4886-92e5-19495bea9da8",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4847,7 +4855,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=4c51fb8f-4e94-4f9f-8721-2178f7944899",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=24976915-99a0-46c8-a0e1-3deb934d3e79",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4857,7 +4865,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=50134ecb-399d-41c4-861d-029b444521dd",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=33e5253f-1a99-4a10-b4a9-56db83c87e2f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4867,7 +4875,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5189ee84-1a49-4df4-8199-a9aa2120b9c5",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=44ec665c-aa08-4317-8781-47cfeba8bb6f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4877,7 +4885,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5256ac80-c7d4-4ac0-83ad-54f197ac3b73",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=50a17f20-d306-4a37-8c83-17cc6081e1b9",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4887,7 +4895,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=55ad182f-f58a-49f4-96e4-b9218fbbfb51",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=520ec50d-d1f4-4f30-9e24-ac01ede5aebe",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4897,7 +4905,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5f26c71d-ede0-4e56-9010-35d864f6fa96",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=52288418-c77e-4498-8163-a5baf4b7969a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4907,7 +4915,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=61430150-e6dd-4d51-a99f-44894a355198",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=539d452b-0b67-4e06-bf65-a4ce2647d1cf",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4917,7 +4925,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=6817984c-a731-40da-a6f8-42b0654efebc",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=6572d4bc-345d-4058-af17-db3ebfb93dfb",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4927,7 +4935,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=6fb5f4d6-eb9d-4f7e-bb2c-e88c049c1ed1",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=68046da5-b0c0-4c38-85d0-fe42b7676bf6",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4937,7 +4945,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=70098099-8ba8-483a-9dc2-b32c27b69d4f",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=6c89b184-f7e4-4b29-82ce-383931678c66",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4947,7 +4955,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=742cf74c-4cbc-4227-a978-f881fcdb7413",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=6e908d56-b0ff-4cdf-af8b-a1d7a1c99be0",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4957,7 +4965,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=74c46943-0b7c-4be6-8c66-e0edeb45bd12",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=70d2f922-b723-4879-b808-e814b86f3560",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4967,7 +4975,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=80308d07-7779-4a49-830a-c67214bca2ed",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=7793e51b-337e-4aa6-be1d-33e6439d0b2f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4977,7 +4985,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=825a98c7-8ca6-4a24-9501-428187f6f382",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=7bedc852-11b0-4eab-8ad9-35c33616415c",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4987,7 +4995,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8aa1be7d-a0a1-4472-969d-05728931cffc",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=7fe1368f-e92f-4808-920d-86c6b4ac291b",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -4997,7 +5005,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8b5ae887-957b-4a1f-873c-98b5b9365f09",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=86e2b17d-128c-41db-953f-09018954fcce",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5007,7 +5015,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=92f9ac28-dcfd-4dd8-95d0-1d7fcd0a4d4e",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8dc69bb0-326e-4e81-889e-c773d16f62a3",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5017,7 +5025,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a4180718-0e99-4c1d-8973-7ef7e49a7794",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8dd2ed0f-638a-41c0-a503-c0d0ae8ea73c",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5027,7 +5035,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=af2dfb16-3c9b-418c-96d9-c381755aa56d",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8ff250c6-5bb2-4a28-88d4-725955cc2b5b",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5037,7 +5045,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b27481a7-d7be-493a-afb3-b0f14170ac8f",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a10dac19-494e-4861-aca5-f839889e4a37",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5047,7 +5055,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b2c4b7f6-5a39-4e64-9001-7553918d8915",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=aaf34d98-1a02-404d-bce7-eb641ad1b19a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5057,7 +5065,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=bbc9b50a-e43f-4a9f-859a-cfc6b1692fb8",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=af0dace5-58cc-4938-8a73-bae9a5f3426d",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5067,7 +5075,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=bfc1f622-c08e-4cd9-8c7a-148c8a45a0c1",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b65c6a51-4ca4-42eb-a906-08f043a0ccc1",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5077,7 +5085,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c276e8d0-fcbf-423a-93f0-b0857d4e1044",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ba96c2a9-2d91-4c11-82ad-2ccffc42830e",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5087,7 +5095,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cd6c5b3f-89dc-4284-86fa-dd85b66f7281",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=bcf1d347-6c65-4fce-a011-d89926e0c00c",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5097,7 +5105,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ce0c395d-d5c3-40dc-b77b-d1eda1335a40",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c0be20eb-cb80-491b-9990-0cd2b496b57a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5107,7 +5115,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cfff3ba7-7d8e-4803-9dd8-e41e81560b14",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c1a3f172-6160-4124-a9c8-55e03da73d49",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5117,7 +5125,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d135e784-b181-482d-bf13-8083a22fc0b8",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c26da6ba-a2b8-437e-9fa0-0089c665571a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5127,7 +5135,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d3296fde-fef6-4749-afcd-02d8931f0037",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c5976c20-1671-4111-8676-efaa7fb0511f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5137,7 +5145,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d377e534-d233-454e-96cd-90594ec9f24c",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cc3f3b71-d4b4-4650-aebf-8d117088ede1",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5147,7 +5155,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d484b4ff-29e5-4b05-9a4a-658f6c4e8b51",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cf0cf710-8aea-4886-ae99-f482e0326928",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5157,7 +5165,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d72f5e68-3ebf-4be9-a182-897c51898b27",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d4c19977-359b-4176-8352-a3ea05c3d372",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5167,7 +5175,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d9dcc911-21d8-41a3-9650-236761e5125b",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d7700643-0636-47ef-b7ab-e868de52db8d",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5177,7 +5185,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=dbcff2d3-5fbb-42aa-9a5a-abb43e745c26",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d8c8e865-fdd6-4c0e-b08e-6c6c592d078a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5187,7 +5195,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=dd8f7932-7158-4957-b055-b44e9c381331",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d9190f05-42a1-407d-8bc9-8cf729a738d4",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5197,7 +5205,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=de804470-0efe-4457-a8ee-1c18b34b2f94",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=dbbaf36a-5e90-473f-8f3e-f39d1a6f4555",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5207,7 +5215,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e1c538c8-4da7-47a8-9e54-4c7458cedcfd",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=dc7c1511-4404-4bc9-9246-a209767b6e8a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5217,7 +5225,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e7896e08-30e8-48fd-891b-08635055e6ac",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e12ee48b-5088-409c-a038-dea46ed242bc",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5227,7 +5235,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e864d535-40a6-40b2-8c09-777d50f72fb1",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e358488e-a92e-405c-b6f5-ecdd768e6961",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5237,7 +5245,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ed6954b5-6760-4365-94e9-a6ce32cc8051",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e4612737-e231-4411-b840-0aa8b792b654",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5247,7 +5255,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=f787c181-697f-4d65-a299-476a7a42594b",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=f24c1c51-fc34-47fe-88c3-d8b934cfb98a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5257,7 +5265,7 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=f94aa8aa-3995-458c-b65b-6780580007a4",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=fc216e3d-8ef4-4db5-ba65-db4b1aed9cc5",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -5267,18 +5275,11 @@
   {
    "role": "guest",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=fd5cd617-fef8-41b6-9126-7190fbe7a450",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=fef7861b-3084-47e5-ae07-228f63cc000f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
    },
-   "tests": 1
-  },
-  {
-   "role": "guest",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/normal/render.uP",
-   "headers": {},
    "tests": 1
   },
   {
@@ -5379,7 +5380,14 @@
    "headers": {
     "accept": "text/css,*/*;q=0.1"
    },
-   "tests": 47
+   "tests": 46
+  },
+  {
+   "role": "guest",
+   "method": "GET",
+   "path": "/uPortal/media/skins/respondr/defaultSkin.css",
+   "headers": {},
+   "tests": 1
   },
   {
    "role": "guest",
@@ -5388,6 +5396,13 @@
    "headers": {
     "accept": "*/*"
    },
+   "tests": 1
+  },
+  {
+   "role": "guest",
+   "method": "GET",
+   "path": "/uPortal/p/logging-in/max/render.uP",
+   "headers": {},
    "tests": 1
   },
   {
@@ -6201,7 +6216,14 @@
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
-   "tests": 3
+   "tests": 2
+  },
+  {
+   "role": "staff",
+   "method": "GET",
+   "path": "/uPortal/api/cookiecheck",
+   "headers": {},
+   "tests": 1
   },
   {
    "role": "staff",
@@ -6215,7 +6237,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/10f2baba-8606-4d78-815b-13458da21647",
+   "path": "/uPortal/api/portlet-list/0db8073f-4348-4fe0-847e-a98c6c75b052",
    "headers": {
     "accept": "*/*"
    },
@@ -6224,7 +6246,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/14f31cf6-5ec3-435a-9219-d1c8d96cd1c3",
+   "path": "/uPortal/api/portlet-list/1b71df1c-ceef-430f-913c-f22318328529",
    "headers": {
     "accept": "*/*"
    },
@@ -6233,7 +6255,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/1834b57c-2dee-48d3-8c43-f2b36d52a88e",
+   "path": "/uPortal/api/portlet-list/1ce18b86-0d41-4e0a-9982-b65f78e47620",
    "headers": {
     "accept": "*/*"
    },
@@ -6242,7 +6264,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/2269316f-d144-4a21-9c5d-6a6d5afc36b3",
+   "path": "/uPortal/api/portlet-list/46a97089-a874-4201-8636-93b817369b8d",
    "headers": {
     "accept": "*/*"
    },
@@ -6251,7 +6273,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/2809d97a-bae0-4d54-9e2e-d7a22686a4bd",
+   "path": "/uPortal/api/portlet-list/57900f42-94fd-4693-acf4-77e81a7a3c31",
    "headers": {
     "accept": "*/*"
    },
@@ -6260,16 +6282,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/6596f2cd-8a5e-4525-9c80-1bb204a3c9e4",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "staff",
-   "method": "GET",
-   "path": "/uPortal/api/portlet-list/8fcc6d10-69c2-4800-8232-aee244f8c03b",
+   "path": "/uPortal/api/portlet-list/9bd0c7cd-db39-4c31-b96b-8642fc4e85bc",
    "headers": {
     "accept": "*/*"
    },
@@ -6287,7 +6300,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/abdf31e4-322b-4b12-9298-6d564110c541",
+   "path": "/uPortal/api/portlet-list/b2204367-e671-4c19-becf-7b602b20735a",
    "headers": {
     "accept": "*/*"
    },
@@ -6296,7 +6309,16 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/f4b92ae7-ee8e-4e64-8a3e-1a30f063595d",
+   "path": "/uPortal/api/portlet-list/d846f9d1-d46c-45d0-84c7-ad9f65bd20df",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "staff",
+   "method": "GET",
+   "path": "/uPortal/api/portlet-list/fab12ad3-af98-4c4f-a5ed-5327050ce83a",
    "headers": {
     "accept": "*/*"
    },
@@ -6360,7 +6382,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=133cc977-ee63-48b9-998f-397ddb289021",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=01341ecf-18d1-4cb9-b3a2-bf4389a3a939",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -6370,7 +6392,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=73e7a4f5-f9db-471c-94ec-00fa3464000a",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=986e7429-b4ca-4b1c-b89b-b039666acef2",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -6380,7 +6402,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c0a4d88f-d8e5-429b-b505-f875f23b4e2c",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c947ca56-e774-4cf1-aa3e-9be844983410",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -6408,7 +6430,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=133cc977-ee63-48b9-998f-397ddb289021",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=01341ecf-18d1-4cb9-b3a2-bf4389a3a939",
    "headers": {
     "accept": "*/*"
    },
@@ -6417,7 +6439,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=73e7a4f5-f9db-471c-94ec-00fa3464000a",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=986e7429-b4ca-4b1c-b89b-b039666acef2",
    "headers": {
     "accept": "*/*"
    },
@@ -6426,7 +6448,7 @@
   {
    "role": "staff",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=c0a4d88f-d8e5-429b-b505-f875f23b4e2c",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=c947ca56-e774-4cf1-aa3e-9be844983410",
    "headers": {
     "accept": "*/*"
    },
@@ -6571,7 +6593,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/basiclti-portlet/pages/proxy.jsp?lti_version=LTI-1p0&lis_person_contact_email_primary=steven.student%40example.org&oauth_signature=noI0wNymNrGkybXoanNAC2I3qag%3D&lis_person_name_family=Student&tool_consumer_instance_guid=12345&oauth_consumer_key=12345&launch_presentation_locale=en_AU&resource_link_id=Pluto_50_u27l1n18_20_&oauth_signature_method=HMAC-SHA1&oauth_timestamp=1791687166&oauth_version=1.0&lis_person_name_full=Steven+Student&lis_person_name_given=Steven&basiclti_submit=null&endpoint_url=http%3A%2F%2Fwww.imsglobal.org%2Fdevelopers%2FLTI%2Ftest%2Fv1p1%2Ftool.php&oauth_nonce=696253422194&user_id=student&lti_message_type=basic-lti-launch-request&oauth_callback=about%3Ablank&example_param_2=another+value&example_param_1=hello+world",
+   "path": "/basiclti-portlet/pages/proxy.jsp?lti_version=LTI-1p0&lis_person_contact_email_primary=steven.student%40example.org&oauth_signature=mdYOqsLz7r5R%2BMh5Yi8tSJorljc%3D&lis_person_name_family=Student&tool_consumer_instance_guid=12345&oauth_consumer_key=12345&launch_presentation_locale=en_AU&resource_link_id=Pluto_50_u27l1n18_20_&oauth_signature_method=HMAC-SHA1&oauth_timestamp=1791689369&oauth_version=1.0&lis_person_name_full=Steven+Student&lis_person_name_given=Steven&basiclti_submit=null&endpoint_url=http%3A%2F%2Fwww.imsglobal.org%2Fdevelopers%2FLTI%2Ftest%2Fv1p1%2Ftool.php&oauth_nonce=605568996166&user_id=student&lti_message_type=basic-lti-launch-request&oauth_callback=about%3Ablank&example_param_2=another+value&example_param_1=hello+world",
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
@@ -7725,14 +7747,7 @@
    "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
    },
-   "tests": 31
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/api/cookiecheck",
-   "headers": {},
-   "tests": 2
+   "tests": 33
   },
   {
    "role": "student",
@@ -7746,7 +7761,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/api/portlet-list/b9b1eeee-02af-4bbc-bd9d-fb9e832b46e3",
+   "path": "/uPortal/api/portlet-list/77fc3b61-1b54-4eba-9d45-efe005bc7bce",
    "headers": {
     "accept": "*/*"
    },
@@ -7853,7 +7868,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=113b075b-e58c-4957-8ff0-c9d004ceb2c6",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=13827ef5-af84-4688-929e-21d22e24e2e4",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7863,7 +7878,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=21c3e0e5-58b0-4ba2-909b-fb791cb36316",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=16295bba-af1c-4a17-b33b-b43e360bc569",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7873,7 +7888,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=286454b3-c185-460d-92a9-3ba30f4a55d5",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=1e520eab-a5a8-41e4-a8ce-b1881dbf7a00",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7883,7 +7898,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2a440915-3d79-4445-9985-d1d0ff088042",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=200e5075-7276-4817-b855-9986033419d3",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7893,7 +7908,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2bd200b0-ae50-4de5-b73d-afeb1e2a84d8",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=217a1e17-c53b-4572-870a-b22ba47c2508",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7903,7 +7918,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2dfdf65b-32ea-4789-a4a3-a50f07db430b",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=2bc2acae-5749-4d67-b4f0-ce4d87786bad",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7913,7 +7928,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=35634f5d-83d2-4fcf-a21c-a2e9edc92454",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=3118878c-9439-4947-b154-3bd27ca8b9c3",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7923,7 +7938,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=39ffbdba-c0a2-40c3-9e6e-e9330f6f9b4b",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=4537f616-25c9-4214-8971-3abb87dad24f",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7933,7 +7948,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=3a133dcf-dc52-476a-bccd-0e28daebb2fa",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=48727cd0-4bbe-48ec-85a1-2f00c4ea3abd",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7943,7 +7958,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=52a83887-4e73-44b3-9abc-5bec6dbebbd9",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=4aa79d87-77d4-4a31-8ba3-88d62516b81d",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7953,7 +7968,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5450c42b-1fb1-4577-a081-c030be014f10",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=55866c8a-90b5-48c5-8fa4-68688ffceeb2",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7963,7 +7978,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=570b758d-3a49-45b3-982d-6ccc8d626573",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=5ef8254d-83c0-4749-9ff6-ae64cda8bf8c",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7973,7 +7988,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=64c4e2d0-c50e-43e0-8424-0a25436a9300",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=65801ec7-ee18-44a5-9afd-b10b1197f30b",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7983,7 +7998,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=889e59f2-e9f1-4ad8-9391-82bf2fae332e",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=67123921-3720-4115-ab6c-aae30c203e1a",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -7993,7 +8008,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8d8476ca-c846-4f5c-b35c-8967fdae15e0",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=6be14854-4624-4547-9bb8-dc17f8a72073",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8003,7 +8018,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8eef3806-f6cc-4c44-874d-12bb5549933d",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=81b168f4-1f2b-4ae4-963d-4d7e6b681d69",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8013,7 +8028,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8f4e7320-8d50-4d4f-8107-da411817ace6",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8bfc1f7b-3a3b-45dd-85a9-1c17708f8277",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8023,7 +8038,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=97366fb3-8dbe-4168-a528-682f8c63aae3",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=8d73d393-29e4-4308-9327-2cd757218bdb",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8033,7 +8048,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a1af25ad-63df-4ab0-82f5-780bde81cf0b",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a618b0e6-ed16-44bb-8497-e5242c2f0116",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8043,7 +8058,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a5d8d4a5-39b9-4dee-9fd1-4d4668f63ab4",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a8a71aa1-6ff1-4d38-9039-d60b1535227b",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8053,7 +8068,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b34c3a8f-b4c3-4202-859a-8f437ca22922",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=a95c4a49-67af-4b66-a89a-242b2d3e31fd",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8063,7 +8078,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c2229ed3-50a7-4c01-ab6e-86c8a9033ee6",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ad2c66c6-31e7-47ba-aae6-ad2f7908abc8",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8073,7 +8088,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c459cfbe-e270-40b0-920c-87ad80170d64",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b091ace5-22a4-41e2-9891-8ed620a886b3",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8083,7 +8098,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cc1ae3ec-0da8-4a7e-a1a4-598674a17377",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b15864a9-b0f1-4daa-94dc-8eed88396da4",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8093,7 +8108,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ccaadb7e-841a-4254-9f4f-310fd2085ce4",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b3c74c59-4e30-4f1d-9643-ed2b68b73d44",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8103,7 +8118,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d1bab4a7-ddf4-4320-9d58-268264a18a7d",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=b5388af3-02ea-466f-a812-10dc881c541d",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8113,7 +8128,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d60225e0-11c3-4538-b451-9f5730c05a74",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=c801a2ff-c317-47fe-84d0-f0e8ad6f02ba",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8123,7 +8138,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d77cf777-39c4-49c8-a0d6-b4f4a5e3d689",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cb4564ce-d397-49ae-afef-75b7967aeddc",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8133,7 +8148,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=ddac2a0b-527c-4de2-b3c2-e0f18f50a2ce",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=cdd88a17-57a3-4b89-93f5-8060168963aa",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8143,7 +8158,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e2993574-3164-460b-8b6b-cb76e4ea5afa",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d12fa5bd-010a-46b7-938c-b7776e526266",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8153,7 +8168,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=e89653b5-b65c-4552-904b-21cea0db3c59",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=d5308c5b-0485-423b-9398-9c6056319af4",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8163,7 +8178,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=f884e09b-7c91-45c0-ae5b-f481980902ed",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=efafcb81-38fc-42c3-b605-6bdf6e4a8867",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8173,7 +8188,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=fb819d67-9c7e-448a-b6ec-e97d5c94edc3",
+   "path": "/uPortal/f/u26l1s200/p/emergency-alert.u26l1n210/normal/GET-NOTIFICATIONS-UNCATEGORIZED.resource.uP?_csrf=f35b6714-941e-4483-9f54-693beabe1f6e",
    "headers": {
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest"
@@ -8219,7 +8234,14 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/max/10102026-7.resource.uP?_csrf=21c3e0e5-58b0-4ba2-909b-fb791cb36316",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/max/10102026-7.resource.uP?_csrf=13827ef5-af84-4688-929e-21d22e24e2e4",
+   "headers": {},
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/max/10102026-7.resource.uP?_csrf=4537f616-25c9-4214-8971-3abb87dad24f",
    "headers": {
     "accept": "*/*"
    },
@@ -8228,16 +8250,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/max/10102026-7.resource.uP?_csrf=2dfdf65b-32ea-4789-a4a3-a50f07db430b",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/max/10102026-7.resource.uP?_csrf=b34c3a8f-b4c3-4202-859a-8f437ca22922",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/max/10102026-7.resource.uP?_csrf=b5388af3-02ea-466f-a812-10dc881c541d",
    "headers": {
     "accept": "*/*"
    },
@@ -8255,7 +8268,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=113b075b-e58c-4957-8ff0-c9d004ceb2c6",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=13827ef5-af84-4688-929e-21d22e24e2e4",
    "headers": {
     "accept": "*/*"
    },
@@ -8264,7 +8277,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=21c3e0e5-58b0-4ba2-909b-fb791cb36316",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=16295bba-af1c-4a17-b33b-b43e360bc569",
    "headers": {
     "accept": "*/*"
    },
@@ -8273,7 +8286,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=286454b3-c185-460d-92a9-3ba30f4a55d5",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=1e520eab-a5a8-41e4-a8ce-b1881dbf7a00",
    "headers": {
     "accept": "*/*"
    },
@@ -8282,7 +8295,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=2a440915-3d79-4445-9985-d1d0ff088042",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=200e5075-7276-4817-b855-9986033419d3",
    "headers": {
     "accept": "*/*"
    },
@@ -8291,7 +8304,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=2bd200b0-ae50-4de5-b73d-afeb1e2a84d8",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=217a1e17-c53b-4572-870a-b22ba47c2508",
    "headers": {
     "accept": "*/*"
    },
@@ -8300,7 +8313,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=2dfdf65b-32ea-4789-a4a3-a50f07db430b",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=2bc2acae-5749-4d67-b4f0-ce4d87786bad",
    "headers": {
     "accept": "*/*"
    },
@@ -8309,95 +8322,14 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=35634f5d-83d2-4fcf-a21c-a2e9edc92454",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=39ffbdba-c0a2-40c3-9e6e-e9330f6f9b4b",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=3a133dcf-dc52-476a-bccd-0e28daebb2fa",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=52a83887-4e73-44b3-9abc-5bec6dbebbd9",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=5450c42b-1fb1-4577-a081-c030be014f10",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=570b758d-3a49-45b3-982d-6ccc8d626573",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=64c4e2d0-c50e-43e0-8424-0a25436a9300",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=889e59f2-e9f1-4ad8-9391-82bf2fae332e",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=8d8476ca-c846-4f5c-b35c-8967fdae15e0",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "student",
-   "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=8d8476ca-c846-4f5c-b35c-8967fdae15e0",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=2bc2acae-5749-4d67-b4f0-ce4d87786bad",
    "headers": {},
    "tests": 1
   },
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=8eef3806-f6cc-4c44-874d-12bb5549933d",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=3118878c-9439-4947-b154-3bd27ca8b9c3",
    "headers": {
     "accept": "*/*"
    },
@@ -8406,7 +8338,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=8f4e7320-8d50-4d4f-8107-da411817ace6",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=4537f616-25c9-4214-8971-3abb87dad24f",
    "headers": {
     "accept": "*/*"
    },
@@ -8415,7 +8347,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=97366fb3-8dbe-4168-a528-682f8c63aae3",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=48727cd0-4bbe-48ec-85a1-2f00c4ea3abd",
    "headers": {
     "accept": "*/*"
    },
@@ -8424,7 +8356,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=a1af25ad-63df-4ab0-82f5-780bde81cf0b",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=4aa79d87-77d4-4a31-8ba3-88d62516b81d",
    "headers": {
     "accept": "*/*"
    },
@@ -8433,7 +8365,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=a5d8d4a5-39b9-4dee-9fd1-4d4668f63ab4",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=55866c8a-90b5-48c5-8fa4-68688ffceeb2",
    "headers": {
     "accept": "*/*"
    },
@@ -8442,7 +8374,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=b34c3a8f-b4c3-4202-859a-8f437ca22922",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=5ef8254d-83c0-4749-9ff6-ae64cda8bf8c",
    "headers": {
     "accept": "*/*"
    },
@@ -8451,7 +8383,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=c2229ed3-50a7-4c01-ab6e-86c8a9033ee6",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=65801ec7-ee18-44a5-9afd-b10b1197f30b",
    "headers": {
     "accept": "*/*"
    },
@@ -8460,7 +8392,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=c459cfbe-e270-40b0-920c-87ad80170d64",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=67123921-3720-4115-ab6c-aae30c203e1a",
    "headers": {
     "accept": "*/*"
    },
@@ -8469,7 +8401,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=cc1ae3ec-0da8-4a7e-a1a4-598674a17377",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=6be14854-4624-4547-9bb8-dc17f8a72073",
    "headers": {
     "accept": "*/*"
    },
@@ -8478,7 +8410,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=ccaadb7e-841a-4254-9f4f-310fd2085ce4",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=81b168f4-1f2b-4ae4-963d-4d7e6b681d69",
    "headers": {
     "accept": "*/*"
    },
@@ -8487,7 +8419,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=d1bab4a7-ddf4-4320-9d58-268264a18a7d",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=8bfc1f7b-3a3b-45dd-85a9-1c17708f8277",
    "headers": {
     "accept": "*/*"
    },
@@ -8496,7 +8428,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=d60225e0-11c3-4538-b451-9f5730c05a74",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=8d73d393-29e4-4308-9327-2cd757218bdb",
    "headers": {
     "accept": "*/*"
    },
@@ -8505,7 +8437,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=d77cf777-39c4-49c8-a0d6-b4f4a5e3d689",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=a618b0e6-ed16-44bb-8497-e5242c2f0116",
    "headers": {
     "accept": "*/*"
    },
@@ -8514,7 +8446,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=ddac2a0b-527c-4de2-b3c2-e0f18f50a2ce",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=a8a71aa1-6ff1-4d38-9039-d60b1535227b",
    "headers": {
     "accept": "*/*"
    },
@@ -8523,7 +8455,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=e2993574-3164-460b-8b6b-cb76e4ea5afa",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=a95c4a49-67af-4b66-a89a-242b2d3e31fd",
    "headers": {
     "accept": "*/*"
    },
@@ -8532,7 +8464,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=e89653b5-b65c-4552-904b-21cea0db3c59",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=ad2c66c6-31e7-47ba-aae6-ad2f7908abc8",
    "headers": {
     "accept": "*/*"
    },
@@ -8541,7 +8473,7 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=f884e09b-7c91-45c0-ae5b-f481980902ed",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=b091ace5-22a4-41e2-9891-8ed620a886b3",
    "headers": {
     "accept": "*/*"
    },
@@ -8550,7 +8482,88 @@
   {
    "role": "student",
    "method": "GET",
-   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=fb819d67-9c7e-448a-b6ec-e97d5c94edc3",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=b15864a9-b0f1-4daa-94dc-8eed88396da4",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=b3c74c59-4e30-4f1d-9643-ed2b68b73d44",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=b5388af3-02ea-466f-a812-10dc881c541d",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=c801a2ff-c317-47fe-84d0-f0e8ad6f02ba",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=cb4564ce-d397-49ae-afef-75b7967aeddc",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=cdd88a17-57a3-4b89-93f5-8060168963aa",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=d12fa5bd-010a-46b7-938c-b7776e526266",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=d5308c5b-0485-423b-9398-9c6056319af4",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=efafcb81-38fc-42c3-b605-6bdf6e4a8867",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "student",
+   "method": "GET",
+   "path": "/uPortal/f/welcome/p/calendar.u16l1n13/normal/10102026-7.resource.uP?_csrf=f35b6714-941e-4483-9f54-693beabe1f6e",
    "headers": {
     "accept": "*/*"
    },
@@ -8782,7 +8795,7 @@
   {
    "role": "admin",
    "method": "DELETE",
-   "path": "/uPortal/api/entity/portlet-definition/e2e-import-1791687051546",
+   "path": "/uPortal/api/entity/portlet-definition/e2e-import-1791689255656",
    "headers": {
     "accept": "*/*",
     "x-requested-with": "XMLHttpRequest"
@@ -8795,7 +8808,7 @@
    "path": "/uPortal/api/import",
    "headers": {
     "accept": "*/*",
-    "content-type": "multipart/form-data; boundary=----WebKitFormBoundaryv6gJPXfqgLE2Qg2a"
+    "content-type": "multipart/form-data; boundary=----WebKitFormBoundaryWAvU8EAHoGMHCU4e"
    },
    "tests": 1
   },
@@ -8805,7 +8818,7 @@
    "path": "/uPortal/api/import",
    "headers": {
     "accept": "*/*",
-    "content-type": "multipart/form-data; boundary=----WebKitFormBoundaryY4UN8vBXwxquy8bQ"
+    "content-type": "multipart/form-data; boundary=----WebKitFormBoundaryrpXqcywJDvT2E2O6"
    },
    "tests": 1
   },
@@ -8924,20 +8937,20 @@
   },
   {
    "role": "admin",
-   "method": "DELETE",
-   "path": "/uPortal/api/portlet-list/{uuid}",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "admin",
    "method": "PUT",
    "path": "/uPortal/api/portlet-list/{uuid}",
    "headers": {
     "accept": "*/*",
     "content-type": "application/json"
+   },
+   "tests": 1
+  },
+  {
+   "role": "admin",
+   "method": "DELETE",
+   "path": "/uPortal/api/portlet-list/{uuid}",
+   "headers": {
+    "accept": "*/*"
    },
    "tests": 1
   },
@@ -9059,16 +9072,6 @@
     "accept": "application/json, text/javascript, */*; q=0.01",
     "x-requested-with": "XMLHttpRequest",
     "content-type": "application/x-www-form-urlencoded; charset=UTF-8"
-   },
-   "tests": 1
-  },
-  {
-   "role": "admin",
-   "method": "POST",
-   "path": "/uPortal/f/u{id}l1s200/p/emergency-alert.u{id}l1n210/normal/action.uP?_csrf={uuid}&pP_action=invokeNotificationService&pP_uuid={uuid}",
-   "headers": {
-    "accept": "*/*",
-    "x-requested-with": "XMLHttpRequest"
    },
    "tests": 1
   },
@@ -10991,7 +10994,7 @@
   {
    "role": "guest",
    "method": "DELETE",
-   "path": "/uPortal/api/entity/portlet-definition/e2e-import-1791687051546",
+   "path": "/uPortal/api/entity/portlet-definition/e2e-import-1791689255656",
    "headers": {
     "accept": "*/*"
    },
@@ -11000,7 +11003,16 @@
   {
    "role": "guest",
    "method": "DELETE",
-   "path": "/uPortal/api/entity/portlet-definition/e2e-portlet-1791687065820",
+   "path": "/uPortal/api/entity/portlet-definition/e2e-portlet-1791689268799",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "guest",
+   "method": "DELETE",
+   "path": "/uPortal/api/portlet-list/{uuid}",
    "headers": {
     "accept": "*/*"
    },
@@ -11013,15 +11025,6 @@
    "headers": {
     "accept": "*/*",
     "content-type": "application/json"
-   },
-   "tests": 1
-  },
-  {
-   "role": "guest",
-   "method": "DELETE",
-   "path": "/uPortal/api/portlet-list/{uuid}",
-   "headers": {
-    "accept": "*/*"
    },
    "tests": 1
   },
@@ -11537,44 +11540,6 @@
   },
   {
    "role": "staff",
-   "method": "DELETE",
-   "path": "/uPortal/api/portlet-list/{uuid}",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "staff",
-   "method": "PUT",
-   "path": "/uPortal/api/portlet-list/{uuid}",
-   "headers": {
-    "accept": "*/*",
-    "content-type": "application/json"
-   },
-   "tests": 1
-  },
-  {
-   "role": "staff",
-   "method": "DELETE",
-   "path": "/uPortal/api/portlet-list/{uuid}",
-   "headers": {
-    "accept": "*/*"
-   },
-   "tests": 1
-  },
-  {
-   "role": "staff",
-   "method": "PUT",
-   "path": "/uPortal/api/portlet-list/{uuid}",
-   "headers": {
-    "accept": "*/*",
-    "content-type": "application/json"
-   },
-   "tests": 1
-  },
-  {
-   "role": "staff",
    "method": "PUT",
    "path": "/uPortal/api/portlet-list/{uuid}",
    "headers": {
@@ -11619,6 +11584,44 @@
    "headers": {
     "accept": "*/*",
     "content-type": "application/json"
+   },
+   "tests": 1
+  },
+  {
+   "role": "staff",
+   "method": "PUT",
+   "path": "/uPortal/api/portlet-list/{uuid}",
+   "headers": {
+    "accept": "*/*",
+    "content-type": "application/json"
+   },
+   "tests": 1
+  },
+  {
+   "role": "staff",
+   "method": "DELETE",
+   "path": "/uPortal/api/portlet-list/{uuid}",
+   "headers": {
+    "accept": "*/*"
+   },
+   "tests": 1
+  },
+  {
+   "role": "staff",
+   "method": "PUT",
+   "path": "/uPortal/api/portlet-list/{uuid}",
+   "headers": {
+    "accept": "*/*",
+    "content-type": "application/json"
+   },
+   "tests": 1
+  },
+  {
+   "role": "staff",
+   "method": "DELETE",
+   "path": "/uPortal/api/portlet-list/{uuid}",
+   "headers": {
+    "accept": "*/*"
    },
    "tests": 1
   },
@@ -11778,11 +11781,10 @@
   },
   {
    "role": "student",
-   "method": "PUT",
+   "method": "DELETE",
    "path": "/uPortal/api/portlet-list/{uuid}",
    "headers": {
-    "accept": "*/*",
-    "content-type": "application/json"
+    "accept": "*/*"
    },
    "tests": 1
   },
@@ -11807,10 +11809,11 @@
   },
   {
    "role": "student",
-   "method": "DELETE",
+   "method": "PUT",
    "path": "/uPortal/api/portlet-list/{uuid}",
    "headers": {
-    "accept": "*/*"
+    "accept": "*/*",
+    "content-type": "application/json"
    },
    "tests": 1
   },
