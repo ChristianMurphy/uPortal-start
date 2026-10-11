@@ -138,7 +138,10 @@ async function misplacedArrows(page: Page, tag: string): Promise<string[]> {
       .filter(
         ({ style }) =>
           style.backgroundImage !== "none" &&
-          !style.backgroundPosition.startsWith(end),
+          // Chromium writes the right edge as "right 7.5px" or "calc(100% - 7.5px)"
+          (/(?:^right\b)|(?:100%)/.test(style.backgroundPositionX)
+            ? "right"
+            : "left") !== end,
       )
       .map(
         ({ select, style }) =>
