@@ -32,6 +32,10 @@ lock-abandonment age keeps its 60 s default. The checks (details and bounds in
   `dc9f4c90f`) changed on node A show on node B.
 * `permission-session`: a session that checked the permission before a grant or a revocation
   follows the change within 30 s, on both nodes.
+* `split-heal`: `iptables` drops the JGroups packets between the nodes until each installs a
+  view of one member. Node A changes a portlet title and grants a permission, and node B must
+  still show the old state. Once the ports are open and both nodes install a MergeView, node B
+  must show both changes within 30 s, the permission in an existing session.
 * `jobs-once`, `failover-jobs-once`: logins and renders on both nodes are aggregated exactly
   once, before and after a failover.
 * `failover-takeover`: the node holding the aggregation lock is killed with `kill -9` after
@@ -49,6 +53,7 @@ Seeded faults, each run nightly with `--fault` and caught when the listed checks
 | `lock-ignored` | `abandonedLockAge=PT0S` | `failover-takeover` |
 | `event-flush-delayed` | `flushInitialDelay=PT120S`, uPortal 5's delay | `events-aggregated` |
 | `join-gives-up` | node B's `jgroups.xml` with `join_timeout="1" max_join_attempts="1"` | `cluster-join` |
+| `merge-clear-off` | `org.apereo.portal.cache.clearReplicatedCachesOnMerge=false` | `split-heal` |
 | (fixture) | `tests/cluster/fixtures/overlap-*.log`, checked before each run | `no-overlap` |
 
 `lock-ignored` rarely makes two nodes run a job at the same moment, so `no-overlap` is shown to
@@ -101,6 +106,7 @@ under "Clusters: permission changes and portal events".
 | Stale permission decisions | `411a0111b` + `d1acaca7e`: `AuthorizationImplCacheTest` | `134e56ec1`: `AuthorizationImpl` clears `PRINCIPAL_HAS_PERMISSION` and `HAS_UNBLOCKED_GRANT` on every add, remove and update, and `ehcache.xml` replicates only their removals | Local eviction demo below, and `permission-session` in CI run 38136427089 |
 | Events lost at node start | `EventFlushScheduleTest` | `4cc3ecb1c`: the event queue is flushed by its own scheduler, `uPortalEventFlushScheduler`, from the start (`...PortalEventDaoQueuingEventHandler.flushInitialDelay`, default PT0S) | `events-aggregated` in CI runs 38120174431 and 38136427089, `event-flush-delayed` caught |
 | A starting node splits from the cluster | `cluster-join` in uPortal-start | `58168e0fe`: `jgroups.xml` GMS `max_join_attempts` 4 → 8, `join_timeout` kept at 1000 ms | Local measurement below |
+| Stale entries after a split heals (owner's decision, MOD-D54) | `ReplicatedCachesMergeClearerTest`, and `split-heal` in uPortal-start | `07ecf0939`: on a JGroups MergeView each node empties every cache with a JGroups replicator, locally, and logs one INFO line. Setting `org.apereo.portal.cache.clearReplicatedCachesOnMerge`, default true | Local split-heal runs below |
 
 Unit test runs:
 
@@ -137,6 +143,14 @@ the three `clearPermissionDecisions()` calls of `134e56ec1`.
 
 On `58168e0fe` the `join-gives-up` fault made `cluster-join` fail (14:38 to 14:48 UTC), and the
 main leg passed 10 of 10 with `cluster-join` at 516 ms (14:48 to 14:58 UTC).
+
+**Split and heal.** On uPortal `32b2e99c8` with the merge clear (the same two commits, on a local
+tree, because the integration branch then failed to load layouts on PostgreSQL, MOD-I224):
+
+| Leg | `split-heal` | The rest |
+| --- | --- | --- |
+| Main, 15:24 to 15:36 UTC | PASS. The ports were blocked at 15:30:05 and each node had a view of one member at 15:30:19. After node A's two changes, the ports opened at 15:30:25, and JGroups merged the nodes at 15:31:55. Node B then showed both changes within 186 ms. Each node logged "cleared 112 replicated caches on this node" | 11 of 11 |
+| `merge-clear-off`, 15:36 to 15:48 UTC | FAIL as it should: 30 s after the merge node B still showed the old title and denied the student (HTTP 403) | The others passed |
 
 ## CI results
 
@@ -179,7 +193,7 @@ main leg passed 10 of 10 with `cluster-join` at 516 ms (14:48 to 14:58 UTC).
   after the fourth. uPortal 5.x (`master`, 5.17.10-SNAPSHOT) has the same `join_timeout="1000"
   max_join_attempts="4"` and JGroups 3.6.20, which makes it an upstream candidate. A real
   network split can still leave stale entries after the merge. Clearing replicated caches on a
-  MergeView, or a shorter `MERGE3` interval, is for the owner to decide.
+  MergeView, which the owner chose (MOD-D54), covers that.
 * **The only node of a cluster waits on its own row after a crash.** JDBC_PING 3.6.20 returns every
   `JGROUPSPING` row as a discovery response with its coordinator flag, dead members' rows
   included. Only a clean shutdown (`register_shutdown_hook`) or a coordinator's view change
@@ -225,11 +239,15 @@ LOG.md is the coordinator's. Numbers from this workstream's block, MOD-I210 to M
   `@Version` can lose counts when aggregation moves between nodes and back.
 * `MOD-I216`: one pushed commit message of this workstream (the one that renamed the cluster test
   a required check) quotes a word the uPortal Vale style flags. It was not rewritten.
+* Logged by the coordinator from this workstream's report: `MOD-I224`, the layout query of
+  uPortal `6c55d9f6a` sorted by `USP.STRUCT_PARM_NM`, an alias the query lacks when the database
+  metadata doesn't report outer joins. The layout import then failed on PostgreSQL 18, found by a local
+  cluster run at 15:20 UTC and fixed in `95542a6b4`.
 * Decisions for the coordinator to number: the two-node cluster test is a required check on every
   push (main leg), with seeded faults nightly. A permission change clears both
   permission-decision caches on every node (whole caches, removals replicated, values never),
-  and the JCache provider that replaces Ehcache 2 must keep `clear()` cluster-wide. Clearing
-  replicated caches on a JGroups MergeView is open for the owner.
+  and the JCache provider that replaces Ehcache 2 must keep `clear()` cluster-wide. The owner
+  chose to clear replicated caches on a JGroups MergeView (MOD-D54).
 
 ## Environment notes
 
@@ -247,8 +265,8 @@ LOG.md is the coordinator's. Numbers from this workstream's block, MOD-I210 to M
 1. Revert the temporary on-push conditions of `9c71a8e` in `integration.yml`. The browsers,
    load and fault legs then run nightly again.
 2. The coordinator numbers the decisions above in LOG.md.
-3. Clearing replicated caches on a JGroups MergeView, for a real network split, waits on the
-   owner's decision.
+3. Read the push runs of uPortal `343c6b395` (CI, DB integration) and of uPortal-start, and the
+   Integration run with this uPortal build, for the batch (MOD-D53).
 4. Not started: a test for stale aggregation caches (MOD-I215). Node A is frozen with SIGSTOP
    past the server bias so that node B aggregates, then resumes after node B stops, and the
    counts must still match the raw events.
