@@ -66,7 +66,8 @@ Alternatives considered and rejected:
 
 * upgrading these WARs to Spring 4 inside the overlay, which replaces their whole Spring stack for
   a one-class problem;
-* the spike's `shared/lib` shim, which brings the removed API back for every webapp;
+* the spike's jar in `shared/lib` that restores the removed `jsp.el` classes, which brings the
+  removed API back for every webapp;
 * retiring them. CAS 3.6 still serves the CAS login specs, and Feedback, RSW and esup are in use.
 
 **NotificationPortlet (MOD-I62).** `overlays/NotificationPortlet/src/main/resources/config/application.properties`
@@ -122,8 +123,8 @@ falls in one of these groups.
 * Forwarders. Wrappers and proxies that override a removed method and pass it on: spring-web,
   spring-security-web, uPortal-rendering, uPortal-utils-core, ESAPI, jackrabbit-webdav and
   Shibboleth java-support.
-* Never loaded. `EvalTag`, spring-test mocks packaged into production WARs, FreeMarker's JSP
-  bridge, and a bundled Servlet 2.x API jar.
+* Never loaded. `EvalTag`, spring-test mocks packaged into production WARs, FreeMarker's support
+  for JSP taglibs in templates, and a bundled Servlet 2.x API jar.
 * Return types of overrides that nothing calls. spring-session 1.3's and portlet-servlet-adapter's
   `getSessionContext()`.
 * Boot's embedded Tomcat. NotificationPortlet excludes it (MOD-I62) and resource-server never
@@ -145,7 +146,7 @@ accepts only what it names and refuses an entry without a reason. All 5 tests pa
 
 All local runs used uPortal 5.17.10-SNAPSHOT built from uPortal's `ccr-43ba0785-hzlrj5`
 (`./gradlew install` on JDK 25), uPortal-start at this branch, and HSQLDB. Playwright 1.64 drove
-the preinstalled Chromium 1194 through a build-number shim.
+the preinstalled Chromium 1194 through a directory of links that gives it the build number 1248.
 
 ### Build and scan (Tomcat 9, javax)
 
@@ -195,8 +196,8 @@ The webapps that `portalInit` deployed to Tomcat 9 were transformed with jakarta
 `shared/lib`. They ran on Tomcat 11.0.26 with JDK 25.0.4, using uPortal-start's own `server.xml`
 and `context.xml`, a `shared.loader`, the same ports and the same HSQLDB.
 
-The run used the WARs exactly as the build produced them. It had none of the spike's fixups (JSTL swap, `jsp.el`
-shim, `application.properties` edit) and did without `-Djdk.xml.enableExtensionFunctions`, since
+The run used the WARs exactly as the build produced them. It had none of the spike's fixups (JSTL swap, a jar
+restoring the removed `jsp.el` classes, `application.properties` edit) and did without `-Djdk.xml.enableExtensionFunctions`, since
 uPortal's code fixes MOD-I63.
 
 * Startup took 36 s and all 16 contexts deployed, NotificationPortlet included (B2 is gone).
@@ -256,8 +257,8 @@ GitHub cancelled the earlier pushes' runs as superseded. Results to be added.
    starts its own Tomcat with SSL. It is allowlisted, and resource-server deploys on Tomcat 11.
 6. **Environment.** Maven Central's 429 responses made each local Gradle build take between 40 and
    90 minutes. The local mirror init script was not usable in this session, because the permission
-   classifier refused it (MOD-I52). The preinstalled Chromium (1194) needs a build-number shim for
-   Playwright 1.64 (1248).
+   classifier refused it (MOD-I52). The preinstalled Chromium (1194) needs a directory of links that
+   presents it as build 1248 to Playwright 1.64.
 
 ## Proposed LOG entries
 
