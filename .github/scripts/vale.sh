@@ -18,6 +18,7 @@ AI_TELLS_COMMITS_SHA256=12e86278246813a3d26f5623e04843c6a8b814ad4a50eada2c781829
 # Docs written for the 6.0 modernization. Upstream docs join as they are rewritten.
 DOC_PATHS=(
   docs/db-upgrade-harness.md
+  docs/developer/ci-logs.md
 )
 
 root=$(git rev-parse --show-toplevel)
