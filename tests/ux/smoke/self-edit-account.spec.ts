@@ -40,15 +40,17 @@ import {
  * - The edit form asks for a new password and its confirmation but not for
  *   the current password. (enterPassword.jsp has a Current Password field,
  *   but no flow state uses it.)
- * - A confirmation that differs from the password is not refused: the
- *   password field is saved. The form's script compares the fields only when
- *   the password input's textLength is above 0, and inputs have no
- *   textLength; PersonFormValidator never runs because Web Flow looks for a
- *   bean named after the model, accountFormValidator, and the bean is called
- *   personValidator.
  * - The form's "Add Preference" link adds an input for any attribute name,
  *   but saving ignores attributes the user may not edit, so nothing it adds
  *   is stored. The tests leave the link alone.
+ *
+ * Fixed (uPortal, MOD-D19 workstream): a confirmation that differs from the
+ * password is refused with "Passwords must match", by the form's script and,
+ * with scripts off, by PersonFormValidator. Before, the password field was
+ * saved: the script compared the fields only when the password input's
+ * textLength was above 0, and inputs have no textLength; the validator never
+ * ran because Web Flow looks for a bean named after the model,
+ * accountFormValidator, and the bean was only called personValidator.
  *
  * The locators use roles and names only, so the same tests describe the
  * portlet and any replacement that keeps its behaviour.
@@ -380,20 +382,61 @@ test.describe("Self edit account", () => {
       await expectLoginRefused(page);
     });
 
-    test("saves the password when the confirmation differs (defect)", async ({
-      page,
-    }) => {
+    test("the form refuses a confirmation that differs", async ({ page }) => {
       const newPassword = `Pw-${Date.now()}`;
       await openEditForm(page);
       await page.getByLabel("Password", { exact: true }).fill(newPassword);
       await page.getByLabel("Confirm Password").fill(`${newPassword}-typo`);
-      await save(page);
+      const alerts: string[] = [];
+      page.once("dialog", (dialog) => {
+        alerts.push(dialog.message());
+        void dialog.dismiss();
+      });
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await expect.poll(() => alerts, { timeout: 10_000 }).toEqual([
+        "Passwords must match",
+      ]);
       await expect(
-        page.getByRole("heading", { name: "Account Updated" }),
+        page.getByRole("heading", { name: "Edit My Account" }),
       ).toBeVisible();
 
       await logout(page);
-      await loginViaUrl(page, { ...account, password: newPassword });
+      await openLoginForm(page);
+      await submitLoginForm(page, account.username, newPassword);
+      await expectLoginRefused(page);
+    });
+
+    test("the portal refuses a confirmation that differs", async ({
+      browser,
+      page,
+    }) => {
+      // With scripts off the form's own check cannot run, so the portal's does
+      const context = await browser.newContext({ javaScriptEnabled: false });
+      const noScript = await context.newPage();
+      await noScript.goto(
+        `${config.url}Login?userName=${account.username}&password=${account.password}`,
+      );
+      await expect(noScript.locator("div.user-name")).toContainText(
+        account.displayName,
+      );
+      await noScript.goto(URL);
+      await noScript.getByRole("link", { name: "Edit", exact: true }).click();
+      const newPassword = `Pw-${Date.now()}`;
+      await noScript.getByLabel("Password", { exact: true }).fill(newPassword);
+      await noScript
+        .getByLabel("Confirm Password")
+        .fill(`${newPassword}-typo`);
+      await noScript.getByRole("button", { name: "Save", exact: true }).click();
+      await expect(noScript.getByText("Passwords must match")).toBeVisible();
+      await expect(
+        noScript.getByRole("heading", { name: "Edit My Account" }),
+      ).toBeVisible();
+      await context.close();
+
+      await logout(page);
+      await openLoginForm(page);
+      await submitLoginForm(page, account.username, newPassword);
+      await expectLoginRefused(page);
     });
 
     test("a blank password leaves the password as it was", async ({ page }) => {
