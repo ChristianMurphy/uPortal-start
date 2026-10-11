@@ -3,11 +3,11 @@
   <name>SearchLauncher</name>
   <fname>search-launcher</fname>
   <desc>Search Launcher to launch the search portlet that searches the portal, directory, and campus web.</desc>
-  <type>Portlet</type>
+  <type>Web Component</type>
   <timeout>30000</timeout>
   <portlet-descriptor>
     <up:isFramework>true</up:isFramework>
-    <up:portletName>Search</up:portletName>
+    <up:portletName>WebComponent</up:portletName>
   </portlet-descriptor>
   <lifecycle>
     <entry name="PUBLISHED" user="system">‹masked›</entry>
@@ -29,24 +29,16 @@
     <name>role</name>
     <value>searchLauncher</value>
   </parameter>
-  <portlet-preference>
-    <name>autoSuggestResultsProcessor</name>
-    <readOnly>false</readOnly>
-    <value>portletListProcessor</value>
-  </portlet-preference>
-  <portlet-preference>
-    <name>prepopulateAutoSuggestUrl</name>
-    <readOnly>false</readOnly>
-    <value>/api/portletList</value>
-  </portlet-preference>
-  <portlet-preference>
-    <name>prepopulateUrlPattern</name>
-    <readOnly>false</readOnly>
-    <value>/p/$fname/max</value>
-  </portlet-preference>
-  <portlet-preference>
-    <name>searchLaunchFname</name>
-    <readOnly>true</readOnly>
-    <value>search</value>
-  </portlet-preference>
+  <parameter>
+    <name>webComponent.attributes</name>
+    <value>search-fname=search</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.moduleUrl</name>
+    <value>up-search</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.tagName</name>
+    <value>up-search-launcher</value>
+  </parameter>
 </portlet-definition>

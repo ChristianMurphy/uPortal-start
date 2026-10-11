@@ -3,11 +3,11 @@
   <name>Search</name>
   <fname>search</fname>
   <desc>Search the portal, directory, and campus web.</desc>
-  <type>Portlet</type>
+  <type>Web Component</type>
   <timeout>30000</timeout>
   <portlet-descriptor>
     <up:isFramework>true</up:isFramework>
-    <up:portletName>Search</up:portletName>
+    <up:portletName>WebComponent</up:portletName>
   </portlet-descriptor>
   <lifecycle>
     <entry name="PUBLISHED" user="system">‹masked›</entry>
@@ -26,24 +26,12 @@
     <name>mobileIconUrl</name>
     <value>/uPortal/media/skins/icons/mobile/search.png</value>
   </parameter>
-  <portlet-preference>
-    <name>RESTSearch</name>
-    <readOnly>false</readOnly>
-    <value>true</value>
-  </portlet-preference>
-  <portlet-preference>
-    <name>autoSuggestResultsProcessor</name>
-    <readOnly>false</readOnly>
-    <value>portletListProcessor</value>
-  </portlet-preference>
-  <portlet-preference>
-    <name>prepopulateAutoSuggestUrl</name>
-    <readOnly>false</readOnly>
-    <value>/api/portletList</value>
-  </portlet-preference>
-  <portlet-preference>
-    <name>prepopulateUrlPattern</name>
-    <readOnly>false</readOnly>
-    <value>/p/$fname/max</value>
-  </portlet-preference>
+  <parameter>
+    <name>webComponent.moduleUrl</name>
+    <value>up-search</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.tagName</name>
+    <value>up-search</value>
+  </parameter>
 </portlet-definition>
