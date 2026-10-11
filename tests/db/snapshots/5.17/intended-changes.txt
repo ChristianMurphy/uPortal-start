@@ -3,19 +3,17 @@
 # docs/db-upgrade-harness.md. One line per table: <TABLE> rows <+n|-n> <MOD reference>
 # A generator definition removed from the mappings: generators declared -table(<TABLE>) <MOD reference>
 #
-# Favorites and Popular Portlets as Web Component channels: the Web Component portlet type, and
-# the webComponent.tagName and webComponent.moduleUrl parameters of the favorites and the
-# popular-portlets definitions (two each)
-# Background Preference as a Web Component channel: the background-preference definition's
-# webComponent.tagName and webComponent.moduleUrl (two more)
-# Password Management as a Web Component channel: the passwordmgr definition's
-# webComponent.tagName and webComponent.moduleUrl (two more)
-# The user locale selector as a Web Component channel: the user-locales-selector definition's
-# webComponent.tagName and webComponent.moduleUrl (two more)
-# Session Timeout as a Web Component channel: the session-timeout definition's
-# webComponent.tagName, webComponent.moduleUrl and webComponent.preferenceAttributes (three more)
+# Favorites, Popular Portlets, Background Preference, Password Management, the user locale
+# selector, Session Timeout, Search and the search launcher as Web Component channels: the Web
+# Component portlet type; webComponent.tagName and webComponent.moduleUrl on all eight
+# definitions, webComponent.preferenceAttributes on session-timeout and webComponent.attributes
+# on the launcher (18 parameters); the eight portlet preferences the Search portlet read are
+# removed (RESTSearch, searchLaunchFname, and the three auto-suggest preferences of each
+# channel), one value each.
 UP_PORTLET_TYPE rows +1 MOD-I134
-UP_PORTLET_DEF_PARAM rows +13 MOD-I134
+UP_PORTLET_DEF_PARAM rows +18 MOD-I134
+UP_PORTLET_PREF rows -8 MOD-I134
+UP_PORTLET_PREF_VALUES rows -8 MOD-I134
 # Hibernate 5.2 (P2-3): the 49 @TableGenerator definitions in hibernate_sequences, each under the
 # name of the entity's @SequenceGenerator, are removed. Hibernate always used the sequence
 # definition, and no database ever had a hibernate_sequences table (MOD-D33, ADR 0006).
