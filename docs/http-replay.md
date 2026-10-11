@@ -54,7 +54,10 @@ The requests come from two sources.
    The GET and HEAD requests are replayed. The others are listed under `mutations` in
    `suite-requests.json` as the suite's state-changing endpoints; they are not replayed, because
    what they do depends on the state the suite built up. Login and logout requests and requests
-   with a CAS ticket in them are left out, because the security checks cover login.
+   with a CAS ticket in them are left out, because the security checks cover login. GET requests
+   that write (`/api/updatePermission`) or that name something by a generated id (`local.22`,
+   `14.admin`, `/permissions/13/`, `pP_portletId=97`) are not replayed either; the report counts
+   them.
 
 ## What is compared
 
@@ -99,9 +102,29 @@ comparison. `tests/replay/lib.mjs` gives the reason for each one:
   findings in `docs/developer/modernization/notes/http-replay.md`);
 * cookie values, which are never stored.
 
-Generated database ids, layout node ids and portlet window ids are deterministic on a freshly
-initialised portal. The replay compares them. A change in how ids are generated, such as a
-different Hibernate ID generator, shows up as a difference.
+### Generated ids
+
+5.17 imports the files of each entity type in parallel, in the order the file system lists them
+(`JaxbPortalDataHandlerService` with `ConcurrentDirectoryScanner`). So the ids of users, groups,
+portlets, portlet types and entity types differ between two machines that import the
+same data. So do the user part of layout node ids (`u26l1n210` on one machine, `u22l1n210` on
+another) and every list that 5.17 orders by those ids, such as the fragments in a page and the
+portlets in a category. The replay handles this in four ways:
+
+* layout node ids in recorded URLs get this portal's user part before they are sent. It comes
+  from the role's own `layout.json` and welcome page, which the crawl requests first anyway, by
+  the portlet's fname, or else by the node part;
+* generated ids in responses are masked: `u{id}l1n210`, `local.{id}`, `PORTLET_ID.{id}`,
+  `{type}.local.`, Pluto namespaces, and numeric `id`, `chanID`, `typeId` and similar fields;
+* lists of objects in JSON, and the lines of an HTML outline, are compared without their order;
+* requests that name a generated id are not replayed (see above), and the crawl names groups by
+  their PAGS key (`pags.Authenticated Users`).
+
+With these rules in place, the replay does not report a change in how ids are generated, or a change in the order
+of an id-ordered list.
+
+The masks are applied again to the recording when comparing, so a mask added later works without
+a re-record. A mask has to give the same result when it runs twice.
 
 When recording, the 5.17 portal replays its own recording against itself after another reset. That
 self-check must pass. When it fails, a value needs a mask.
