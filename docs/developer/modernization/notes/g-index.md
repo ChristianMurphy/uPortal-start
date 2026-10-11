@@ -82,7 +82,7 @@ All of them are on the allowlist with reasons. The main findings, by cost:
    | 50 | 39 | 737 | 3,592 | 77 |
    | 60 | 0 | 644 | 3,723 | 87 |
 
-   The 5.x defaults reach 127 connections under this load, so a 5.x portal on PostgreSQL's default of 100 can run out today. A thread dump at 30 showed why: each page keeps a connection open while its portlets render (request threads wait on the portlet workers with the OpenEntityManagerInView session open), and each portlet render opens a transaction to read its cached portlet definition. uPortal-start now caps the total at 110, with `PortalDb` at 60, and recommends `max_connections=150` (docs/connection-budget.md). The database harness fails a PostgreSQL run above 110 or the server's `max_connections` less 10. Keeping fewer connections open per page is MOD-I240 to MOD-I249.
+   The 5.x defaults reach 127 connections under this load, so a 5.x portal on PostgreSQL's default of 100 can run out today. A thread dump at 30 showed why: each page keeps a connection open while its portlets render (request threads wait on the portlet workers with the OpenEntityManagerInView session open), and each portlet render opens a transaction to read its cached portlet definition. The owner chose to fix that in uPortal first (MOD-I240 to MOD-I249) and leave the pool defaults as they are until then. docs/connection-budget.md tells sites to set `max_connections` to at least 150 on PostgreSQL or size it from their own peak. The database harness reports each PostgreSQL run's peak, and the G-index summary reports p50, p95 and "Pool empty".
 
 ## CI results
 

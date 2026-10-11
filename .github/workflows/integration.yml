@@ -426,14 +426,11 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
       # dbWait polls JDBC until the database accepts connections (Oracle and SQL Server need a
-      # minute or two after their container starts). On PostgreSQL the harness also checks the
-      # connection budget (on PostgreSQL's default max_connections of 100: at most 90), then starts
-      # the portal again with one pool raised past it, which the check must catch
-      # (docs/connection-budget.md, MOD-I190)
+      # minute or two after their container starts)
       - name: Start the database, dataInit, snapshot, compare, then run the API specs
         env:
           VENDOR: ${{ matrix.vendor }}
-        run: tests/db/harness.sh --portal --seeded-pool-fault "$VENDOR" -- -PdbWaitSeconds=600
+        run: tests/db/harness.sh --portal "$VENDOR" -- -PdbWaitSeconds=600
       - name: Show Tomcat startup errors
         if: failure()
         run: .github/scripts/tomcat-log-summary.sh
