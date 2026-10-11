@@ -1,7 +1,7 @@
 {
  "$comment": "How these fixtures were recorded; see docs/http-replay.md",
  "label": "uPortal 5.17.9 on uPortal-start master",
- "normaliserVersion": 1,
+ "normaliserVersion": 2,
  "roles": [
   "guest",
   "student",
@@ -11,7 +11,7 @@
  ],
  "counts": {
   "crawl": 1386,
-  "suite": 1007,
+  "suite": 1004,
   "routes": 277
  }
 }
