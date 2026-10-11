@@ -297,6 +297,11 @@ async function render(
 }
 
 test.describe("Bundled portlets in every mode and window state", () => {
+  // The tests run on every worker (MOD-I341). Each one opens its own page, signs in itself and
+  // renders one portlet, and none depends on another. Run in one worker, this file took 9.7 of
+  // the suite's 13.1 minutes on HSQLDB while the other worker waited.
+  test.describe.configure({ mode: "parallel" });
+
   // A request that was still in flight may explain a failure, so a failed test prints the
   // notes that settle() made; a passing test prints nothing.
   test.afterEach(() => printInFlightNotesOfFailedTest(test.info()));
