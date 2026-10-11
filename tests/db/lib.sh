@@ -21,7 +21,7 @@ use_vendor() {  # use_vendor <vendor>: later gradle calls get the vendor's gradl
 
 gradle() {
     echo "+ ./gradlew $* ${VENDOR_ARGS[*]+"${VENDOR_ARGS[*]}"}"
-    ./gradlew --no-daemon -S "$@" "${VENDOR_ARGS[@]+"${VENDOR_ARGS[@]}"}" "${GRADLE_EXTRA[@]+"${GRADLE_EXTRA[@]}"}"
+    ./gradlew --no-daemon "$@" "${VENDOR_ARGS[@]+"${VENDOR_ARGS[@]}"}" "${GRADLE_EXTRA[@]+"${GRADLE_EXTRA[@]}"}"
 }
 
 container_name() {

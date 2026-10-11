@@ -135,7 +135,7 @@ jobs:
       # build.gradle, ignored by a ref without it) leaves the compiler warnings out of the log
       # and keeps every compile error.
       - name: Build and install uPortal
-        run: ./gradlew -S --stacktrace --no-daemon --no-parallel -PquietCompile install
+        run: ./gradlew --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
         id: uportal
         env:
@@ -229,13 +229,13 @@ jobs:
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Initialize portal
-        run: ./gradlew -i -S portalInit
+        run: ./gradlew -i portalInit
       - name: Check the deployed uPortal version
         env:
           UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
         run: ls -l ".gradle/tomcat/webapps/uPortal/WEB-INF/lib/uPortal-core-$UPORTAL_VERSION.jar"
       - name: Start Tomcat
-        run: ./gradlew -i -S tomcatStart
+        run: ./gradlew -i tomcatStart
       - name: Wait for portal
         run: |
           for i in $(seq 1 60); do
@@ -268,7 +268,7 @@ jobs:
             .gradle/tomcat/logs/
       - name: Stop Tomcat
         if: always()
-        run: ./gradlew -i -S tomcatStop
+        run: ./gradlew -i tomcatStop
 
   # The opt-in CAS mode (-PauthMode=cas, docs/authentication.md, MOD-Q3) on the uPortal build: the
   # auth and proxy ticket specs against the development CAS 8 container, then once more with CAS
@@ -321,11 +321,11 @@ jobs:
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Start CAS
-        run: ./gradlew -i -S casStart
+        run: ./gradlew -i casStart
       - name: Initialize portal
-        run: ./gradlew -i -S portalInit
+        run: ./gradlew -i portalInit
       - name: Start Tomcat
-        run: ./gradlew -i -S tomcatStart
+        run: ./gradlew -i tomcatStart
       - name: Wait for portal
         run: |
           for i in $(seq 1 60); do
@@ -370,8 +370,8 @@ jobs:
       - name: Stop Tomcat and CAS
         if: always()
         run: |
-          ./gradlew -i -S tomcatStop
-          ./gradlew -i -S casStop
+          ./gradlew -i tomcatStop
+          ./gradlew -i casStop
 
   # The in-place upgrade harness (G-db) on every 6.0 runtime database (MOD-D25). The scripts
   # start each database themselves (MySQL and MariaDB need server options that a service container

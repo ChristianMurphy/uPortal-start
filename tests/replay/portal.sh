@@ -42,15 +42,15 @@ case "${1:-}" in
         shift 2
         (
             cd "$checkout"
-            ./gradlew -S "$@" tomcatStop
+            ./gradlew "$@" tomcatStop
             # A fresh database, as on a new CI runner: dataInit recreates uPortal's tables, but the
             # portlets that create their own tables when they start (NotificationPortlet) fail on
             # the ones left from the previous run.
-            ./gradlew -S "$@" hsqlStop
+            ./gradlew "$@" hsqlStop
             rm -rf .gradle/hsqldb
-            ./gradlew -S "$@" hsqlStart
-            ./gradlew -S "$@" dataInit
-            ./gradlew -S "$@" tomcatStart
+            ./gradlew "$@" hsqlStart
+            ./gradlew "$@" dataInit
+            ./gradlew "$@" tomcatStart
         )
         wait_for_portal
         ;;

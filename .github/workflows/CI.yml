@@ -60,23 +60,23 @@ jobs:
         shell: bash
       # :buildSrc:test runs the removed-API scanner's seeded-fault tests; 'build' only builds buildSrc's jar
       - name: Build
-        run: ./gradlew -i -S build :buildSrc:test
+        run: ./gradlew -i build :buildSrc:test
       - name: Tomcat Install
-        run: ./gradlew -i -S tomcatInstall
+        run: ./gradlew -i tomcatInstall
       - name: Start Tomcat
-        run: ./gradlew -i -S tomcatStart
+        run: ./gradlew -i tomcatStart
       - name: Stop Tomcat
-        run: ./gradlew -i -S tomcatStop
+        run: ./gradlew -i tomcatStop
       - name: Clear Logs Tomcat
-        run: ./gradlew -i -S tomcatClearLogs
+        run: ./gradlew -i tomcatClearLogs
       - name: Start Database
-        run: ./gradlew -i -S hsqlStart
+        run: ./gradlew -i hsqlStart
       - name: Init Data
-        run: ./gradlew -i -S dataInit
+        run: ./gradlew -i dataInit
       - name: Stop Database
-        run: ./gradlew -i -S hsqlStop
+        run: ./gradlew -i hsqlStop
       - name: Generate Skin
-        run: ./gradlew -i -S skinGenerate -DskinName=test
+        run: ./gradlew -i skinGenerate -DskinName=test
 
   playwright:
     name: "Playwright E2E tests"
@@ -117,9 +117,9 @@ jobs:
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Initialize portal
-        run: ./gradlew -i -S portalInit
+        run: ./gradlew -i portalInit
       - name: Start Tomcat
-        run: ./gradlew -i -S tomcatStart
+        run: ./gradlew -i tomcatStart
       - name: Wait for portal
         run: |
           echo "Waiting for uPortal to be ready..."
@@ -151,7 +151,7 @@ jobs:
             test-results/
       - name: Stop Tomcat
         if: always()
-        run: ./gradlew -i -S tomcatStop
+        run: ./gradlew -i tomcatStop
 
   commits:
     name: Commit messages
