@@ -5,6 +5,7 @@ import {
   Locator,
   Page,
   Request,
+  TestInfo,
 } from "@playwright/test";
 import { config } from "../../general-config";
 import {
@@ -161,6 +162,8 @@ function wrapperOf(page: Page, fname: string): Locator {
   return page.locator(`#portalPageBodyColumns .up-portlet-wrapper.${fname}`);
 }
 
+const IN_FLIGHT_NOTE = "requests still in flight";
+
 /*
  * The URLs of the XHR and fetch requests to the portal that the page has in
  * flight. Errors in their callbacks belong to the render, so a render waits
@@ -187,9 +190,11 @@ function trackScriptRequests(page: Page): () => string[] {
 /*
  * Give the page's requests to the portal up to 3 seconds to end, so that
  * errors in their callbacks count against this render. Requests that take
- * longer are annotated and logged, and the render's checks go on. In CI on
- * HSQLDB many renders had a request in flight for over 30 seconds, and
- * waiting that long made the job exceed its 45-minute limit.
+ * longer are annotated, and the render's checks go on. The annotation is
+ * printed only if the test fails (see the afterEach hook below): in CI on
+ * HSQLDB many renders had a request in flight for over 30 seconds, and a
+ * line for each of them hid the failures in the job log. Waiting that long
+ * made the job exceed its 45-minute limit.
  */
 async function settle(
   page: Page,
@@ -200,12 +205,18 @@ async function settle(
   } catch {
     const pending = scriptRequests().join(" ");
     test.info().annotations.push({
-      type: "requests still in flight",
-      description: pending,
+      type: IN_FLIGHT_NOTE,
+      description: `after 3 s on ${page.url()}: ${pending}`,
     });
-    console.log(
-      `Requests still in flight after 3 s on ${page.url()}: ${pending}`,
-    );
+  }
+}
+
+function printInFlightNotesOfFailedTest(info: TestInfo): void {
+  if (info.status === info.expectedStatus) return;
+  for (const { type, description } of info.annotations) {
+    if (type === IN_FLIGHT_NOTE) {
+      console.log(`Requests still in flight ${description}`);
+    }
   }
 }
 
@@ -286,6 +297,10 @@ async function render(
 }
 
 test.describe("Bundled portlets in every mode and window state", () => {
+  // A request that was still in flight may explain a failure, so a failed test prints the
+  // notes that settle() made; a passing test prints nothing.
+  test.afterEach(() => printInFlightNotesOfFailedTest(test.info()));
+
   test("the portal registers exactly the bundled portlets", async ({
     page,
   }) => {

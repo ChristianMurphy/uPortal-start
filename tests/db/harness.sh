@@ -195,7 +195,7 @@ run_portal() {
     local specs=(tests/api) log="$out/playwright-api.log"
     if [ "$FULL_SUITE" = true ]; then specs=(); log="$out/playwright.log"; fi
     PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts \
-        "${specs[@]+"${specs[@]}"}" --reporter=list --output="$out/playwright" 2>&1 | tee "$log"
+        "${specs[@]+"${specs[@]}"}" "$(playwright_reporter)" --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
     stop_own_tomcat "$vendor"
     use_vendor "$vendor"
