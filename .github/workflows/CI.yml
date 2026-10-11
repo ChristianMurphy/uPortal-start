@@ -57,8 +57,9 @@ jobs:
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_21_ARM64" >> "$gradle_user_home/gradle.properties"
         shell: bash
+      # :buildSrc:test runs the removed-API scanner's seeded-fault tests; 'build' only builds buildSrc's jar
       - name: Build
-        run: ./gradlew -i -S build
+        run: ./gradlew -i -S build :buildSrc:test
       - name: Tomcat Install
         run: ./gradlew -i -S tomcatInstall
       - name: Start Tomcat

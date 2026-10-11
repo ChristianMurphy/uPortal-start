@@ -33,6 +33,10 @@ ckeditor4Version=4.22.1
 # Dependencies driven by Tomcat version
 tomcatVersion=9.0.122
 servletApiDependency=javax.servlet:javax.servlet-api:4.0.1
+jspApiVersion=2.3.3
+elApiVersion=3.0.0
+# JSTL packaged into every overlaid WAR that ships one (MOD-I60, see overlays/build.gradle)
+taglibsStandardVersion=1.2.5
 ccppVersion=1.0
 
 # Dependencies driven by uPortal
@@ -43,6 +47,8 @@ plutoVersion=2.1.0-M3
 portletApiDependency=org.apache.portals:portlet-api_2.1.0_spec:1.0
 
 # Gradle Task Dependencies
+asmVersion=9.11
+junitJupiterVersion=5.13.4
 gradleDockerPluginVersion=10.0.0
 hsqldbVersion=2.7.4
 jasyptVersion=1.9.3

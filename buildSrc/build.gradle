@@ -21,6 +21,19 @@ repositories {
 
 dependencies {
     implementation "org.apache.portals.pluto:pluto-util:${plutoVersion}"
+    // Reads class files for the removed-API scan (RemovedApiScanPlugin)
+    implementation "org.ow2.asm:asm:${asmVersion}"
 
     compileOnly "org.jasig.portal:uPortal-tools:${uPortalVersion}"
+
+    // Seeded-fault tests of the removed-API scanner:  ./gradlew :buildSrc:test
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly servletApiDependency
+    testRuntimeOnly "javax.servlet.jsp:javax.servlet.jsp-api:${jspApiVersion}"
+    testRuntimeOnly "javax.el:javax.el-api:${elApiVersion}"
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
 }
