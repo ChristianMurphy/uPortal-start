@@ -109,6 +109,15 @@ the same name, else its parent branch, else `master`) and runs:
 * **nightly** (and on a manual run with `nightly`): PostgreSQL 18 and MariaDB 12.3 at scale 0.05,
   ten minutes of the driver. A manual run can set any scale.
 
+A push to a topic branch (`ccr-43ba0785-hzlrj5-<topic>`) runs the first set only when it changes
+persistence, SQL, schema, data files or G-index itself. The first job of the workflow compares the
+branch with `origin/ccr-43ba0785-hzlrj5` in uPortal-start and, if uPortal has a branch of the same
+name, in uPortal, against the paths listed in `.github/scripts/gindex-changes.sh`. The job summary
+lists the files that matched, or says `no matching changes, G-index skipped`, and then the build
+of uPortal and the G-index job are skipped. A push to the integration branch, a manual run and the
+nightly run always run G-index. `.github/scripts/gindex-changes.test.sh` checks the rule with a
+table of example pushes.
+
 ## Full scale
 
 The whole campus (scale 1) needs a machine with about 16 cores, 64 GB of memory and 200 GB of
