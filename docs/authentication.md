@@ -8,6 +8,11 @@ Gradle property:
 | `local` (default) | uPortal's own login form (`/p/login`)    | nothing beyond the portal                |
 | `cas`             | the CAS server at `casServerUrl`         | a CAS server: the bundled CAS 8 container, or yours |
 
+Local login is the default for demos and development: a fresh checkout signs users in with no
+setup. A production portal should sign users in through the institution's single sign-on, with
+`authMode=cas` or its own SSO configuration. uPortal's own `security.properties` defaults are
+unchanged.
+
 Both modes keep the URL login that scripts and tests use,
 `/uPortal/Login?userName=student&password=student`: uPortal checks the password in its own
 database (`SimpleSecurityContextFactory`) either way.
