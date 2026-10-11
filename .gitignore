@@ -164,6 +164,8 @@ fabric.properties
 
 # Log file
 *.log
+# Cluster lock logs the overlap check is tested on (tests/cluster/cluster.sh)
+!tests/cluster/fixtures/*.log
 
 # BlueJ files
 *.ctxt

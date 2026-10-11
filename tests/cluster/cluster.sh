@@ -969,10 +969,14 @@ collect_logs() {  # keep both nodes' logs next to the results
 : > "$OUT/results.txt"
 # The overlap check must catch the overlap seeded in tests/cluster/fixtures (lock-ignored rarely
 # makes two nodes run a job at once, so it cannot be relied on to show this)
-if node tests/cluster/lock-overlap.mjs a=tests/cluster/fixtures/overlap-a.log b=tests/cluster/fixtures/overlap-b.log \
-        > "$OUT/lock-overlap-fixture.txt"; then
-    echo "FAILED: tests/cluster/lock-overlap.mjs missed the overlap seeded in tests/cluster/fixtures"
-    github_annotation error "cluster: no-overlap" "lock-overlap.mjs missed the overlap seeded in tests/cluster/fixtures"
+# Only the overlap report counts: a missing fixture or a crash also ends in a non-zero status
+node tests/cluster/lock-overlap.mjs a=tests/cluster/fixtures/overlap-a.log b=tests/cluster/fixtures/overlap-b.log \
+    > "$OUT/lock-overlap-fixture.txt" 2>&1
+fixture_status=$?
+if [ "$fixture_status" -ne 1 ] || ! grep -q 'time(s) a job ran on two nodes at once' "$OUT/lock-overlap-fixture.txt"; then
+    echo "FAILED: tests/cluster/lock-overlap.mjs did not report the overlap seeded in tests/cluster/fixtures (exit status $fixture_status):"
+    head -n 20 "$OUT/lock-overlap-fixture.txt"
+    github_annotation error "cluster: no-overlap" "lock-overlap.mjs did not report the overlap seeded in tests/cluster/fixtures (exit status $fixture_status)"
     exit 1
 fi
 log "no-overlap: lock-overlap.mjs catches the overlap seeded in tests/cluster/fixtures"
