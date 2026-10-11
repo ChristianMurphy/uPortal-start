@@ -1,6 +1,10 @@
 import { test, expect, Page, Locator } from "@playwright/test";
 import { config } from "../../general-config";
-import { loginViaUrl, logout } from "../utils/ux-general-utils";
+import {
+  loginViaUrl,
+  logout,
+  sessionCsrfHeaders,
+} from "../utils/ux-general-utils";
 
 /*
  * Session Timeout (fname session-timeout) sits in the header region of the
@@ -24,6 +28,12 @@ const SESSION_TIMEOUT_MS = 30 * MINUTE;
 const DIALOG_DISPLAY_MS = 60 * SECOND;
 const WARNING_LEAD_MS = DIALOG_DISPLAY_MS + 30 * SECOND;
 const WARNING_OPENS_AFTER_MS = SESSION_TIMEOUT_MS - WARNING_LEAD_MS;
+
+/*
+ * The English tests sign in as faculty: user-locale.spec.ts saves French for
+ * student while its tests run, and the warning would then be in French.
+ */
+const USER = config.users.faculty;
 
 const REMAINING = /Your session will expire\s+in (\d+) seconds\./;
 
@@ -55,7 +65,7 @@ async function runUntilWarning(
 test.describe("Session timeout warning", () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.install();
-    await loginViaUrl(page, config.users.student);
+    await loginViaUrl(page, USER);
   });
 
   test.afterEach(async ({ page }) => {
@@ -118,7 +128,7 @@ test.describe("Session timeout warning", () => {
 
     await expect(warning(page)).toBeHidden();
     await expect(page.locator("div.user-name")).toContainText(
-      config.users.student.displayName,
+      USER.displayName,
     );
 
     // The next warning comes a whole session period after the keep-alive
@@ -185,7 +195,7 @@ test.describe("Session timeout warning", () => {
     const laterTab = await context.newPage();
     await laterTab.goto(config.url);
     await expect(laterTab.locator("div.user-name")).toContainText(
-      config.users.student.displayName,
+      USER.displayName,
     );
 
     // The first tab's own warning time passes without a warning
@@ -226,7 +236,7 @@ test.describe("Session timeout warning for guests", () => {
 test.describe("Session timeout web component", () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.install();
-    await loginViaUrl(page, config.users.student);
+    await loginViaUrl(page, USER);
   });
 
   test.afterEach(async ({ page }) => {
@@ -298,9 +308,9 @@ test.describe("Session timeout web component", () => {
 });
 
 /*
- * The warning in the user's own locale. The renderer passes the locale the
- * user chose in the User Locales Selector to the element, which asks the
- * portal for its messages in that locale. The locale is stored for the user,
+ * The warning in the user's own locale. The renderer passes the user's chosen
+ * locale (PUT /api/v6-0/locale, as the User Locales Selector saves it) to the
+ * element, which asks the portal for its messages in that locale. The locale is stored for the user,
  * so these tests sign in as developer, whom no other spec uses, and set it
  * back to en_US at the end of each test.
  */
@@ -311,11 +321,13 @@ const developer = {
   displayName: "Developer User",
 };
 
+/** Saves the signed-in user's locale through the API the selector uses. */
 async function chooseLocale(page: Page, code: string): Promise<void> {
-  await page.goto(`${config.url}p/user-locales-selector/max/render.uP`);
-  await page.locator(`input[name="locale"][value="${code}"]`).check();
-  await page.locator('input[name="_eventId_updateLocale"]').click();
-  await page.waitForLoadState("load");
+  const response = await page.request.put(`${config.url}api/v6-0/locale`, {
+    data: { code },
+    headers: await sessionCsrfHeaders(page.request),
+  });
+  expect(response.status(), `PUT /api/v6-0/locale ${code}`).toBe(200);
 }
 
 for (const { code, title, remaining } of [
