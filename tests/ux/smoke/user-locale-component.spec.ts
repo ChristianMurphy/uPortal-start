@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 import { config } from "../../general-config";
 import {
   loginViaUrl,
@@ -20,6 +20,47 @@ const MODULE_SCRIPT =
 interface UserLocaleBody {
   selected: string | null;
   locales: { code: string; tag: string; name: string }[];
+}
+
+/**
+ * How the page reads in each language the component is translated into
+ * (MOD-D50): the language's radio button, the heading and the Update button,
+ * then the alert of a failed save, one of the component's own messages.
+ */
+const TRANSLATED = [
+  {
+    language: "Spanish",
+    radio: "Español (Spanish)",
+    lang: /^es/,
+    heading: "Establecer preferencia de idioma",
+    chosen: "Español",
+    update: "Actualizar",
+    saveFailed: "No se pudo cambiar su idioma.",
+  },
+  {
+    language: "French",
+    radio: "Français (French)",
+    lang: /^fr/,
+    heading: "Modifier le choix de la langue",
+    chosen: "Français",
+    update: "Mise à jour",
+    saveFailed: "Impossible de modifier votre langue.",
+  },
+];
+
+/** Saves English through the API, whatever language the page is in. */
+async function restoreEnglish(page: Page): Promise<void> {
+  await page.unrouteAll({ behavior: "wait" });
+  await page.goto(URL);
+  const element = page.locator("up-user-locale");
+  await expect(element.getByRole("radio")).toHaveCount(8);
+  const header = (await element.getAttribute("csrf-header")) ?? "";
+  const token = (await element.getAttribute("csrf-token")) ?? "";
+  const restored = await page.request.put(API, {
+    data: { code: "en_US" },
+    headers: { [header]: token },
+  });
+  expect(restored.status()).toBe(200);
 }
 
 test.describe("User locale web component", () => {
@@ -101,4 +142,69 @@ test.describe("User locale web component", () => {
     );
     await expect(page.locator("html")).toHaveAttribute("lang", /^en/);
   });
+
+  test("names each language in its own language", async ({ page }) => {
+    await page.goto(URL);
+    const element = page.locator("up-user-locale");
+
+    for (const name of ["Español (Spanish)", "Français (French)", "English"]) {
+      await expect(
+        element.getByRole("radio", { name, exact: true }),
+      ).toBeVisible();
+    }
+    await expect(
+      element.locator("label span", { hasText: "Español" }),
+    ).toHaveAttribute("lang", "es-ES");
+  });
+});
+
+/*
+ * A guest's language lasts only its session, and each test has its own, so
+ * these tests can't change the language of a user that specs running at the
+ * same time sign in as.
+ */
+test.describe("User locale web component for a guest", () => {
+  for (const translated of TRANSLATED) {
+    test(`renders in ${translated.language} once the guest chooses it`, async ({
+      page,
+    }) => {
+      try {
+        await page.goto(URL);
+        const element = page.locator("up-user-locale");
+        await element
+          .getByRole("radio", { name: translated.radio, exact: true })
+          .check();
+        await element
+          .getByRole("button", { name: "Update", exact: true })
+          .click();
+        await expect(page.locator("html")).toHaveAttribute(
+          "lang",
+          translated.lang,
+        );
+
+        await expect(
+          element.getByRole("heading", { name: translated.heading }),
+        ).toBeVisible();
+        await expect(
+          element.getByRole("radio", { name: translated.chosen, exact: true }),
+        ).toBeChecked();
+
+        await page.route(API, async (route) => {
+          await (route.request().method() === "PUT"
+            ? route.fulfill({ status: 500, body: "" })
+            : route.continue());
+        });
+        await element
+          .getByRole("button", { name: translated.update, exact: true })
+          .click();
+        await expect(element.getByRole("alert")).toContainText(
+          translated.saveFailed,
+        );
+      } finally {
+        await restoreEnglish(page);
+      }
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("lang", /^en/);
+    });
+  }
 });
