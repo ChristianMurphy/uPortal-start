@@ -14,6 +14,11 @@ name: G-index
 #             the schedule or a manual run with "nightly"; workstream branches run only the push
 #             job (Prototype only, MOD-D30: CI capacity is shared by the workstreams)
 #
+# Prototype only (MOD-I306): a push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs the
+# push job only when it changes persistence, SQL, schema, data files or G-index itself, in
+# uPortal-start or in the uPortal branch of the same name; .github/scripts/gindex-changes.sh lists
+# the paths. The integration branch, a manual run and the schedule always run it.
+#
 # The full campus (scale 1: 100,000 users, 155 million raw events) does not fit a GitHub runner;
 # docs/g-index.md describes running it on real hardware.
 #
@@ -71,12 +76,30 @@ jobs:
       runs: ${{ steps.runs.outputs.runs }}
     steps:
       # The planning of the G-index runs (MOD-I303) runs first in this job, not in a job of its own
-      # that the build would wait for
+      # that the build would wait for. So does the check of what a topic push changes (MOD-I306):
+      # when it finds nothing G-index measures, the build below and the G-index job are skipped.
+      - name: Checkout the history to compare
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          fetch-depth: 0
+          filter: blob:none
+          path: plan
+      - name: Does the push change what G-index measures
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+          START_DIR: plan
+          UPORTAL_URL: https://github.com/${{ github.repository_owner }}/uPortal
+        run: plan/.github/scripts/gindex-changes.sh
       - name: Choose the push or the nightly set
         id: runs
         env:
           NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
           SCALE: ${{ inputs.scale }}
+          CHANGES: ${{ steps.changes.outputs.run }}
         run: |
           if [ -n "$SCALE" ] && ! [[ "$SCALE" =~ ^(0\.[0-9]+|1(\.0+)?)$ ]]; then
             echo "Unexpected scale '$SCALE'" >&2
@@ -90,10 +113,14 @@ jobs:
           if [ -n "$SCALE" ]; then
             runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
           fi
+          if [ "$CHANGES" = false ]; then
+            runs='[]'
+          fi
           echo "runs=$runs" >> "$GITHUB_OUTPUT"
           echo "G-index runs: $runs" >> "$GITHUB_STEP_SUMMARY"
       - name: Choose the uPortal repository and ref
         id: source
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         env:
           INPUT_REPOSITORY: ${{ inputs.uportal-repository }}
           INPUT_REF: ${{ inputs.uportal-ref }}
@@ -122,6 +149,7 @@ jobs:
           echo "repository=$repository" >> "$GITHUB_OUTPUT"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
       - name: Checkout uPortal
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ steps.source.outputs.repository }}
@@ -130,6 +158,7 @@ jobs:
       # uPortal's CI matrix includes the JDK its .sdkmanrc pins; build with that major version
       - name: Read uPortal's JDK
         id: jdk
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         run: |
           sdk=$(sed -n 's/^java=//p' .sdkmanrc | tr -d '\r')
           version=${sdk%%.*}
@@ -145,19 +174,23 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "distribution=$distribution" >> "$GITHUB_OUTPUT"
       - name: Setup Java
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: ${{ steps.jdk.outputs.distribution }}
           java-version: ${{ steps.jdk.outputs.version }}
       - name: Setup Gradle
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
           cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Build and install uPortal
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         run: ./gradlew --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
         id: uportal
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         env:
           REPOSITORY: ${{ steps.source.outputs.repository }}
           REF: ${{ steps.source.outputs.ref }}
@@ -171,6 +204,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Built uPortal $version from $REPOSITORY@$REF ($(git rev-parse HEAD))" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the uPortal build
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: uportal-maven-local
@@ -181,6 +215,7 @@ jobs:
   g-index:
     name: "G-index: ${{ matrix.vendor }} at ${{ matrix.scale }}"
     needs: uportal
+    if: ${{ needs.uportal.outputs.runs != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     strategy:
