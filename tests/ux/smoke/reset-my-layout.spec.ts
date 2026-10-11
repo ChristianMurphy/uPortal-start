@@ -3,6 +3,7 @@ import { config } from "../../general-config";
 import {
   loginViaUrl,
   logout,
+  sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 
@@ -48,13 +49,6 @@ async function openChannel(page: Page): Promise<Locator> {
   return content;
 }
 
-/** The CSRF token in the current page's portlet URLs, for the layout API. */
-async function csrfToken(page: Page): Promise<string> {
-  const token = /[&?]_csrf=([\da-f-]+)/.exec(await page.content())?.[1];
-  expect(token, "a _csrf parameter on the page").toBeTruthy();
-  return token ?? "";
-}
-
 /** Opens the Welcome tab, a page with the user's tabs and a CSRF token. */
 async function openWelcome(page: Page): Promise<void> {
   await page.goto(WELCOME_URL);
@@ -65,8 +59,8 @@ async function openWelcome(page: Page): Promise<void> {
 async function addTab(page: Page, name: string): Promise<string> {
   await openWelcome(page);
   const response = await page.request.post<{ tabId?: string }>(LAYOUT_API, {
+    headers: await sessionCsrfHeaders(page.request),
     form: {
-      _csrf: await csrfToken(page),
       action: "addTab",
       "widths[]": "100",
       tabName: name,
@@ -90,8 +84,8 @@ async function removeTabs(page: Page, name: string): Promise<void> {
     );
   for (const id of ids) {
     const response = await page.request.post<unknown>(LAYOUT_API, {
+      headers: await sessionCsrfHeaders(page.request),
       form: {
-        _csrf: await csrfToken(page),
         action: "removeElement",
         elementID: id,
       },
