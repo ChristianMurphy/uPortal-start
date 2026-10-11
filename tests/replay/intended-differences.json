@@ -322,6 +322,26 @@
             "upgrading": "Session Timeout is a web component"
         },
         {
+            "id": "reset-my-layout-web-component-page",
+            "path": "/uPortal/p/reset-my-layout/*",
+            "field": "body",
+            "detail": "^(- |\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-reset-my-layout-[^\\]]+\\.js\\]$)",
+            "reason": "The Reset My Layout channel renders <up-reset-my-layout>: the flow's form with its Reset Now button is gone from the page outline, and the page loads the component's module.",
+            "log": "uPortal-start e3c7803",
+            "visible": true,
+            "upgrading": "Reset My Layout is a web component"
+        },
+        {
+            "id": "reset-my-layout-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "webComponent\\.(moduleUrl|tagName): added .*up-reset-my-layout",
+            "reason": "The portlet registry and marketplace APIs list Reset My Layout's webComponent parameters. Its type change is the Favorites registry entry's type line.",
+            "log": "uPortal-start e3c7803",
+            "visible": true,
+            "upgrading": "Reset My Layout is a web component"
+        },
+        {
             "id": "preferences-api-npe-message-java14",
             "path": "/uPortal/api/preferences/*",
             "status": 500,
