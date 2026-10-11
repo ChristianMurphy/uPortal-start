@@ -192,6 +192,13 @@
                prefix="localhost_access_log" suffix=".txt"
                pattern="%h %l %u %t &quot;%r&quot; %s %b &quot;%{Referer}i&quot; &quot;%{User-Agent}i&quot;" />
 
+        <!-- Tomcat's own error pages (a 404 outside any webapp's error-page, a request the
+             connector rejects, an exception in a webapp without an error-page) print the
+             exception and "Apache Tomcat/<version>" by default.  This valve keeps the status
+             line and title and leaves out both. -->
+        <Valve className="org.apache.catalina.valves.ErrorReportValve"
+               showReport="false" showServerInfo="false" />
+
       </Host>
     </Engine>
   </Service>
