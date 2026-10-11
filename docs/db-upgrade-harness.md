@@ -140,8 +140,8 @@ Each file has one complete fact per line, sorted, in `[section]` blocks. Lines s
 * `schema-normalized.txt` has the same facts, with identifiers upper-cased and constraint and
   index names removed. A foreign key is then identified by its table, columns and target.
 * `generators.txt` has one line for each of the 51 entities with a generated ID. Each line gives
-  the generator definitions the entity declares (49 declare both a `@SequenceGenerator` and a
-  `@TableGenerator` under one name), the object that actually backs the ID in the database, and
+  the generator definitions the entity declares (in 5.17, 49 declare both a `@SequenceGenerator`
+  and a `@TableGenerator` under one name; see "Removed generator definitions"), the object that actually backs the ID in the database, and
   that object's increment and current value, next to the table's row count and `max(id)`. The
   file also has a per-vendor summary and the `UP_SEQUENCE` counters.
 * `lob-report.txt` (PostgreSQL) lists every `text` and `oid` column, how many of its values are
@@ -218,6 +218,26 @@ The rest of the comparison is unchanged. A row added to a table that isn't liste
 differs from the adjusted baseline, and its entry reads `NOT FOUND`. A malformed line, a table
 listed twice or a table missing from the baseline also fails `dbVerify`. Remove an entry once a
 new baseline directory is recorded from data that has the change.
+
+### Removed generator definitions
+
+`generators.txt` lists the generator definitions each entity declares (`declared=`), next to the
+object that actually allocates its IDs (`backing=`). When uPortal removes a definition that never
+allocated IDs, the same file lists it:
+
+```text
+# generators declared -table(<TABLE>) <MOD reference>
+generators declared -table(hibernate_sequences) MOD-D33
+```
+
+Hibernate 5.2 (P2-3) removed the 49 `@TableGenerator` definitions in `hibernate_sequences`, each
+under the name of the entity's `@SequenceGenerator`. Hibernate always used the sequence definition, and no
+database ever had a `hibernate_sequences` table (MOD-D33, ADR 0006). `dbVerify` drops the
+`table(hibernate_sequences[...],alloc=n)` parts from the baseline's `declared=` text and compares
+the rest of each line exactly: the backing object, its increment and value, the row count and
+`max(id)`. The entry is listed in the report like an intended data change. It reads `NOT FOUND`,
+and fails the run, when this run still declares such definitions or when the baseline backs any ID
+with that table, because removing a definition that allocated IDs is a real change.
 
 ## Choosing the baseline
 
