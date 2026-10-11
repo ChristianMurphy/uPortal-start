@@ -575,6 +575,23 @@ check_permission_invalidation() {
 SPLIT_PORTS=7800:7810
 # After the merge, node B must show what node A changed during the split within this time
 SPLIT_HEAL_BOUND_S=30
+# SPLIT_HEAL_STATEMENTS=1 also counts the statements PostgreSQL runs in the 30 s after the merge,
+# when the nodes read their emptied caches again, and in 30 s before the split for comparison
+SPLIT_HEAL_STATEMENTS=${SPLIT_HEAL_STATEMENTS:-}
+
+utc_now() { date -u '+%F %T.%3N'; }
+
+statements_between() {  # statements_between <from> <to>: statements PostgreSQL logged in between
+    # Each statement is one "LOG:  statement:" or "LOG:  execute" line, after a UTC timestamp
+    docker logs "$(container_name "$VENDOR")" 2>&1 |
+        awk -v from="$1" -v to="$2" '/LOG:  (statement|execute)/ { t = $1 " " $2; if (t >= from && t < to) n++ } END { print n + 0 }'
+}
+
+first_merge_utc() {  # first_merge_utc <lines before on a> <lines before on b>: when the first MergeView was installed
+    { views_installed a | tail -n +"$(( $1 + 1 ))"; views_installed b | tail -n +"$(( $2 + 1 ))"; } |
+        grep 'MergeView' | awk '{ print $1, $2 }' | sort | head -n 1 |
+        { read -r day time && date -u -d "${day//-/ } $time" '+%F %T.%3N'; }
+}
 
 firewall() {  # firewall <iptables arguments...>
     if [ "$(id -u)" = 0 ]; then iptables "$@"; else sudo -n iptables "$@"; fi
@@ -614,6 +631,13 @@ check_split_heal() {
     changed="$original (split $RANDOM)"
     sed "s#<title>$original</title>#<title>$changed</title>#" "$OUT/split-original.xml" > "$OUT/split-changed.xml"
 
+    if [ -n "$SPLIT_HEAL_STATEMENTS" ]; then
+        sql "alter system set log_statement = 'all'" > /dev/null && sql "select pg_reload_conf()" > /dev/null
+        sleep 30
+        local quiet_to quiet_from
+        quiet_to=$(utc_now)
+        quiet_from=$(date -u -d "$quiet_to 30 seconds ago" '+%F %T.%3N')
+    fi
     before_a=$(views_installed a | wc -l)
     before_b=$(views_installed b | wc -l)
     split || { record split-heal FAIL "could not block the JGroups ports with iptables"; return; }
@@ -642,12 +666,24 @@ check_split_heal() {
         record split-heal FAIL "the split did not hold: $(IFS=';'; echo "${stale[*]}")"
     else
         merged=$(now_ms)
+        if [ -n "$SPLIT_HEAL_STATEMENTS" ]; then
+            local merge_utc
+            merge_utc=$(first_merge_utc "$before_a" "$before_b")
+        fi
         if poll "$SPLIT_HEAL_BOUND_S" title_is b "$b" "$changed" && poll "$SPLIT_HEAL_BOUND_S" allowed_on b "$s"; then
             elapsed=$(( $(now_ms) - merged ))
             record split-heal PASS "after the merge node B showed the title and allowed the student session within ${elapsed} ms (both changed on node A during the split)"
         else
             record split-heal FAIL "$SPLIT_HEAL_BOUND_S s after the merge node B showed '$(portlet_title_on b "$b")' (database: '$changed') and the student session got HTTP $(portlet_status b "$s")"
         fi
+    fi
+    if [ -n "$SPLIT_HEAL_STATEMENTS" ] && [ -n "${merge_utc:-}" ]; then
+        local after_to
+        after_to=$(date -u -d "$merge_utc 30 seconds" '+%F %T.%3N')
+        while [ "$(utc_now)" \< "$after_to" ]; do sleep 1; done
+        sleep 2
+        log "split-heal: PostgreSQL ran $(statements_between "$merge_utc" "$after_to") statements in the 30 s after the merge at $merge_utc UTC, and $(statements_between "$quiet_from" "$quiet_to") in the 30 s before the split"
+        sql "alter system reset log_statement" > /dev/null && sql "select pg_reload_conf()" > /dev/null
     fi
     curl -sS -b "$a" -H "$(csrf_header a "$a")" -o /dev/null -F "file=@$OUT/split-original.xml;type=text/xml" "$(node_url a)/api/import"
     update_permission "$admin" INHERIT
