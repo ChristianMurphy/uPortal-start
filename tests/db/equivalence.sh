@@ -171,22 +171,26 @@ create_database() {  # create_database <vendor> <version>: an empty uPortal data
     deploy "$1" "$2" dbWait dbSetup :overlays:uPortal:dataInit :overlays:NewsReaderPortlet:dataInit
 }
 
-import_fixture() {  # import_fixture <vendor> <version>
+# Why an entity failed to import or export is only in the reports of dataImport and dataExport:
+# keep them with the logs, and show their start in the job log
+show_reports() {  # show_reports <import|export>
     local report
+    while IFS= read -r report; do
+        mkdir -p "$OUT/$(dirname "$report")"
+        cp "$report" "$OUT/$report"
+        echo "==== $report"
+        head -n 40 "$report"
+    done < <(find overlays/*/build/data-"$1"-reports -type f 2>/dev/null | sort)
+}
+
+import_fixture() {  # import_fixture <vendor> <version>
     use_vendor "$1"
     rm -rf overlays/*/build/data-import-reports
     if gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:uPortal:dataImport -Ddir="$ROOT/$FIXTURE/uportal" &&
         gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:NewsReaderPortlet:dataImport -Ddir="$ROOT/$FIXTURE/news-reader"; then
         return 0
     fi
-    # Why an entity failed is only in the import's reports: keep them with the logs, and show
-    # their start in the job log
-    while IFS= read -r report; do
-        mkdir -p "$OUT/$(dirname "$report")"
-        cp "$report" "$OUT/$report"
-        echo "==== $report"
-        head -n 40 "$report"
-    done < <(find overlays/*/build/data-import-reports -type f 2>/dev/null | sort)
+    show_reports import
     return 1
 }
 
@@ -200,8 +204,13 @@ export_all() {  # export_all <vendor> <version> <dir>
     rm -rf "$dir"
     mkdir -p "$dir/uportal" "$dir/news-reader"
     use_vendor "$vendor"
-    gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:uPortal:dataExport -Ddir="$dir/uportal" &&
-        gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:NewsReaderPortlet:dataExport -Ddir="$dir/news-reader"
+    rm -rf overlays/*/build/data-export-reports
+    if gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:uPortal:dataExport -Ddir="$dir/uportal" &&
+        gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:NewsReaderPortlet:dataExport -Ddir="$dir/news-reader"; then
+        return 0
+    fi
+    show_reports export
+    return 1
 }
 
 normalize() {  # normalize <export dir> <normalised dir> [Gradle options]
