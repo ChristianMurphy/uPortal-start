@@ -70,15 +70,55 @@ scenario are thresholds from `tests/load/baseline.json` (1.5 × + 50/100 ms, < 1
 
 ## CI results
 
-RESULTS
+Status at the checkpoint (2026-10-11 01:40 UTC). Nothing is green yet.
+
+* Run 38095302669 (head `ba30c74`) was the first run of the cluster test. Setup worked: both
+  nodes started on PostgreSQL 18 and both registered in `JGROUPSPING`. `jobs-once` passed
+  (24 logins and 444 portlet renders, each interval's aggregates grew by exactly that).
+  `invalidation-portlet` failed: node B still showed the old title 30 s after node A's import.
+  The other failures were errors in the test, fixed in `a63e95a`. The `updatePermission` call
+  got HTTP 400 from unencoded `[]` in the query. The layout check looked for the tab in the
+  wrong place. The lock times were read as timestamps.
+* Run for `9c71a8e` (pending at the checkpoint) runs the cluster test with the `a63e95a` fixes,
+  both seeded faults, the five browser jobs, the query budgets and the load baseline once on
+  push (`ci(prototype)` commit, to be reverted).
 
 ## Findings
 
-FINDINGS
+Candidates, still to confirm in CI:
+
+* In run 38095302669 the raw events of both nodes had the server name `node-a` although node
+  B's `uPortal.properties` sets `node-b` (the copy step was checked locally). `a63e95a` logs each
+  node's `portal.home` and server name, and `jobs-once` now fails when both names are not
+  present. Until this is explained, the failover check may kill the wrong node.
+* Portlet definition change not visible on the other node within 30 s (run 38095302669). The
+  next run reports how much later node B catches up, and the title in the database.
+* From reading `ehcache.xml`: permission checks are cached per node without replication
+  (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` 180 s, `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT`
+  300 s). Another node can keep allowing a revoked permission for up to 5 minutes. The
+  permission check measures this.
+* From reading the code: `LoginAggregationImpl` and the other aggregation entities are cached
+  in Hibernate L2 without replication and have no `@Version`. If aggregation moves from node A
+  to node B and back within the 10-minute idle time, node A can update a stale copy and lose
+  counts. Not yet tested (see "What's left").
+* `jgroups.xml` reads `jgroups.tcp.bind_port`, while uPortal sets
+  `uPortal.cacheManager.jgroups.tcp.bind_port`, so the port setting in `portal.properties`
+  has no effect. Nodes on one host still start, through the port range.
 
 ## Proposed LOG entries
 
-PROPOSED
+Draft, to finalise once CI confirms the findings:
+
+* `MOD-D?`: the two-node cluster test is a required check on every push (`tests/cluster/cluster.sh`),
+  with seeded faults nightly; browsers, accessibility and visual snapshots, query budgets and the
+  load baseline run nightly (budgets also on integration-branch pushes).
+* `MOD-I?`: other nodes enforce a revoked permission only after the per-node permission caches
+  expire (up to 300 s), if the permission check confirms it.
+* `MOD-I?`: portlet definition changes do not reach the other node within 30 s, if the next run
+  confirms it.
+* `MOD-I?`: the `uPortal.cacheManager.jgroups.tcp.bind_port` setting does not reach `jgroups.xml`.
+* `MOD-I?`: one pushed commit message of this workstream (the one that renamed the cluster test
+  a required check) quotes a word the uPortal Vale style flags. It was not rewritten.
 
 ## Environment notes
 
@@ -92,4 +132,18 @@ PROPOSED
 
 ## What's left
 
-LEFT
+Next step: read the jobs of the run for `9c71a8e` (or its successor) on this branch.
+
+1. Cluster: read the node identity lines and the results. Fix the test, or record findings.
+   Repeat until `cluster` passes and each seeded-fault leg passes (the fault was caught).
+2. Record the baselines from that run's output: `tests/query-budget/budgets.json` from the
+   `observed=` line, `tests/a11y/baseline.ts` from the `a11y observed` annotations, the visual
+   snapshots with `tests/visual/fetch-snapshots.sh <job log>`, `tests/load/baseline.json` from
+   the `load observed` annotation (and pin `K6_VERSION` to the version the job reports).
+   Triage Firefox, WebKit and phone failures: fix real cross-browser bugs or log them.
+3. Revert `9c71a8e` (the on-push-once commit) so those jobs are nightly again.
+4. Fill in this note's results with run IDs, then the proposed LOG entries.
+
+Not started: a test for stale aggregation caches. Node A is frozen with SIGSTOP past the server
+bias so that node B aggregates. Node A then resumes after node B stops, and the counts must still
+match the raw events.
