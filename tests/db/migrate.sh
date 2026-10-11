@@ -72,16 +72,14 @@ OUT="build/db-migrate/$PAIR"
 mkdir -p "$OUT"
 FAILED_STEP=
 FAILED_LOG=
-TIMINGS=()
 
-step() {  # step <name> <log> <command...>: run, log, time; remember the first failure
-    local name="$1" log="$OUT/$2" started status
+step() {  # step <name> <log> <command...>: run, log, time (see phase_begin); remember the first failure
+    local name="$1" log="$OUT/$2" status
     shift 2
-    echo "==== $PAIR: $name"
-    started=$(date +%s)
+    phase_begin "$name"
     "$@" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
-    TIMINGS+=("$(printf '%-44s %5ss  %s' "$name" "$(( $(date +%s) - started ))" "$([ "$status" -eq 0 ] && echo ok || echo FAILED)")")
+    phase_end "$status"
     if [ "$status" -ne 0 ] && [ -z "$FAILED_STEP" ]; then FAILED_STEP=$name; FAILED_LOG=$log; fi
     return "$status"
 }
@@ -123,15 +121,15 @@ copy_summary() {  # the copy tool's own summary of this pair (build/db-migrate/<
 
 cleanup() {
     if [ "$KEEP" = false ]; then
-        stop_database "$SOURCE"
-        stop_database "$TARGET"
+        timed "stop the $SOURCE database" stop_database "$SOURCE"
+        timed "stop the $TARGET database" stop_database "$TARGET"
     fi
 }
 
 echo "==== Copy migration $SOURCE ($(prop "$SOURCE" vendor.name)) -> $TARGET ($(prop "$TARGET" vendor.name))"
 rm -f "build/db-migrate/$PAIR.json" "build/db-migrate/$PAIR.txt"
 # Both databases start first: Oracle and SQL Server need a while before they accept connections
-if ! start_database "$SOURCE" || ! start_database "$TARGET"; then
+if ! timed "start the $SOURCE database" start_database "$SOURCE" || ! timed "start the $TARGET database" start_database "$TARGET"; then
     cleanup
     exit 1
 fi
@@ -154,8 +152,8 @@ if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
 fi
 cleanup
 
+phase_summary "Copy migration $PAIR phases"
 echo "==== Copy migration $PAIR summary"
-printf '%s\n' "${TIMINGS[@]}"
 if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
     echo "FAILED: ${FAILED_STEP:-starting the databases} ${FAILED_LOG:+(see $FAILED_LOG)}"
     if [ -f "$FAILED_LOG" ]; then

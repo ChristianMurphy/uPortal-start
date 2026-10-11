@@ -1,6 +1,7 @@
 # shellcheck shell=bash
-# Shared by tests/db/harness.sh and tests/db/migrate.sh (sourced, not run). The caller sets ROOT
-# (the checkout), GRADLE_EXTRA (arguments for every Gradle call) and HTTP_PORT.
+# Shared by tests/db/harness.sh, migrate.sh, equivalence.sh and gindex/gindex.sh (sourced, not
+# run). The caller sets ROOT (the checkout), GRADLE_EXTRA (arguments for every Gradle call) and
+# HTTP_PORT.
 #
 # A vendor is a file in tests/db/vendors. One with a container.image runs as a throwaway Docker
 # container named uportal-dbh-<vendor> on its host.port; one without is served by uPortal-start's
@@ -134,4 +135,54 @@ tomcat_errors() {  # the distinct database and schema errors in this checkout's 
 
 failed_specs() {  # the failure summary at the end of a Playwright log (list, dot and line reporters print it alike)
     sed -n '/^  [0-9]* failed/,$p' "$1" | head -n 40
+}
+
+# Phase times. These scripts run as one workflow step, so the step list shows only their total.
+# A phase is a log group (GitHub Actions folds it) that ends with a line giving the seconds it
+# took; phase_summary lists every phase at the end, in the log and in the job summary. Locally a
+# phase is a "====" heading. The scripts' behaviour does not depend on any of it.
+TIMINGS=()
+PHASE_TITLE=
+PHASE_STARTED=0
+PHASE_OPEN=false
+
+phase_begin() {  # phase_begin <title>
+    PHASE_TITLE="$1"
+    PHASE_STARTED=$SECONDS
+    PHASE_OPEN=true
+    if [ "${GITHUB_ACTIONS:-}" = true ]; then echo "::group::$1"; else echo "==== $1"; fi
+}
+
+phase_end() {  # phase_end <status>: close the phase, print how long it took, remember it
+    local status="${1:-0}" took=$(( SECONDS - PHASE_STARTED )) result=ok
+    [ "$PHASE_OPEN" = true ] || return 0
+    PHASE_OPEN=false
+    [ "$status" -eq 0 ] || result=FAILED
+    if [ "${GITHUB_ACTIONS:-}" = true ]; then echo "::endgroup::"; fi
+    echo "---- $PHASE_TITLE: ${took}s, $result"
+    TIMINGS+=("$(printf '%-58s %5ss  %s' "$PHASE_TITLE" "$took" "$result")")
+}
+
+phase_next() {  # phase_next <title>: end the open phase, if any, and start the next one
+    phase_end 0
+    phase_begin "$1"
+}
+
+timed() {  # timed <title> <command...>: run a command as one phase and return its status
+    local title="$1" status
+    shift
+    phase_begin "$title"
+    "$@"
+    status=$?
+    phase_end "$status"
+    return "$status"
+}
+
+phase_summary() {  # phase_summary <title>: every phase's time, in the log and the GitHub job summary
+    [ ${#TIMINGS[@]} -gt 0 ] || return 0
+    echo "==== $1"
+    printf '%s\n' "${TIMINGS[@]}"
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+        { echo "### $1"; echo; echo '```'; printf '%s\n' "${TIMINGS[@]}"; echo '```'; echo; } >> "$GITHUB_STEP_SUMMARY"
+    fi
 }

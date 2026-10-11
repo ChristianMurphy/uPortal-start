@@ -124,7 +124,7 @@ run_vendor() {
     echo "==== $vendor: $(prop "$vendor" vendor.name)"
     local started=false
     if [ "$EXTERNAL" = false ]; then
-        start_database "$vendor" || return 1
+        timed "start the $vendor database" start_database "$vendor" || return 1
         started=true
     fi
     use_vendor "$vendor"
@@ -146,8 +146,10 @@ run_vendor() {
     local status=0
     local baseline=()
     if [ -n "$BASELINE" ]; then baseline=(-PdbBaseline="$BASELINE"); fi
+    phase_begin "Gradle: deploy, dataInit, snapshot, $([ "$RECORD" = true ] && echo record || echo verify)"
     gradle -PdbVendor="$vendor" "${baseline[@]+"${baseline[@]}"}" "${tasks[@]}" 2>&1 | tee "$out/harness.log"
     status=${PIPESTATUS[0]}
+    phase_end "$status"
     if [ "$RECORD" = true ] || grep -qs 'no baseline: ' "$out/drift-report.txt"; then
         annotate_snapshot "$vendor"
     fi
@@ -176,7 +178,7 @@ run_vendor() {
     fi
 
     if [ "$started" = true ] && [ "$KEEP" = false ]; then
-        stop_database "$vendor"
+        timed "stop the $vendor database" stop_database "$vendor"
     fi
     return $status
 }
@@ -188,20 +190,25 @@ run_portal() {
     if [ "$FULL_SUITE" = true ] && [ "$INIT" = true ]; then
         # The portlets keep their tables in the portal database (the snapshot covers uPortal's
         # own schema only, so it was taken first); create them like portalInit does
+        phase_begin "Gradle: the portlets' tables (dataInit)"
         gradle -PdbVendor="$vendor" dataInit -x :overlays:uPortal:dataInit 2>&1 | tee "$out/portlet-data-init.log"
-        [ "${PIPESTATUS[0]}" -eq 0 ] || return 1
+        status=${PIPESTATUS[0]}
+        phase_end "$status"
+        [ "$status" -eq 0 ] || return 1
     fi
-    start_portal "$vendor" || return 1
-    local specs=(tests/api) log="$out/playwright-api.log"
-    if [ "$FULL_SUITE" = true ]; then specs=(); log="$out/playwright.log"; fi
+    timed "start the portal" start_portal "$vendor" || return 1
+    local specs=(tests/api) log="$out/playwright-api.log" what="the API specs"
+    if [ "$FULL_SUITE" = true ]; then specs=(); log="$out/playwright.log"; what="the whole suite"; fi
+    phase_begin "Playwright: $what"
     PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts \
         "${specs[@]+"${specs[@]}"}" "$(playwright_reporter)" --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
-    stop_own_tomcat "$vendor"
+    phase_end "$status"
+    timed "stop the portal" stop_own_tomcat "$vendor"
     use_vendor "$vendor"
     if [ "${vendor#postgres}" != "$vendor" ]; then
         # The portal has now written events (EVENT_DATA is a @Lob String); look at the LOBs again
-        gradle -PdbVendor="$vendor" -PdbLobReportName=lob-report-after-portal.txt dbLobReport || status=1
+        timed "Gradle: the LOB report after the portal" gradle -PdbVendor="$vendor" -PdbLobReportName=lob-report-after-portal.txt dbLobReport || status=1
         if [ "$reachable" = true ]; then
             vacuumlo_dry_run "$container" > "$out/vacuumlo-dry-run-after-portal.txt"
             cat "$out/vacuumlo-dry-run-after-portal.txt"
@@ -236,6 +243,7 @@ for vendor in "${VENDORS[@]}"; do
     fi
 done
 
+phase_summary "Database harness phases"
 echo "==== Database harness summary (baseline ${BASELINE:-chosen by uPortalVersion}, $([ "$RECORD" = true ] && echo recorded || echo compared))"
 printf '%s\n' "${summary[@]}"
 exit $overall
