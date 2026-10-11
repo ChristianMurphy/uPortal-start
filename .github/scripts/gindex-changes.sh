@@ -20,8 +20,11 @@
 #   START_DIR    a checkout of uPortal-start with the history of origin/<INTEGRATION> (default .)
 #   UPORTAL_URL  where to fetch uPortal from; empty skips the uPortal check
 #
-# It writes run=true or run=false to $GITHUB_OUTPUT (to standard output when that is unset), and the
-# files that matched, or "no matching changes, G-index skipped", to the job summary and the log.
+# It writes run=true or run=false and a one-line report to $GITHUB_OUTPUT (to standard output when
+# that is unset), and the files that matched, or "no matching changes, G-index skipped", to the job
+# summary, the log and a notice annotation. Agents can't read job summaries, but the annotations of
+# a job come back through the API, and the workflow prints the report again in the last step of the
+# job.
 #
 # Rule of thumb for the paths: when unsure, include the path. A false "run" costs an hour of a
 # runner; a false "skip" is caught by the next push to the integration branch, which always runs.
@@ -45,13 +48,21 @@ START_PATHS='^(tests/db/|data/|\.github/workflows/g-index\.yml$|\.github/scripts
 # Spring contexts and property files that set up the data source and the caches.
 UPORTAL_PATHS='(\.sql$|\.hbm\.xml$|\.cfg\.xml$|(^|/)(persistence|orm)\.xml$|(^|/)hibernate[^/]*\.properties$|(^|/)ehcache[^/]*\.xml$|(^|/)[a-z]*(persistence|datasource|cache|importexport)[a-z]*context[^/]*\.xml$|^uPortal-webapp/src/main/resources/properties/(db/|rdbm\.properties$|portal\.properties$)|(^|/)(dao|jpa|aggr|rdbm|hibernate|persistence|entity|entities|usertype)(/|$)|(^|/)RDBM[^/]*\.java$|^uPortal-(rdbm|hibernate|db-migrate|io|events|tools)/|^gradle\.properties$|^gradle/[^/]*\.(toml|properties)$)'
 
-finish() {  # finish <true|false> <heading> [markdown lines...]
-    local run="$1" heading="$2" text
-    shift 2
+finish() {  # finish <true|false> <heading> <one-line report> [markdown lines...]
+    local run="$1" heading="$2" report="$3" text note
+    shift 3
     text=$(printf '### G-index change check: %s\n\n' "$heading"; if [ $# -gt 0 ]; then printf '%s\n' "$@"; fi)
     echo "$text"
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "$text" >> "$GITHUB_STEP_SUMMARY"; fi
-    if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "run=$run" >> "$GITHUB_OUTPUT"; else echo "run=$run"; fi
+    # an annotation message: % first, then the line ends
+    note=${text//'%'/'%25'}; note=${note//$'\r'/'%0D'}; note=${note//$'\n'/'%0A'}
+    echo "::notice title=G-index change check::$note"
+    if [ -n "${GITHUB_OUTPUT:-}" ]; then
+        { echo "run=$run"; echo "report=$report"; } >> "$GITHUB_OUTPUT"
+    else
+        echo "run=$run"
+        echo "report=$report"
+    fi
     exit 0
 }
 
@@ -65,12 +76,14 @@ bullets() {  # bullets <label> <files>: the first LIST_LIMIT files, one bullet e
 
 case "$EVENT_NAME:$BRANCH" in
     push:"$INTEGRATION"-*) ;;
-    *) finish true "run" "$EVENT_NAME on $BRANCH is not a push to a topic branch of $INTEGRATION, which always runs G-index." ;;
+    *) finish true "run" "run: $EVENT_NAME on $BRANCH is not a push to a topic branch" \
+        "$EVENT_NAME on $BRANCH is not a push to a topic branch of $INTEGRATION, which always runs G-index." ;;
 esac
 
 # uPortal-start's own changes
 if ! start_files=$(git -C "$START_DIR" diff --no-renames --name-only "origin/$INTEGRATION...HEAD" 2>&1); then
-    finish true "run" "Could not compare this push with origin/$INTEGRATION, so G-index runs to be safe:" '```' "$start_files" '```'
+    finish true "run" "run: could not compare this push with origin/$INTEGRATION" \
+        "Could not compare this push with origin/$INTEGRATION, so G-index runs to be safe:" '```' "$start_files" '```'
 fi
 start_matched=$(printf '%s\n' "$start_files" | grep -E -i -- "$START_PATHS" || true)
 
@@ -87,22 +100,28 @@ if [ -n "$UPORTAL_URL" ]; then
             if ! git -C "$tmp" fetch -q --no-tags --filter=blob:none "$UPORTAL_URL" \
                     "+refs/heads/$INTEGRATION:refs/remotes/u/integration" "+refs/heads/$BRANCH:refs/remotes/u/topic" 2> "$tmp/fetch.err" ||
                 ! uportal_files=$(git -C "$tmp" diff --no-renames --name-only u/integration...u/topic 2>&1); then
-                finish true "run" "Could not compare uPortal's $BRANCH with its $INTEGRATION, so G-index runs to be safe:" '```' "$(cat "$tmp/fetch.err" 2> /dev/null)" "${uportal_files:-}" '```'
+                finish true "run" "run: could not compare uPortal's $BRANCH with its $INTEGRATION" \
+                    "Could not compare uPortal's $BRANCH with its $INTEGRATION, so G-index runs to be safe:" '```' "$(cat "$tmp/fetch.err" 2> /dev/null)" "${uportal_files:-}" '```'
             fi
             uportal_matched=$(printf '%s\n' "$uportal_files" | grep -E -i -- "$UPORTAL_PATHS" || true)
             uportal_note="uPortal branch $BRANCH, $(printf '%s\n' "$uportal_files" | grep -c .) changed files"
             ;;
         2) ;;
-        *) finish true "run" "Could not list the branches of uPortal, so G-index runs to be safe." ;;
+        *) finish true "run" "run: could not list the branches of uPortal" \
+            "Could not list the branches of uPortal, so G-index runs to be safe." ;;
     esac
 fi
 
 if [ -z "$start_matched" ] && [ -z "$uportal_matched" ]; then
-    finish false "skipped" "no matching changes, G-index skipped" "" \
+    finish false "skipped" "skipped: no matching changes, G-index skipped" "no matching changes, G-index skipped" "" \
         "Checked uPortal-start against origin/$INTEGRATION ($(printf '%s\n' "$start_files" | grep -c .) changed files) and uPortal ($uportal_note)."
 fi
 
 lines=("This push changes files that G-index measures:" "")
 if [ -n "$start_matched" ]; then lines+=("$(bullets "uPortal-start" "$start_matched")" ""); fi
 if [ -n "$uportal_matched" ]; then lines+=("$(bullets "uPortal branch $BRANCH" "$uportal_matched")" ""); fi
-finish true "run" "${lines[@]}"
+report="run: $(printf '%s\n' "$start_matched" | grep -c .) matching files in uPortal-start"
+if [ -n "$start_matched" ]; then report+=" (first: $(printf '%s\n' "$start_matched" | head -n 1))"; fi
+report+=", $(printf '%s\n' "$uportal_matched" | grep -c .) in uPortal"
+if [ -n "$uportal_matched" ]; then report+=" (first: $(printf '%s\n' "$uportal_matched" | head -n 1))"; fi
+finish true "run" "$report" "${lines[@]}"
