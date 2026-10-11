@@ -153,13 +153,17 @@ start_gindex_database() {
 
 portal_properties() {
     # The MOD-Q7 retention (30 days of raw events) and analytics jobs that run every ~20 s instead
-    # of every ~60 s, so a short workload sees each of them several times
+    # of every ~60 s, so a short workload sees each of them several times. The aggregation job may
+    # cross 50 intervals per run instead of 5: it catches up on the loaded backlog in its first
+    # runs and then closes live five-minute intervals (deleting their UP_UNIQUE_STR rows) in every
+    # workload, not only on a fast runner
     local global=.gradle/tomcat/portal/global.properties
     sed -i '/^## G-index workload/,$d' "$global"
     cat >> "$global" <<'EOF'
 ## G-index workload (tests/db/gindex/gindex.sh)
 org.apereo.portal.events.aggr.PortalEventPurgerImpl.purgeDelay=P30D
 org.apereo.portal.events.aggr.PortalEventProcessingManagerImpl.aggregateRawEventsPeriod=20011
+org.apereo.portal.events.aggr.PortalRawEventsAggregatorImpl.intervalAggregationBatchSize=50
 org.apereo.portal.events.aggr.PortalEventProcessingManagerImpl.purgeEventSessionsPeriod=20021
 org.apereo.portal.events.aggr.PortalEventProcessingManagerImpl.purgeRawEventsPeriod=20023
 org.apereo.portal.portlet.container.services.PortletCookieServiceImpl.purgeExpiredCookiesPeriod=30011
@@ -272,6 +276,7 @@ job_report() {
             ('raw-event purge', 'delete from up_raw_events%'),
             ('event-session purge', '%from up_event_session %last_accessed<%'),
             ('portal-cookie purge', 'delete from up_portal_cookies%'),
+            ('closed intervals (unique strings deleted)', 'delete from up_unique_str %'),
             ('login', '%from up_person_dir %')) j(job, pattern)
           LEFT JOIN gindex.workload_statements s ON lower(s.query) LIKE j.pattern
           GROUP BY j.job ORDER BY j.job;"
@@ -282,6 +287,7 @@ job_report() {
             SELECT 'raw-event purge', 'delete from \`up_raw_events\`%' UNION ALL
             SELECT 'event-session purge', '%from \`up_event_session\` %\`last_accessed\` <%' UNION ALL
             SELECT 'portal-cookie purge', 'delete from \`up_portal_cookies\`%' UNION ALL
+            SELECT 'closed intervals (unique strings deleted)', 'delete from \`up_unique_str\` %' UNION ALL
             SELECT 'login', '%from \`up_person_dir\` %') j
           LEFT JOIN gindex.workload_digests s ON LOWER(s.digest_text) LIKE j.pattern
           GROUP BY j.job ORDER BY j.job;"
@@ -362,7 +368,8 @@ workload() {
     } > "$OUT/workload.md"
     cat "$OUT/workload.md"
     summary "$OUT/workload.md"
-    for job in 'raw-event aggregation' 'raw events marked aggregated' 'raw-event purge' 'event-session purge'; do
+    for job in 'raw-event aggregation' 'raw events marked aggregated' 'raw-event purge' 'event-session purge' \
+            'closed intervals \(unique strings deleted\)'; do
         if ! grep -E "^\| $job +\| [1-9]" "$OUT/workload.md" > /dev/null; then
             echo "The workload is incomplete: the $job job did not run" >&2
             github_annotation error "G-index $VENDOR" "The workload is incomplete: the $job job did not run"
