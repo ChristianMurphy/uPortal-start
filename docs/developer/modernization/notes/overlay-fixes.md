@@ -226,9 +226,21 @@ uPortal's code fixes MOD-I63.
 
 ### GitHub CI
 
-Code head `a8194f0`, before this note's `[skip ci]` commits: CI run 38094277016 and Integration
-run 38094276952. Both were still queued on GitHub's saturated runners when this note was written.
-GitHub cancelled the earlier pushes' runs as superseded. Results to be added.
+Code head `3d144aa`. Later commits only touch this note and carry `[skip ci]`.
+
+* CI run 38098393436 passed. Its Build step runs `./gradlew build :buildSrc:test`, so it includes
+  every overlay's `removedApiScan` and the 5 seeded-fault tests.
+* Integration run 38098393434 passed, on the light profile that workstream branches get
+  (MOD-D30):
+  * Playwright on HSQLDB;
+  * Playwright on PostgreSQL 18 (`harness.sh --full-suite`);
+  * the DB harness on PostgreSQL 18;
+  * G-migrate from MariaDB 11.4 to PostgreSQL 18.
+
+  The light profile leaves out Playwright on MariaDB 12.3. It runs once the branch is merged into the
+  integration branch.
+* The run before it, on `a8194f0`, failed. `removedApiScan` ran out of the Gradle daemon's 512 MB
+  heap while it held whole nested jars in memory (finding 4). `3d144aa` streams them instead.
 
 ## Findings
 
@@ -250,8 +262,9 @@ GitHub cancelled the earlier pushes' runs as superseded. Results to be added.
    enumeration, or a change on the integration branch. Settle it before the P7-1 required checks fix the expected Pluto
    numbers.
 4. **The scan indexes the whole WAR and needs memory.** Run in parallel, the 16 scans outgrew the
-   Gradle daemon's default 512 MB heap. They now share a build service with one slot. Each scan
-   takes between 0.2 and 10 s.
+   Gradle daemon's default 512 MB heap. They now share a build service with one slot. In CI a
+   single scan still ran out of heap while it held resource-server's nested jars (up to 28 MB) in
+   memory. The scanner now streams each nested jar. Each scan takes between 0.2 and 10 s.
 5. **Spring Boot 2.7's `SslConnectorCustomizer` in resource-server** also references
    `AbstractHttp11JsseProtocol`, like NotificationPortlet's Boot 1.5. Boot only uses it when it
    starts its own Tomcat with SSL. It is allowlisted, and resource-server deploys on Tomcat 11.
