@@ -159,11 +159,45 @@ task tomcatStart() {
             arg(value: 'start')
         }
 
-        ant.waitfor() {
-            http(url: "http://localhost:${tomcatHttpPort}/uPortal", followRedirects: false)
+        /*
+         * Tomcat answers HTTP requests only once it has deployed every webapp, so any answer
+         * means that it has started (errorsBeginAt 600 counts a 404 as an answer). Waiting for
+         * /uPortal to answer below 400 instead waited out waitfor's 3 minutes whenever uPortal
+         * was not deployed or did not start (MOD-I344), and then said it was live.
+         */
+        String uPortalUrl = "http://localhost:${tomcatHttpPort}/uPortal"
+        ant.waitfor(maxwait: 3, maxwaitunit: 'minute', timeoutproperty: 'tomcatStartTimedOut') {
+            http(url: uPortalUrl, followRedirects: false, errorsBeginAt: 600)
         }
+        if (ant.properties['tomcatStartTimedOut']) {
+            logger.lifecycle("Tomcat did not answer at ${uPortalUrl} within 3 minutes")
+            return
+        }
+        int status = uPortalStatus(uPortalUrl)
+        if (status >= 200 && status < 400) {
+            logger.lifecycle('Tomcat has finished loading webapps, local uPortal server is live')
+        } else {
+            logger.lifecycle("Tomcat has finished loading webapps, but ${uPortalUrl} answered " +
+                    "${status < 0 ? 'nothing' : status}: uPortal is not deployed or did not start " +
+                    "(see the logs in ${serverHome}/logs)")
+        }
+    }
+}
 
-        logger.lifecycle('Tomcat has finished loading webapps, local uPortal server is live')
+/*
+ * The HTTP status of the URL without following redirects, or -1 when it doesn't answer.
+ */
+private int uPortalStatus(String url) {
+    HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection()
+    connection.instanceFollowRedirects = false
+    connection.connectTimeout = 10_000
+    connection.readTimeout = 60_000
+    try {
+        return connection.responseCode
+    } catch (IOException ignored) {
+        return -1
+    } finally {
+        connection.disconnect()
     }
 }
 
