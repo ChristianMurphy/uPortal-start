@@ -13,6 +13,12 @@
 // since the epoch, in the logs' clock). Prints the outcome and exits 0 when the nodes shared a
 // view of two members within --bound seconds (default 30), 1 when they did not, and 2 when that
 // can't be told yet: no shared view so far, and node B's log ends within the bound.
+//
+//   node tests/cluster/cluster-join.mjs --lone a=<log>[,<log>...] [--since <ms>]
+//
+// A node started alone: prints how long it took from its channel starting to forming a cluster of
+// its own, and how many JOINs it sent to coordinators that never answered (rows that crashed
+// members left in JGROUPSPING). Exits 0, or 2 when the node has not formed its cluster yet.
 
 import console from "node:console";
 import { readFileSync } from "node:fs";
@@ -65,8 +71,10 @@ const args = process.argv.slice(2);
 const files = {};
 let since = 0;
 let bound = 30;
+let lone = false;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--since") since = Number(args[++i]);
+  else if (args[i] === "--lone") lone = true;
   else if (args[i] === "--bound") bound = Number(args[++i]);
   else {
     const m = /^([ab])=(.+)$/.exec(args[i]);
@@ -76,6 +84,24 @@ for (let i = 0; i < args.length; i++) {
     }
     files[m[1]] = m[2].split(",");
   }
+}
+const iso = (ms) => new Date(ms).toISOString().slice(11, 23);
+const formedOwn = (line) =>
+  /becoming singleton|created cluster \(first member\)/.test(line.text);
+const joinTimeouts = (lines) =>
+  lines.filter((l) => /JOIN\(.*\) sent to .* timed out/.test(l.text)).length;
+
+if (lone && files.a) {
+  const lines = linesOf(files.a, since);
+  const formed = lines.find(formedOwn);
+  if (!formed) {
+    console.log("UNDECIDED: the node has not formed a cluster of its own yet");
+    process.exit(2);
+  }
+  console.log(
+    `LONE: formed a cluster of its own ${formed.at - lines[0].at} ms after its channel started, after ${joinTimeouts(lines)} JOIN timeout(s)`,
+  );
+  process.exit(0);
 }
 if (!files.a || !files.b) {
   console.error(
@@ -92,7 +118,6 @@ if (b.length === 0) {
 }
 const started = b[0].at;
 const deadline = started + bound * 1000;
-const iso = (ms) => new Date(ms).toISOString().slice(11, 23);
 
 // Replay both nodes' views in time order, and find when they first shared a view of two members
 const events = [
@@ -118,12 +143,8 @@ for (const e of events) {
   }
 }
 
-const singleton = b.find((l) =>
-  /becoming singleton|created cluster \(first member\)/.test(l.text),
-);
-const timeouts = b.filter((l) =>
-  /JOIN\(.*\) sent to .* timed out/.test(l.text),
-).length;
+const singleton = b.find(formedOwn);
+const timeouts = joinTimeouts(b);
 const how = singleton
   ? `; node B gave up after ${timeouts} JOIN timeout(s) and formed its own cluster at ${iso(singleton.at)}`
   : "";

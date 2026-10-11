@@ -111,10 +111,16 @@ tests/cluster/cluster.sh --fault replication-off  # a seeded fault must be caugh
 tests/cluster/cluster.sh --keep                   # leave the nodes and the database running
 tests/cluster/cluster.sh --no-deploy              # reuse them (after --keep)
 tests/cluster/cluster.sh --join-starts 20         # start node B 20 times, count the joins
+tests/cluster/cluster.sh --lone-restarts 10       # crash and restart node A alone 10 times
 ```
 
 `--join-starts` runs no other check. It starts node A, then starts and stops node B the given
 number of times, and writes each start's `cluster-join` outcome to `build/cluster/join-starts.txt`.
+`--lone-restarts` starts node A alone, then kills it with `kill -9` and starts it again the given
+number of times. JDBC_PING returns the row the killed node left in `JGROUPSPING` as a coordinator,
+so the restarted node sends JOINs to that dead address until it gives up after
+`join_timeout` × `max_join_attempts`. `build/cluster/lone-restarts.txt` has the wait of each
+restart, which a longer join setting adds to every single-server restart after a crash.
 
 Arguments after `--` are passed to every Gradle call, and results are in `build/cluster/results.txt`, with
 both nodes' logs in `build/cluster/logs-a` and `logs-b`; on GitHub Actions failed checks also
