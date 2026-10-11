@@ -7,6 +7,9 @@ name. No 5.17 site on SQL Server holds emoji or CJK text, so the migration-equiv
 imports a fixture converted to the code page there, and compares 5.17's export with the reference
 converted the same way. See docs/migration-equivalence.md.
 
+The conversion writes "_", not SQL Server's "?": 5.17 names exported files after group names, and
+"?" is not allowed in a file name on Windows or in a GitHub Actions artifact.
+
     python3 tests/db/equivalence/code_page.py <code page> <from dir> <to dir>
 
 Copies <from dir> to <to dir> and converts the text of every file, and every file and directory
@@ -17,7 +20,7 @@ import os
 import re
 import sys
 
-REPLACEMENT = "?"
+REPLACEMENT = "_"
 
 # A numeric character reference: &#233; or &#xE9;
 _REFERENCE = re.compile(r"&#(?:([0-9]+)|[xX]([0-9a-fA-F]+));")
@@ -32,7 +35,7 @@ def _encodable(char, code_page):
 
 
 def to_code_page(text, code_page="cp1252"):
-    """Replace each character that code_page can't encode with "?", one per code point.
+    """Replace each character that code_page can't encode with "_", one per code point.
 
     Numeric character references to such characters are replaced too, since an XML parser turns
     them into the character. Text that code_page can encode, and references to it, stay as they are.

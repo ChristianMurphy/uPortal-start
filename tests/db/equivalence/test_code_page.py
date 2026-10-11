@@ -12,18 +12,18 @@ class ToCodePageTest(unittest.TestCase):
         text = "Personen mit «ünïcødé» Attributen & mehr — €, Œ, ™, Équipe"
         self.assertEqual(to_code_page(text), text)
 
-    def test_replaces_an_emoji_with_one_question_mark(self):
-        self.assertEqual(to_code_page("PAGS Fixture Child 🌱"), "PAGS Fixture Child ?")
+    def test_replaces_an_emoji_with_one_underscore(self):
+        self.assertEqual(to_code_page("PAGS Fixture Child 🌱"), "PAGS Fixture Child _")
 
     def test_replaces_each_japanese_character(self):
-        self.assertEqual(to_code_page("研究グループ"), "??????")
+        self.assertEqual(to_code_page("研究グループ"), "______")
 
     def test_replaces_letters_outside_the_code_page(self):
-        self.assertEqual(to_code_page("ünïcødé-łøwęr Ŧitle №"), "ünïcødé-?øw?r ?itle ?")
+        self.assertEqual(to_code_page("ünïcødé-łøwęr Ŧitle №"), "ünïcødé-_øw_r _itle _")
 
     def test_replaces_numeric_character_references_to_such_characters(self):
-        self.assertEqual(to_code_page('name="Umbenannt &#127881;"'), 'name="Umbenannt ?"')
-        self.assertEqual(to_code_page("&#x1F389;&#X4E2D;"), "??")
+        self.assertEqual(to_code_page('name="Umbenannt &#127881;"'), 'name="Umbenannt _"')
+        self.assertEqual(to_code_page("&#x1F389;&#X4E2D;"), "__")
 
     def test_keeps_numeric_character_references_the_code_page_holds(self):
         text = "caf&#233; &#xE9; &#38; &#8364;"
@@ -60,9 +60,9 @@ class ConvertDirectoryTest(unittest.TestCase):
 
         changed = convert_directory(self.source, self.target)
 
-        self.assertEqual(changed, ["group/??????.xml", "group/Équipe.xml"])
-        self.assertEqual(self.read("group/??????.xml"), "<name>??????</name>\n")
-        self.assertEqual(self.read("group/Équipe.xml"), "<name>Équipe ?</name>\n")
+        self.assertEqual(changed, ["group/______.xml", "group/Équipe.xml"])
+        self.assertEqual(self.read("group/______.xml"), "<name>______</name>\n")
+        self.assertEqual(self.read("group/Équipe.xml"), "<name>Équipe _</name>\n")
         self.assertEqual(self.read("user/plain.xml"), "<name>plain</name>\n")
 
     def test_refuses_two_names_that_become_one(self):
