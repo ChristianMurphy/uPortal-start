@@ -527,7 +527,11 @@ def audit_mariadb(db, args):
 # --------------------------------------------------------------------------------------------
 
 def read_allowlist(path, vendor):
-    """Lines: `<check> <subject glob> [vendor=<v>] -- <reason>`; '#' starts a comment."""
+    """Lines: `<check> <subject glob> [vendor=<v>] [required] -- <reason>`; '#' starts a comment.
+
+    A `required` entry fails the audit when it matches nothing: it covers a finding the workload
+    must keep producing until the fix lands, so the entry is removed then and cannot hide a later
+    regression."""
     entries = []
     if not path or not os.path.exists(path):
         return entries
@@ -540,13 +544,14 @@ def read_allowlist(path, vendor):
                 raise SystemExit(f"{path}:{n}: an allowlist entry needs ' -- <reason>'")
             head, reason = line.split(" -- ", 1)
             parts = head.split()
-            if len(parts) < 2 or parts[0] not in GATE_CHECKS or not reason.strip():
-                raise SystemExit(f"{path}:{n}: expected '<check> <subject> [vendor=x] -- <reason>'")
+            if (len(parts) < 2 or parts[0] not in GATE_CHECKS or not reason.strip()
+                    or any(p != "required" and not p.startswith("vendor=") for p in parts[2:])):
+                raise SystemExit(f"{path}:{n}: expected '<check> <subject> [vendor=x] [required] -- <reason>'")
             only = [p.split("=", 1)[1] for p in parts[2:] if p.startswith("vendor=")]
             if only and vendor not in only:
                 continue
             entries.append({"check": parts[0], "subject": parts[1], "reason": reason.strip(), "line": n,
-                            "used": False})
+                            "used": False, "required": "required" in parts[2:]})
     return entries
 
 
@@ -595,7 +600,9 @@ def report(findings, stats, args, entries):
     for check in GATE_CHECKS:
         fail = sum(1 for f in failing if f["check"] == check)
         ok = sum(1 for f in allowed if f["check"] == check)
-        lines.append(f"| {check} | {fail} | {ok} | {'FAIL' if fail else 'pass'} |")
+        gone = sum(1 for e in entries if e["required"] and not e["used"] and e["check"] == check)
+        result = "FAIL" if fail or gone else "pass"
+        lines.append(f"| {check} | {fail}{f' (+{gone} stale)' if gone else ''} | {ok} | {result} |")
     unused = [f for f in findings if f["check"] == "unused-index"]
     lines.append(f"| unused-index (report) | {len(unused)} | | {sum(1 for f in unused if not f['constraint'])} "
                  f"not backing a constraint |")
@@ -611,7 +618,14 @@ def report(findings, stats, args, entries):
         for f in allowed:
             lines.append(f"| {f['check']} | `{f['subject']}` | {describe(f)} | {md_escape(f['allowed'])} |")
         lines += ["", "</details>", ""]
-    stale = [e for e in entries if not e["used"]]
+    missing = [e for e in entries if e["required"] and not e["used"]]
+    if missing:
+        lines += ["### Stale required allowlist entries", "",
+                  "These entries matched nothing. Remove them if their fix has landed; otherwise the workload "
+                  "stopped producing the finding they cover.", ""]
+        lines += [f"- `{e['check']} {e['subject']}` (line {e['line']}): {md_escape(e['reason'])}" for e in missing]
+        lines.append("")
+    stale = [e for e in entries if not e["used"] and not e["required"]]
     if stale:
         lines.append("Allowlist entries that matched nothing: "
                      + ", ".join(f"`{e['check']} {e['subject']}` (line {e['line']})" for e in stale))
@@ -629,10 +643,10 @@ def report(findings, stats, args, entries):
         for f in top:
             lines.append(f"| {f['calls']} | {f['total_ms']} | {f['mean_ms']} | `{md_escape(f['query'][:300])}` |")
         lines += ["", "</details>", ""]
-    return failing, "\n".join(lines) + "\n"
+    return failing, missing, "\n".join(lines) + "\n"
 
 
-def annotate(failing, label):
+def annotate(failing, missing, label):
     if os.environ.get("GITHUB_ACTIONS") != "true":
         return
     # A run that is meant to fail (seeded faults) reports its findings as notices
@@ -646,6 +660,9 @@ def annotate(failing, label):
         print(f"::{level} title={title}::{text}")
     if len(failing) > 10:
         print(f"::{level} title=G-index {label}::{len(failing) - 10} more failing findings; see the job summary")
+    for e in missing:
+        title = f"G-index {label}: stale allowlist entry".replace(":", "%3A").replace(",", "%2C")
+        print(f"::{level} title={title}::{e['check']} {e['subject']} (allowlist line {e['line']}) matched nothing")
 
 
 def main():
@@ -675,7 +692,7 @@ def main():
         return 2
     findings = [f for f in findings if "table" not in f or fnmatch.fnmatchcase(f["table"], args.tables)]
     apply_allowlist(findings, entries)
-    failing, summary = report(findings, stats, args, entries)
+    failing, missing, summary = report(findings, stats, args, entries)
 
     os.makedirs(args.out, exist_ok=True)
     with open(os.path.join(args.out, "findings.json"), "w", encoding="utf-8") as f:
@@ -686,10 +703,11 @@ def main():
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
             f.write(summary)
     print(summary)
-    annotate(failing, args.label or args.vendor)
-    if failing:
-        print(f"G-index audit FAILED: {len(failing)} finding(s) not on the allowlist "
-              f"({os.path.relpath(args.allowlist)})", file=sys.stderr)
+    annotate(failing, missing, args.label or args.vendor)
+    if failing or missing:
+        print(f"G-index audit FAILED: {len(failing)} finding(s) not on the allowlist, {len(missing)} stale "
+              f"required entr{'y' if len(missing) == 1 else 'ies'} ({os.path.relpath(args.allowlist)})",
+              file=sys.stderr)
         return 1
     print("G-index audit passed")
     return 0
