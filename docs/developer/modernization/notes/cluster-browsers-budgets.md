@@ -32,12 +32,19 @@ lock-abandonment age stays at its 60 s default. Checks (details and bounds in
   sooner than 60 s after the dead node's last lock update, and within 60 s + the 28 s server bias
   + 60 s.
 * `failover-jobs-once`: events from before and after the kill are aggregated once.
+* `events-aggregated`: no raw event is left unaggregated behind the aggregator's last event date.
 * `no-overlap`: from both nodes' `ClusterLockServiceImpl` TRACE logs, no job held its lock on
   both nodes at once.
 
 Seeded faults (`--fault`, nightly matrix): `replication-off` (uPortal's own
-`ehcache-no-jgroups.xml`) must fail `invalidation-portlet` and `invalidation-layout`.
-`lock-ignored` (`abandonedLockAge=PT0S`) must fail `failover-takeover` and `no-overlap`.
+`ehcache-no-jgroups.xml`) must fail `invalidation-portlet`. `lock-ignored`
+(`abandonedLockAge=PT0S`) must fail `failover-takeover` and `no-overlap`. The layout check does
+not depend on replication (uPortal reads a layout from the database when a session starts), so
+no seeded fault covers it yet.
+
+`invalidation-permission` and `events-aggregated` fail because of the uPortal problems under
+"Findings". They are listed in `KNOWN_FAILURES` in `cluster.sh`, which reports them as warnings
+without failing the run.
 
 ### 2. Browsers, accessibility, visual snapshots
 
@@ -63,7 +70,7 @@ reported for lowering.
 
 ### 4. Load baseline
 
-k6 (Grafana's signed apt repository, CI only) runs 10 virtual users on PostgreSQL 18 for 3
+k6 (the `grafana/k6` image pinned by digest, CI only) runs 10 virtual users on PostgreSQL 18 for 3
 minutes after a warm-up. Half browse as guests, the rest log in and out or render a portlet. p50, p95 and error rate per
 scenario are thresholds from `tests/load/baseline.json` (1.5 × + 50/100 ms, < 1 % errors).
 `docs/load-tests.md` describes scaling to MOD-Q7's large campus on real hardware.
@@ -92,22 +99,58 @@ Status at the checkpoint (2026-10-11 01:40 UTC). Nothing is green yet.
     views, the permission rows and the stuck events.
   * Query budgets: uPortal did not start with p6spy (404). Load: the k6 install failed. Both
     fixed, see the commits after the run.
-* Run for `250bc60d1` (the fixes, merged with the integration branch) is next.
+* Run 38106773735 (head `250bc60d1`, the fixes merged with the integration branch):
+  * Firefox, WebKit, phone, a11y (the ratchet against the recorded baseline) and load passed.
+    Load observed p50/p95 of 1/69 ms (guest), 5/152 ms (login) and 2/45 ms (portlet), error
+    rates up to 0.08 % (three "unexpected EOF" responses), now in `tests/load/baseline.json`.
+  * Visual: 9 of 10 passed. The phone's guest page, the first page after the portal started,
+    did not load within 30 s. The suite's timeout is now 60 s.
+  * Query budgets: uPortal started with p6spy, but every request counted 0 statements. The
+    next run prints what `sql.log` holds.
+  * Cluster, main leg: `invalidation-portlet` passed (1 372 ms), `invalidation-layout` passed
+    (645 ms), `no-overlap` passed (256 runs). `invalidation-permission` failed (node B denied
+    the grant 330 s later). `jobs-once` failed: 96 events node B stored in its first seconds
+    were never aggregated (see "Findings"), and the failover checks did not run.
+  * Cluster, `replication-off`: `invalidation-portlet` failed as it should (no catch-up in
+    300 s). `invalidation-layout` passed, which showed it does not depend on replication.
+    With the cluster wait taking 2 minutes, node B's events were stored in time, so
+    `jobs-once` (48 logins, 888 renders), `failover-takeover` (60 208 ms after the last
+    update), `failover-jobs-once` and `no-overlap` (336 runs) all passed. That run is the
+    first evidence that failover works.
+  * Cluster, `lock-ignored`: stopped at `jobs-once` like the main leg, so the checks that
+    must catch the fault never ran.
+* Run for `ff634d161` (cluster test waits for node B's tasks, known failures, JGroups views,
+  query diagnostics, visual timeout, load baseline) is next.
 
 ## Findings
 
-Candidates, still to confirm in CI:
+Confirmed in CI:
 
-* In run 38095302669 the raw events of both nodes had the server name `node-a` although node
-  B's `uPortal.properties` sets `node-b` (the copy step was checked locally). `a63e95a` logs each
-  node's `portal.home` and server name, and `jobs-once` now fails when both names are not
-  present. Until this is explained, the failover check may kill the wrong node.
-* Portlet definition change not visible on the other node within 30 s (run 38095302669). The
-  next run reports how much later node B catches up, and the title in the database.
+* **Events lost at node start.** A node queues its portal events in memory and writes them to
+  `UP_RAW_EVENTS` only once its scheduled tasks start, 120 s after uPortal starts
+  (`uPortalTaskScheduler` `initialDelay` PT120S also delays `portalEventDaoQueuingEventHandler.flush`).
+  The aggregator reads only events after its last event date
+  (`PortalRawEventsAggregatorImpl.doAggregateRawEventsInternal`), so when another node has
+  aggregated past them by then, they are never aggregated. Run 38106773735: 96 events of
+  node B from 03:19:08 to 03:19:14, aggregator at 03:29:41. Every node restart in a running
+  cluster loses its first minutes from the statistics. The check `events-aggregated` covers it.
+* **Permission changes do not reach the other node.** After node B checked the student's denied
+  SUBSCRIBE, node A's grant (stored in `UP_PERMISSION`, enforced on node A) did not reach node B
+  within 330 s, with or without replication, in all three legs of run 38106773735. The next run
+  checks node A's own cached denial first and what a new session on node B gets, which tells
+  a missing eviction from a missing replication.
+* **The server names are right.** Since `a63e95a` both nodes report their own `portal.home`
+  and server name, and the raw events hold `node-a` and `node-b`.
+
+Candidates:
+
+* Portlet definition change not visible on the other node within 30 s, nor 300 s, in runs
+  38095302669 and 38100770775. It showed in under 1.5 s in the two legs of run 38106773735
+  that had replication. A change made before the nodes share a JGroups view would explain it.
+  The test now logs the views and waits for a view of two members.
 * From reading `ehcache.xml`: permission checks are cached per node without replication
   (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` 180 s, `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT`
-  300 s). Another node can keep allowing a revoked permission for up to 5 minutes. The
-  permission check measures this.
+  300 s). Another node can keep allowing a revoked permission for up to 5 minutes.
 * From reading the code: `LoginAggregationImpl` and the other aggregation entities are cached
   in Hibernate L2 without replication and have no `@Version`. If aggregation moves from node A
   to node B and back within the 10-minute idle time, node A can update a stale copy and lose
@@ -123,10 +166,13 @@ Draft, to finalise once CI confirms the findings:
 * `MOD-D?`: the two-node cluster test is a required check on every push (`tests/cluster/cluster.sh`),
   with seeded faults nightly; browsers, accessibility and visual snapshots, query budgets and the
   load baseline run nightly (budgets also on integration-branch pushes).
-* `MOD-I?`: other nodes enforce a revoked permission only after the per-node permission caches
-  expire (up to 300 s), if the permission check confirms it.
-* `MOD-I?`: portlet definition changes do not reach the other node within 30 s, if the next run
-  confirms it.
+* `MOD-I?`: events a node stores in its first 120 s are never aggregated when another node's
+  aggregator has passed their time (the event flush waits for the task scheduler's initial
+  delay).
+* `MOD-I?`: a permission granted on one node does not reach another node's checks within
+  330 s. The next run says whether a new session sees it.
+* `MOD-I?`: portlet definition changes sometimes do not reach the other node at all (two of
+  four runs), if the JGroups view logging confirms a late view.
 * `MOD-I?`: the `uPortal.cacheManager.jgroups.tcp.bind_port` setting does not reach `jgroups.xml`.
 * `MOD-I?`: one pushed commit message of this workstream (the one that renamed the cluster test
   a required check) quotes a word the uPortal Vale style flags. It was not rewritten.
@@ -143,17 +189,16 @@ Draft, to finalise once CI confirms the findings:
 
 ## What's left
 
-Next step: read the jobs of the run for `9c71a8e` (or its successor) on this branch.
+Next step: read the jobs of the run for `ff634d161` (or its successor) on this branch.
 
-1. Cluster: read the node identity lines and the results. Fix the test, or record findings.
-   Repeat until `cluster` passes and each seeded-fault leg passes (the fault was caught).
-2. Record the baselines from that run's output: `tests/query-budget/budgets.json` from the
-   `observed=` line, `tests/a11y/baseline.ts` from the `a11y observed` annotations, the visual
-   snapshots with `tests/visual/fetch-snapshots.sh <job log>`, `tests/load/baseline.json` from
-   the `load observed` annotation (and pin `K6_VERSION` to the version the job reports).
-   Triage Firefox, WebKit and phone failures: fix real cross-browser bugs or log them.
-3. Revert `9c71a8e` (the on-push-once commit) so those jobs are nightly again.
-4. Fill in this note's results with run IDs, then the proposed LOG entries.
+1. Cluster: the main leg must pass with only the known failures. The `replication-off` and
+   `lock-ignored` legs must each report the fault caught. Update "Findings" from the JGroups
+   views, the permission diagnosis and the unaggregated events.
+2. Query budgets: fix the counting with the help of the `sql.log` summary. Record
+   `tests/query-budget/budgets.json` from the `observed=` line once the counts are not zero.
+3. Visual: should pass with the longer timeout.
+4. Revert `9c71a8e` (the on-push-once commit) so those jobs are nightly again.
+5. Finalise the proposed LOG entries.
 
 Not started: a test for stale aggregation caches. Node A is frozen with SIGSTOP past the server
 bias so that node B aggregates. Node A then resumes after node B stops, and the counts must still
