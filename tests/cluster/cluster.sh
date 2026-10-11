@@ -33,6 +33,8 @@
 #                  replication-off  the nodes use ehcache-no-jgroups.xml (no cache replication)
 #                  lock-ignored     a held cluster lock counts as abandoned at once
 #                                   (abandonedLockAge=PT0S), so another node can take it
+#                  event-flush-delayed  the nodes write their portal events only 120 s after
+#                                   they start, as uPortal 5 did (flushInitialDelay=PT120S)
 #   --keep       leave the nodes and the database running afterwards
 #   --no-deploy  reuse the database and the nodes deployed by an earlier --keep run
 #
@@ -64,15 +66,13 @@ done
 
 # The checks each seeded fault must make fail
 declare -A FAULT_CHECKS=(
-    [replication-off]="invalidation-portlet"
+    [replication-off]="invalidation-portlet permission-session"
     [lock-ignored]="failover-takeover no-overlap"
+    [event-flush-delayed]="events-aggregated"
 )
 # Checks that fail because of a known uPortal problem (docs/cluster-tests.md): reported as
 # warnings, they do not fail the run. Remove an entry once uPortal is fixed.
-declare -A KNOWN_FAILURES=(
-    [permission-session]="a session keeps the permission decisions it made for minutes after a change"
-    [events-aggregated]="events a node stores after another node's aggregator passed their time are never aggregated"
-)
+declare -A KNOWN_FAILURES=()
 if [ -n "$FAULT" ] && [ -z "${FAULT_CHECKS[$FAULT]+x}" ]; then
     echo "Unknown fault '$FAULT'; faults: ${!FAULT_CHECKS[*]}" >&2
     exit 2
@@ -187,6 +187,9 @@ append_properties() {  # append_properties <node> <server name>
             lock-ignored)
                 echo "# Seeded fault (tests/cluster/cluster.sh --fault lock-ignored)"
                 echo "org.apereo.portal.concurrency.locking.ClusterLockDao.abandonedLockAge=PT0S" ;;
+            event-flush-delayed)
+                echo "# Seeded fault (tests/cluster/cluster.sh --fault event-flush-delayed)"
+                echo "org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S" ;;
         esac
     } >> "$file"
 }

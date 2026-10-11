@@ -60,17 +60,17 @@ that node B does not serve the layout from a stale node-wide copy.
 
 ## Known failures
 
-The checks in `KNOWN_FAILURES` (`tests/cluster/cluster.sh`) fail because of uPortal problems
-this test found. Their failure shows as a warning without failing the run. When one of them
-passes, the run says so, and its entry can go once uPortal is fixed.
+A check listed in `KNOWN_FAILURES` (`tests/cluster/cluster.sh`) fails because of a uPortal
+problem this test found. Its failure shows as a warning without failing the run, and a run where
+it passes says so. The list is empty: the problems the test found are fixed in uPortal 6.0
+(`docs/UPGRADING-6.0.md` in uPortal), and their checks fail the run again:
 
-* `permission-session`: a session keeps the permission decisions it has made. In run
-  38110056978 the student's session on node A, where the grant was made, was denied the portlet
-  for about 6 minutes after the grant, while a new session was allowed at once.
-* `events-aggregated`: a node queues its events in memory and stores them only once its
-  scheduled tasks run, 120 s after it starts. If another node's aggregator has passed their
-  time by then, those events are never aggregated. Every node restart in a running cluster
-  loses the events of its first minutes from the statistics.
+* `permission-session`: uPortal cached each permission decision per node for up to 300 s and
+  kept it after a grant or a revocation. It now clears its decision caches on every permission
+  change, and the caches replicate the removal.
+* `events-aggregated`: a node wrote its portal events only 120 s after it started, after
+  another node's aggregator had passed their time, so they were never aggregated. The event
+  queue is now flushed from the start.
 
 ## Seeded faults
 
@@ -79,8 +79,9 @@ seeded fault and passes only if the checks meant to catch it fail:
 
 | Fault | Seeded by | Must fail |
 | --- | --- | --- |
-| `replication-off` | `org.apereo.portal.ehcache.filename=ehcache-no-jgroups.xml` (uPortal's own non-clustered cache file) | `invalidation-portlet` |
+| `replication-off` | `org.apereo.portal.ehcache.filename=ehcache-no-jgroups.xml` (uPortal's own non-clustered cache file) | `invalidation-portlet`, `permission-session` |
 | `lock-ignored` | `org.apereo.portal.concurrency.locking.ClusterLockDao.abandonedLockAge=PT0S`: a held lock counts as abandoned at once | `failover-takeover`, `no-overlap` |
+| `event-flush-delayed` | `org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S`: events are written 120 s after start, as in uPortal 5 | `events-aggregated` |
 
 ## Running it
 
