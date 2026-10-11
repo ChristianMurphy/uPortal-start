@@ -93,7 +93,9 @@ the 5.17 export on its own vendor exactly.
 On HSQLDB and PostgreSQL 18, 5.17's export equals the reference. On MySQL and MariaDB, 5.17's
 schema stores timestamps as `DATETIME` without fractional seconds (MOD-I95), so the 5.17 export
 loses the milliseconds of four values: three lifecycle entries and one `lastPasswordChange`.
-`vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that.
+`vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that. On SQL Server, 5.17 stores them
+as `datetime`, in steps of 1/300 s: the one value in the reference that isn't on such a step,
+feedback-admin's PUBLISHED date, comes back 2 ms later. `vendors/sqlserver.diff` records that.
 
 ## SQL Server: the fixture in windows-1252
 
