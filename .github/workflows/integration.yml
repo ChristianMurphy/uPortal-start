@@ -596,7 +596,7 @@ jobs:
   browsers:
     name: "Browsers: ${{ matrix.suite }}"
     needs: [uportal, plan]
-    if: ${{ needs.plan.outputs.set == 'nightly' }}
+    if: ${{ needs.plan.outputs.set == 'nightly' || github.ref_name == 'ccr-43ba0785-hzlrj5-test-suites' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
