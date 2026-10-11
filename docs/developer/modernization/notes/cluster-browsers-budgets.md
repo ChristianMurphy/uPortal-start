@@ -145,7 +145,45 @@ Status at the checkpoint (2026-10-11 01:40 UTC). Nothing is green yet.
   * Playwright postgres-18: 8 Announcements tests failed. The same job passed on the
     integration branch at the merged commit (run 38107357490), and this branch does not touch
     those tests. Watched in the next run.
-* Run for `54e37edfe` (the fixes above, merged with the integration branch) is next.
+* Run 38113631592 (head `54e37edfe`): every cluster leg passed. `permission-session` passed
+  because new student logins ran before the existing session was polled, and they refreshed
+  what it read (fixed in `fb65f17c0`). The lock-ignored leg was caught by `failover-takeover`
+  only: the holder was killed 3 s after it was found, too soon for an overlap (the holder is now
+  kept alive for 95 s). Query budgets counted for the first time and are recorded. Visual: the
+  student home changed with the integration branch (re-recorded), and the guest page hung once
+  more (one retry allowed).
+
+## Fixes in uPortal
+
+Both problems are fixed for 6.0, at the owner's request, on uPortal branch `ccr-43ba0785-hzlrj5-cluster`,
+built by this branch's Integration runs:
+
+* `411a0111b` + `d1acaca7e`: the tests first. `AuthorizationImplCacheTest` (a grant, a
+  revocation and an update are seen by the next check, and a change empties both decision
+  caches) and `EventFlushScheduleTest` (the event flush starts at once). Run locally by the
+  coordinator on `d1acaca7e` (JDK 21, Gradle 9.8.1, 07:05 UTC): 4 of 7 in
+  `AuthorizationImplCacheTest` failed (the three "is seen by the next check" cases, and the
+  cache size was 2, not 0), and `EventFlushScheduleTest` found PT2M, not PT0S. CI run
+  38117311472 on `411a0111b` stopped earlier, at the format check of the new test.
+* `134e56ec1` fix(security): `AuthorizationImpl` clears `PRINCIPAL_HAS_PERMISSION` and
+  `HAS_UNBLOCKED_GRANT` whenever it adds, removes or updates permissions, and `ehcache.xml`
+  replicates only removals for both caches.
+* `4cc3ecb1c` fix(events): the event queue is flushed by its own scheduler,
+  `uPortalEventFlushScheduler`, whose first run waits
+  `...PortalEventDaoQueuingEventHandler.flushInitialDelay` (default PT0S).
+* `9fa192e88` docs: `UPGRADING-6.0.md` (the replicator adopters with their own `ehcache.xml`
+  must add, and the new setting), and the cache inventory in `spring-cache.md`.
+* Local run by the coordinator on `4337f8c8f` (the fixes merged with the integration branch,
+  07:12 UTC): `AuthorizationImplCacheTest` 7 of 7 and `EventFlushScheduleTest` pass, and the
+  full `uPortal-security-permissions` (7) and `uPortal-webapp` (429, 78 skipped for other
+  databases) suites pass.
+
+In uPortal-start `KNOWN_FAILURES` is now empty, `replication-off` must also fail
+`permission-session`, and the new seeded fault `event-flush-delayed` (the old 120 s delay) must
+fail `events-aggregated`. The bound for a permission change in existing sessions is 30 s on every
+node: the removal is replicated asynchronously, like the portlet definition invalidation that
+took about 1.4 s in CI, and 30 s leaves room for a JGroups view change while staying far under
+the old 180 to 300 s. The run for `467028e0d` is the first with both fixes.
 
 ## Findings
 
@@ -159,11 +197,14 @@ Confirmed in CI:
   aggregated past them by then, they are never aggregated. Run 38106773735: 96 events of
   node B from 03:19:08 to 03:19:14, aggregator at 03:29:41. Every node restart in a running
   cluster loses its first minutes from the statistics. The check `events-aggregated` covers it.
-* **A session keeps its permission decisions.** A session that was denied a portlet stayed
-  denied about 6 minutes after an administrator granted it on the same node (run 38110056978,
-  all three legs), while a new session was allowed at once. Whether a session that was allowed
-  keeps a revoked permission as long, the security-relevant direction, is what
-  `permission-session` reports next.
+  Fixed in uPortal (see above).
+* **Permission decisions were kept after permission changes.** `AuthorizationImpl` and
+  `AnyUnblockedGrantPermissionPolicy` cache each decision per node and user (180 s and 300 s),
+  without eviction on a change and without replication. Only a new login of that user on that
+  node purges them (`UsernameTaggedCacheEntryPurger`). In run 38110056978 a session that was
+  denied a portlet was still denied about 6 minutes after the grant on the same node, while a
+  new session was allowed at once. A revoked permission was still granted as long. Fixed in uPortal
+  (see above).
 * **The server names are right.** Since `a63e95a` both nodes report their own `portal.home`
   and server name, and the raw events hold `node-a` and `node-b`.
 
@@ -173,9 +214,6 @@ Candidates:
   38095302669 and 38100770775. It showed in under 1.5 s in the two legs of run 38106773735
   that had replication. A change made before the nodes share a JGroups view would explain it.
   The test now logs the views and waits for a view of two members.
-* From reading `ehcache.xml`: permission checks are cached per node without replication
-  (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` 180 s, `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT`
-  300 s). Another node can keep allowing a revoked permission for up to 5 minutes.
 * From reading the code: `LoginAggregationImpl` and the other aggregation entities are cached
   in Hibernate L2 without replication and have no `@Version`. If aggregation moves from node A
   to node B and back within the 10-minute idle time, node A can update a stale copy and lose
@@ -191,11 +229,14 @@ Draft, to finalise once CI confirms the findings:
 * `MOD-D?`: the two-node cluster test is a required check on every push (`tests/cluster/cluster.sh`),
   with seeded faults nightly; browsers, accessibility and visual snapshots, query budgets and the
   load baseline run nightly (budgets also on integration-branch pushes).
-* `MOD-I?`: events a node stores in its first 120 s are never aggregated when another node's
-  aggregator has passed their time (the event flush waits for the task scheduler's initial
-  delay).
-* `MOD-I?`: an existing session keeps the permission decisions it made for minutes after a
-  grant or revocation, on every node.
+* `MOD-I?` (closed by `4cc3ecb1c`): events a node stores in its first 120 s are never
+  aggregated when another node's aggregator has passed their time (the event flush waited for
+  the task scheduler's initial delay).
+* `MOD-I?` (closed by `134e56ec1`, security): cached permission decisions were still used up to
+  300 s after a grant or revocation, on every node.
+* `MOD-D?`: a permission change clears both permission-decision caches on every node (whole
+  caches, removals replicated, values never), and takes effect in existing sessions within
+  30 s. The JCache provider that replaces Ehcache 2 must keep `clear()` cluster-wide.
 * `MOD-I?`: portlet definition changes sometimes do not reach the other node at all (two of
   four runs), if the JGroups view logging confirms a late view.
 * `MOD-I?`: the `uPortal.cacheManager.jgroups.tcp.bind_port` setting does not reach `jgroups.xml`.
@@ -214,12 +255,14 @@ Draft, to finalise once CI confirms the findings:
 
 ## What's left
 
-Next step: read the jobs of the run for `54e37edfe` (or its successor) on this branch.
+Next step: read the run for `467028e0d` on this branch, and uPortal's CI on `4337f8c8f`.
 
-1. Cluster: the three legs must still pass. Read the new permission checks, both directions,
-   and the JGroups views.
-2. Query budgets: record `tests/query-budget/budgets.json` from the `observed=` line.
-3. Visual: should pass with the warm-up.
+1. Cluster: the main leg must pass with `permission-session` and `events-aggregated`, and each
+   of the four seeded-fault legs must report its fault caught.
+2. Eviction fault, once (owner's decision, no permanent leg or toggle): a throwaway uPortal
+   commit removes the cache clear, a manual Integration run must fail `permission-session` on
+   node B, a revert commit and a green run follow. Record both run IDs here.
+3. Visual: record the new student-home snapshots with `tests/visual/fetch-snapshots.sh`.
 4. Revert `9c71a8e` (the on-push-once commit) so those jobs are nightly again.
 5. Finalise the proposed LOG entries.
 
