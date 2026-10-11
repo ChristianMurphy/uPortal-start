@@ -258,6 +258,12 @@ LOG.md is the coordinator's. Numbers from this workstream's block, MOD-I210 to M
   `@Version` can lose counts when aggregation moves between nodes and back.
 * `MOD-I216`: one pushed commit message of this workstream (the one that renamed the cluster test
   a required check) quotes a word the uPortal Vale style flags. It was not rewritten.
+* `MOD-I217` (Open, upstream: the Notification portlet's `notification-icon` webjar): the bell
+  button's only text is the count of notifications. For a user without notifications the count is a
+  hidden "0", and the button has no accessible name (axe `button-name` on `notification-icon >>>
+  #dropdownMenuButton`). The accessibility ratchet waits for the visible count, so it doesn't report
+  this for the test users, who all have notifications (uPortal-start `82790f96d` on
+  `ccr-43ba0785-hzlrj5-test-suites`).
 * Logged by the coordinator from this workstream's report: `MOD-I224`, the layout query of
   uPortal `6c55d9f6a` sorted by `USP.STRUCT_PARM_NM`, an alias the query lacks when the database
   metadata doesn't report outer joins. The layout import then failed on PostgreSQL 18, found by a local
