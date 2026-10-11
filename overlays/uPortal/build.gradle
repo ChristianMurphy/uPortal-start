@@ -340,6 +340,7 @@ dataInit {
         scriptFile.delete()  // Clear from previous invocation, if present
         scriptFile.append(
 """
+${PortalShellInvoker.importSummaryDefinition(uPortalProject)}
 //db(String target, String tablesFile, String dataFile, String scriptFile, boolean dropTables, boolean createTables, boolean populateTables)
 portalShellBuildHelper.db('db',
     '${tablesFile}', '${dataFile}', ' ',
@@ -396,6 +397,7 @@ portalShellBuildHelper.dataImport('data-import',
     portalShellBuildHelper.getFilesListStringFromInput('${file}', '${files}', '${filesListFile}'),
     '${archive}',
     '${logDir}');
+${PortalShellInvoker.importSummaryScript(uPortalProject, entitiesLocation, logDir)}
 """         )
         }
     }
@@ -443,6 +445,7 @@ dataImport {
             scriptFile.delete()  // Clear from previous invocation, if present
             scriptFile.write(
 """
+${PortalShellInvoker.importSummaryDefinition(uPortalProject)}
 //dataImport(String target, String dataDir, String pattern, String filesList, String archive, String logDir)
 portalShellBuildHelper.dataImport("data-import",
     '${dirEscaped}',
@@ -450,6 +453,7 @@ portalShellBuildHelper.dataImport("data-import",
     portalShellBuildHelper.getFilesListStringFromInput('${fileEscaped}','${filesEscaped}','${manifestEscaped}'),
     '${archiveEscaped}',
     '${logDirEscaped}');
+${args.containsKey('dir') ? PortalShellInvoker.importSummaryScript(uPortalProject, dirEscaped, logDirEscaped) : ''}
 """         )
 
             PortalShellInvoker psi = new PortalShellInvoker()

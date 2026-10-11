@@ -83,7 +83,7 @@ dataInit {
                 }
             }
             sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
-            sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
+            sysproperty(key: 'logback.configurationFile', value: PortalShellInvoker.logbackConfiguration(rootProject))
         }
     }
     /*
@@ -105,7 +105,7 @@ dataInit {
                 }
             }
             sysproperty(key: 'portal.home', value: rootProject.ext['buildProperties'].getProperty('portal.home'))
-            sysproperty(key: 'logback.configurationFile', value: 'command-line.logback.xml')
+            sysproperty(key: 'logback.configurationFile', value: PortalShellInvoker.logbackConfiguration(rootProject))
             arg(value: 'classpath://org/jasig/portlet/calendar/io/import.crn.xml')
             arg(value: "${implementationEntitiesLocation}")
         }
