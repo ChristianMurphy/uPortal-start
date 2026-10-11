@@ -47,3 +47,5 @@ jobs:
         run: .github/scripts/gindex-changes.test.sh
       - name: Test the choice of the uPortal to build
         run: .github/scripts/choose-uportal.test.sh
+      - name: Test the search for an earlier uPortal build
+        run: .github/scripts/find-uportal-build.test.sh
