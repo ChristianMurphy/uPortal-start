@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Helpers for the HTTP differential replay (docs/http-replay.md).
 #
-#   tests/replay/portal.sh wait  [base url]                    wait until the portal answers
+#   tests/replay/portal.sh wait  [base url]                    wait until the portal answers and its portlets have started
 #   tests/replay/portal.sh reset <checkout> [gradle args...]   stop Tomcat, empty HSQLDB, dataInit, start Tomcat, wait
 #
 # The replay compares a portal in the state a fresh portalInit leaves it in, so the recorder
@@ -16,9 +16,14 @@ base="${PORTAL_BASE_URL:-http://localhost:8080/uPortal/}"
 
 wait_for_portal() {
     local url="${1:-$base}"
+    # /api/session.json answers without rendering a portlet. A page render while Pluto still
+    # initialises the portlets makes Tomcat mark a portlet's servlet unavailable until the next
+    # restart (NotificationPortlet's EmergencyAlert, see docs/http-replay.md), so the first render
+    # waits until the portlets have had time to start.
     for i in $(seq 1 90); do
-        if curl -s -o /dev/null -w '%{http_code}' "$url" | grep -qE '200|302'; then
-            echo "Portal is ready at $url"
+        if curl -s -o /dev/null -w '%{http_code}' "${url}api/session.json" | grep -q 200; then
+            echo "Portal is up at $url; letting the portlets initialise for ${PORTAL_SETTLE_SECONDS:-30}s"
+            sleep "${PORTAL_SETTLE_SECONDS:-30}"
             return 0
         fi
         echo "Waiting for $url ($i/90)"
