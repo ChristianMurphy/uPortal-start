@@ -1,12 +1,14 @@
 // Builds the job matrices of .github/workflows/migration-equivalence.yml (see
 // docs/migration-equivalence.md).
 //
-//   node tests/db/equivalence/matrix.mjs push|nightly
+//   node tests/db/equivalence/matrix.mjs push|workstream|nightly
 //
 // Prints `in-place=<json>` and `copy=<json>` (for $GITHUB_OUTPUT) on stdout and the sets on stderr.
 // The 6.0 runtime servers (targets) and the old servers 5.17 runs on (sources) are the ones
 // tests/db/migrate/matrix.json lists (MOD-D25).
-//   push        as listed in equivalence/matrix.json; copies must cross vendors
+//   push        as listed in equivalence/matrix.json (the integration branch); copies must cross
+//               vendors
+//   workstream  the light profile for ccr-43ba0785-hzlrj5-<topic> branches (MOD-D30), as listed
 //   nightly     in place on every target; one copy per vendor, from its oldest source into the
 //               next vendor's target, so every vendor is copied from and into once
 // Exits with 1 when a vendor file is missing or a pair breaks these rules.
@@ -25,7 +27,7 @@ const familyOf = (vendor) => families.find((family) =>
 const set = process.argv[2];
 let inPlace;
 let copy;
-if (set === 'push') {
+if (set === 'push' || set === 'workstream') {
     inPlace = config[set]['in-place'];
     copy = config[set].copy;
 } else if (set === 'nightly') {
@@ -35,7 +37,7 @@ if (set === 'push') {
         target: servers.targets[families[(i + 1) % families.length]],
     }));
 } else {
-    console.error('Usage: node tests/db/equivalence/matrix.mjs push|nightly');
+    console.error('Usage: node tests/db/equivalence/matrix.mjs push|workstream|nightly');
     process.exit(2);
 }
 

@@ -13,12 +13,18 @@ name: Migration equivalence
 #      test) copies it into a current server of another vendor, and the build under test, started
 #      on the copy, must export exactly what 5.17.9 exported from the original.
 #
-# The vendors come from tests/db/equivalence/matrix.json: the push set (a manual run) is HSQLDB,
-# PostgreSQL 18 and MariaDB 12.3 in place and two cross-vendor copies; nightly every 6.0 runtime
-# server in place and a copy from and into every vendor. Differences are shown in the job summary
-# and as annotations.
+# The vendors come from tests/db/equivalence/matrix.json: on the integration branch HSQLDB,
+# PostgreSQL 18 and MariaDB 12.3 in place and two cross-vendor copies; on a workstream branch
+# (ccr-43ba0785-hzlrj5-<topic>, MOD-D30) PostgreSQL 18 in place and one copy; nightly every 6.0
+# runtime server in place and a copy from and into every vendor. Differences are shown in the job
+# summary and as annotations.
 #
 on:
+  push:
+    branches:
+      # Prototype only (MOD-I74): run on the modernization integration branches. Drop this
+      # trigger before upstreaming.
+      - 'ccr-*'
   schedule:
     - cron: '23 5 * * *'
   workflow_dispatch:
@@ -40,7 +46,9 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
+  # cancels the older run.
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
 jobs:
   uportal:
@@ -147,14 +155,18 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Choose the push or nightly set
+      # Prototype only (MOD-D30): a workstream branch runs the light set
+      - name: Choose the push, workstream or nightly set
         id: matrix
         env:
           NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
+          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
         run: |
           set_name=push
           if [ "$NIGHTLY" = true ]; then
             set_name=nightly
+          elif [ "$WORKSTREAM" = true ]; then
+            set_name=workstream
           fi
           node tests/db/equivalence/matrix.mjs "$set_name" >> "$GITHUB_OUTPUT"
 
