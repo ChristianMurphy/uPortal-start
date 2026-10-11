@@ -66,7 +66,7 @@ const ADMIN_ONLY = { fname: "fragment-audit", title: "Audit DLM Fragments" };
 const ADMIN_TAB = "Testing";
 
 const INFO =
-  /^Viewing page (\d+)\. Showing records (\d+) to (\d+) of (\d+) items\.$/;
+  /^Viewing page (\d+)\. Showing records (\d+) to (\d+) of (\d+) items?\.$/;
 
 async function addToLayout(
   page: Page,
@@ -399,7 +399,7 @@ test.describe("Popular Portlets", () => {
     await expect(courses).toBeVisible();
     await expect(dataRows(table)).toHaveCount(1);
     await expect(info(page)).toHaveText(
-      "Viewing page 1. Showing records 1 to 1 of 1 items."
+      "Viewing page 1. Showing records 1 to 1 of 1 item."
     );
 
     // A second value widens the filter
