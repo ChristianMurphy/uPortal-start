@@ -11,13 +11,13 @@ const config: PlaywrightTestConfig = {
   ...base,
   testDir: "visual",
   testMatch: "**/*.visual.ts",
-  // The guest page's load event sometimes never fires (runs 38106773735,
-  // 38110056978 and 38113631592, on either project, even after a warm-up);
-  // a retry loads it again. A snapshot difference fails both attempts.
-  retries: 1,
+  retries: 0,
+  // One page at a time: in four runs (38106773735 to 38120174431) the guest
+  // page's load event never fired when both workers opened their first page
+  // on a fresh portal at the same moment
+  workers: 1,
   // The first pages after the portal starts load its caches
   timeout: 60_000,
-  globalSetup: "./visual/warm-up.ts",
   updateSnapshots: "missing",
   snapshotPathTemplate: "{testDir}/snapshots/{projectName}/{arg}{ext}",
   expect: {
