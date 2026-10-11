@@ -52,3 +52,7 @@ CREATE INDEX up_group_upper_name_idx ON up_group (upper(group_name) text_pattern
 
 -- R14: a user's layouts are read by USER_ID; the primary key is (LAYOUT_ID, USER_ID)
 CREATE INDEX up_user_layout_user_idx ON up_user_layout (user_id);
+
+-- R15: user search, USER_NAME LIKE 'prefix%' (user administration); the unique index on USER_NAME
+-- cannot serve LIKE under a non-C collation
+CREATE INDEX up_user_name_pattern_idx ON up_user (user_name text_pattern_ops);

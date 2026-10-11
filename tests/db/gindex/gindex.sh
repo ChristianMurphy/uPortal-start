@@ -18,7 +18,7 @@
 #   --concurrency N   driver users at once (default 16)
 #   --no-suite        skip the Playwright suite (the driver and the jobs still run)
 #   --min-rows N      seq-scan check: smallest table that counts (default 1000)
-#   --fault F         seed a fault after the load, to prove the gate fails (repeatable):
+#   --fault F         seed a fault after the load, to prove the audit fails (repeatable):
 #                       drop-index:<index>              drop an index the workload needs
 #                       duplicate-index:<table>:<cols>  add a second index on the same columns
 #   --external        the database is already running (as started by this script); no Docker run
