@@ -121,11 +121,30 @@ export async function exportedAccount(
   return response.text();
 }
 
+/** The value of one attribute of the local account, if it has one. */
+async function accountAttribute(
+  admin: APIRequestContext,
+  username: string,
+  name: string,
+): Promise<string | undefined> {
+  const xml = await exportedAccount(admin, username);
+  return new RegExp(`<name>${name}</name>\\s*<value>([^<]+)</value>`).exec(
+    xml,
+  )?.[1];
+}
+
 /** The account's password reset token, if it has one. */
 export async function loginToken(
   admin: APIRequestContext,
   username: string,
 ): Promise<string | undefined> {
-  const xml = await exportedAccount(admin, username);
-  return /<name>loginToken<\/name>\s*<value>([^<]+)<\/value>/.exec(xml)?.[1];
+  return accountAttribute(admin, username, "loginToken");
+}
+
+/** When the account's password reset token was issued, if it was dated. */
+export async function loginTokenIssued(
+  admin: APIRequestContext,
+  username: string,
+): Promise<string | undefined> {
+  return accountAttribute(admin, username, "loginTokenIssued");
 }
