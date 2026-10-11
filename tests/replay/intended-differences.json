@@ -19,6 +19,18 @@
             "upgrading": "Tomcat's error pages no longer show the Tomcat version"
         },
         {
+            "id": "tomcat-error-page-no-vary",
+            "path": "*",
+            "status": 400,
+            "field": "header:vary",
+            "from": "accept-encoding",
+            "to": null,
+            "reason": "A request the connector rejects (here a raw [ or ] in the query) gets Tomcat's own 400 page. Without the report and the version (uPortal-start \"fix(tomcat): leave the report and version off tomcat's error pages\") that page is 435 bytes, under the connector's compressionMinSize of 1024, so Tomcat neither compresses it nor sends Vary: accept-encoding. With the valve taken out of the deployed server.xml, the same request gets a 2143-byte page with Vary: accept-encoding. The status and the rest of the page are unchanged.",
+            "log": "MOD-I250",
+            "visible": false,
+            "upgrading": "Tomcat's error pages no longer show the Tomcat version"
+        },
+        {
             "id": "tomcat-9-json-charset",
             "path": "*",
             "field": "header:content-type",
