@@ -43,12 +43,16 @@ import {
  * they may not see.
  *
  * Known defects (uPortal 5.17), recorded as they are:
- * - The edit form asks for a new password and its confirmation but not for
- *   the current password. (enterPassword.jsp has a Current Password field,
- *   but no flow state uses it.)
  * - The form's "Add Preference" link adds an input for any attribute name,
  *   but saving ignores attributes the user may not edit, so nothing it adds
  *   is stored. The tests leave the link alone.
+ *
+ * Fixed (uPortal, MOD-D19 workstream, approved by the project owner):
+ * - A new password needs the current password: "Please enter your current
+ *   password" when it is missing, "Provided password does not match the
+ *   current account password" when it is wrong. uPortal 5.17 asked only for
+ *   the new password and its confirmation (enterPassword.jsp had a Current
+ *   Password field, but no flow state used it).
  *
  * Fixed (uPortal, MOD-D19 workstream): a confirmation that differs from the
  * password is refused with "Passwords must match", by the form's script and,
@@ -217,7 +221,7 @@ test.describe("Self edit account", () => {
         "",
       );
       await expect(page.getByLabel("Confirm Password")).toHaveValue("");
-      await expect(page.getByLabel("Current Password")).toHaveCount(0);
+      await expect(page.getByLabel("Current Password")).toHaveValue("");
     });
 
     test("cancel goes back to the details", async ({ page }) => {
@@ -288,11 +292,10 @@ test.describe("Self edit account", () => {
       );
     });
 
-    test("changes the password without asking for the current one", async ({
-      page,
-    }) => {
+    test("changes the password with the current one", async ({ page }) => {
       const newPassword = `Pw-${Date.now()}`;
       await openEditForm(page);
+      await page.getByLabel("Current Password").fill(account.password);
       await page.getByLabel("Password", { exact: true }).fill(newPassword);
       await page.getByLabel("Confirm Password").fill(newPassword);
       await save(page);
@@ -306,6 +309,39 @@ test.describe("Self edit account", () => {
       await openLoginForm(page);
       await submitLoginForm(page, account.username, account.password);
       await expectLoginRefused(page);
+    });
+
+    test("refuses a new password without the right current one", async ({
+      page,
+    }) => {
+      const newPassword = `Pw-${Date.now()}`;
+      await openEditForm(page);
+      await page.getByLabel("Password", { exact: true }).fill(newPassword);
+      await page.getByLabel("Confirm Password").fill(newPassword);
+      await save(page);
+      await expect(
+        page.getByText("Please enter your current password"),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "Edit My Account" }),
+      ).toBeVisible();
+
+      await page.getByLabel("Current Password").fill("not-the-password");
+      await page.getByLabel("Password", { exact: true }).fill(newPassword);
+      await page.getByLabel("Confirm Password").fill(newPassword);
+      await save(page);
+      await expect(
+        page.getByText(
+          "Provided password does not match the current account password",
+        ),
+      ).toBeVisible();
+
+      // The password is as it was
+      await logout(page);
+      await openLoginForm(page);
+      await submitLoginForm(page, account.username, newPassword);
+      await expectLoginRefused(page);
+      await loginViaUrl(page, account);
     });
 
     test("the form refuses a confirmation that differs", async ({ page }) => {
