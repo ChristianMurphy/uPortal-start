@@ -43,7 +43,7 @@ on:
         required: false
         default: ''
       uportal-ref:
-        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else its nearest parent branch, else master'
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch ccr-43ba0785-hzlrj5, else master'
         required: false
         default: ''
 permissions:
@@ -93,17 +93,20 @@ jobs:
       version: ${{ steps.uportal.outputs.version }}
       repository: ${{ steps.source.outputs.repository }}
       ref: ${{ steps.source.outputs.ref }}
+      sha: ${{ steps.source.outputs.sha }}
       replay: ${{ steps.mode.outputs.replay }}
     steps:
       # Prototype only (MOD-D30): on a workstream branch (ccr-43ba0785-hzlrj5-<topic>) the replay
       # runs only when the push changes the replay itself; the integration branch replays on every
-      # push. A new branch (no previous commit to compare with) replays.
+      # push. A new branch (no previous commit to compare with) replays. The checkout also brings
+      # the script that chooses the uPortal to build (MOD-I307), on every kind of run.
       - name: Checkout the history to compare
-        if: startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name == 'push'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
+          sparse-checkout: .github/scripts
+          fetch-depth: 0
+          filter: blob:none
           path: plan
       - name: Does the push change the replay
         id: mode
@@ -115,7 +118,7 @@ jobs:
         run: |
           replay=true
           if [ "$WORKSTREAM" = true ] && [ "$EVENT" = push ] && git -C plan cat-file -e "$BEFORE^{commit}" 2> /dev/null; then
-            if ! git -C plan diff --name-only "$BEFORE" "$AFTER" | grep -qE '^(tests/replay/|\.github/workflows/replay\.yml$)'; then
+            if ! git -C plan diff --no-renames --name-only "$BEFORE" "$AFTER" | grep -qE '^(tests/replay/|\.github/workflows/replay\.yml$)'; then
               replay=false
             fi
           fi
@@ -129,34 +132,13 @@ jobs:
           INPUT_REF: ${{ inputs.uportal-ref }}
           OWNER: ${{ github.repository_owner }}
           BRANCH: ${{ github.ref_name }}
-        run: |
-          repository="${INPUT_REPOSITORY:-$OWNER/uPortal}"
-          ref="$INPUT_REF"
-          # As in integration.yml: the uPortal branch of the same name, else the nearest parent
-          # branch (ccr-x-topic -> ccr-x), else master
-          candidate="$BRANCH"
-          while [ -z "$ref" ] && [ -n "$candidate" ]; do
-            if git ls-remote --exit-code --heads "https://github.com/$repository" "refs/heads/$candidate" > /dev/null; then
-              ref="$candidate"
-            elif [[ "$candidate" == *-* ]]; then
-              candidate="${candidate%-*}"
-            else
-              candidate=""
-            fi
-          done
-          ref="${ref:-master}"
-          if ! [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "$ref" =~ ^[A-Za-z0-9_./-]+$ ]]; then
-            echo "Unexpected repository '$repository' or ref '$ref'" >&2
-            exit 1
-          fi
-          echo "repository=$repository" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+        run: plan/.github/scripts/choose-uportal.sh
       - name: Checkout uPortal
         if: ${{ steps.mode.outputs.replay == 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ steps.source.outputs.repository }}
-          ref: ${{ steps.source.outputs.ref }}
+          ref: ${{ steps.source.outputs.sha || steps.source.outputs.ref }}
           persist-credentials: false
       - name: Read uPortal's JDK
         if: ${{ steps.mode.outputs.replay == 'true' }}
@@ -235,7 +217,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ needs.uportal.outputs.repository }}
-          ref: ${{ needs.uportal.outputs.ref }}
+          ref: ${{ needs.uportal.outputs.sha || needs.uportal.outputs.ref }}
           path: uportal-docs
           sparse-checkout: docs/UPGRADING-6.0.md
           sparse-checkout-cone-mode: false
