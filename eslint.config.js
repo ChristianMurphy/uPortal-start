@@ -18,6 +18,7 @@ export default [
         AbortSignal: 'readonly',
         Buffer: 'readonly',
         Headers: 'readonly',
+        structuredClone: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
         console: 'readonly',

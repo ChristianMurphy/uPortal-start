@@ -357,7 +357,7 @@ function visit(node, keys, action) {
 
 const sortArray = (array) => (Array.isArray(array) ? array.toSorted((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : array);
 
-function unorder(value, path) {
+export function unorder(value, path) {
     const replace = (v) => (Array.isArray(v) ? `{unstable:${v.length} items}` : '{unstable}');
     for (const [pattern, keys] of UNSTABLE) if (pattern.test(path)) visit(value, keys, replace);
     let result = value;

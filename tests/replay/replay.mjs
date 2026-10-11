@@ -26,6 +26,7 @@ import {
     normaliseResponse,
     outcome,
     sessionFor,
+    unorder,
 } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -310,7 +311,11 @@ async function replay() {
         compared++;
         expectedByKey.delete(itemKey(exchange));
         const unexplained = [];
-        for (const difference of compare(recorded.response, exchange.response)) {
+        // The sorting rules apply to the recording too, so a rule added later needs no re-record
+        const expectedResponse = recorded.response.body?.kind === 'json'
+            ? { ...recorded.response, body: { ...recorded.response.body, value: unorder(structuredClone(recorded.response.body.value), recorded.path) } }
+            : recorded.response;
+        for (const difference of compare(expectedResponse, exchange.response)) {
             const entry = registry.find((r) => r.matches(exchange, difference));
             if (entry) {
                 entry.used++;
