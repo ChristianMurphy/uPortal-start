@@ -323,7 +323,7 @@ const developer = {
 
 /** Saves the signed-in user's locale through the API the selector uses. */
 async function chooseLocale(page: Page, code: string): Promise<void> {
-  const response = await page.request.put(`${config.url}api/v6-0/locale`, {
+  const response = await page.request.put<unknown>(`${config.url}api/v6-0/locale`, {
     data: { code },
     headers: await sessionCsrfHeaders(page.request),
   });
