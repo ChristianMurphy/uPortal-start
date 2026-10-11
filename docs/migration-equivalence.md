@@ -73,6 +73,9 @@ changes with its reason.
   a portlet's categories, groups, permissions and parameters, PAGS test groups, tests and members,
   permission owner activities, and layout structure attributes. Layout nodes, preference values
   and attribute values keep their order, because uPortal stores it.
+* **Timestamps with an offset** are printed as the same instant in UTC. uPortal prints an
+  `xs:dateTime` with the offset of the JVM's zone, and a run in another zone than UTC must still
+  match the reference, which was recorded in UTC.
 * **One mask** applies, and only in the comparison with the reference. `dataInit` stamps a
   PUBLISHED lifecycle entry (user `system`) on each portlet definition that has no
   `<lifecycle>`. Its date is the time the job ran.
