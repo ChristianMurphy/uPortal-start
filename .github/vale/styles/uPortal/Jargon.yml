@@ -1,7 +1,11 @@
-# Agent and planning jargon that ai-tells doesn't cover (MOD-D35). Name the concrete thing instead:
-# "gate" -> "required check" or the check's name; "seam" -> "interface" or "abstraction".
+# Abstract architecture and planning metaphors that ai-tells doesn't cover (MOD-D35). The owner asked
+# for plain, concrete words: name the thing itself.
+#   gate -> the required check, or the check's name (G-unit, G-db)
+#   seam, facade, bridge, glue, shim -> the API, class, jar or adapter it actually is
+#   slice, wave, groundwork -> the step, batch or change it is
+# Check IDs such as G-unit don't match. Quote upstream text verbatim under a suppression with a reason.
 extends: existence
-message: "Jargon: '%s'. Name the concrete thing, such as the required check, interface or dependency."
+message: "Abstract term: '%s'. Name the concrete thing: the API, class, jar, check, step or change."
 level: error
 ignorecase: true
 tokens:
@@ -11,3 +15,24 @@ tokens:
   - '\bload[- ]bearing\b'
   - '\bblast radius\b'
   - '\bfoot-?guns?\b'
+  - '\bfacades?\b'
+  - '\bbridg(?:e|es|ed|ing)\b'
+  - '\bglue\b'
+  - '\bshims?\b'
+  - '\bslices?\b'
+  - '\bwaves?\b'
+  - '\bgroundwork\b'
+  - '\b(?:api|attack|security|integration|public|config(?:uration)?) surfaces?\b'
+  - '\bbackbone\b'
+  - '\blinchpin\b'
+  - '\bpillars?\b'
+  - '\bnorth star\b'
+  - '\bguardrails?\b'
+  - '\bescape hatch(?:es)?\b'
+  - '\bfirst-class\b'
+  - '\bbuilding blocks?\b'
+  - '\bmoving parts\b'
+  - '\bplumbing\b'
+  - '\bscaffold(?:ing)?\b'
+  - '\btouchpoints?\b'
+  - '\b(?:test |the )oracle\b'
