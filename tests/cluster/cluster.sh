@@ -91,6 +91,9 @@ B_HTTP_PORT=8180
 B_SHUTDOWN_PORT=8105
 # uPortal's default; also the floor of the takeover check
 ABANDONED_LOCK_AGE_MS=60000
+# How long the failover check keeps the lock holder alive before killing it: past the
+# abandonment age and the server bias, so a node that takes a live holder's lock is caught
+LIVE_HOLD_MS=95000
 # 4 x aggregateRawEventsPeriod in cluster.properties: after a node's last update of the
 # aggregation lock, another node waits this long before it even tries the lock
 SERVER_BIAS_MS=28004
@@ -382,6 +385,8 @@ PERMISSION_FNAME=permissionsmanager
 # AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT, 300 s, in ehcache.xml): a revoked
 # permission is enforced on the other node only once those entries expire.
 PERMISSION_BOUND_S=330
+# Sessions that checked the permission before the change
+PERMISSION_SESSION_BOUND_S=30
 
 update_permission() {  # update_permission <jar> <GRANT|INHERIT>: student, SUBSCRIBE on the portlet
     local principal
@@ -411,23 +416,27 @@ new_session_denied() { [ "$(new_session_status "$1")" = 403 ]; }
 allowed_on() { [ "$(portlet_status "$1" "$2")" = 200 ]; }
 
 check_permission_invalidation() {
-    local admin=$JARS/perm-admin early=$JARS/perm-early granted=$JARS/perm-granted started elapsed session=()
+    local admin=$JARS/perm-admin started elapsed session=() n
     PERSON_TYPE=$(sql "select entity_type_id from up_entity_type where entity_type_name = 'org.apereo.portal.security.IPerson'")
     PORTLET_ID=$(sql "select portlet_def_id from up_portlet_def where portlet_fname = '$PERMISSION_FNAME'")
     if [ -z "$PERSON_TYPE" ] || [ -z "$PORTLET_ID" ]; then
         record invalidation-permission FAIL "could not look up the person entity type or portlet $PERMISSION_FNAME"
         return
     fi
-    login a admin "$admin" && login a student "$early" ||
-        { record invalidation-permission FAIL "logins failed"; return; }
-    # Both nodes check (and cache) the denial first
-    if ! denied_on a "$early" || ! new_session_denied b; then
-        record invalidation-permission FAIL "student could already open $PERMISSION_FNAME (HTTP $(status_of))"
-        return
-    fi
+    login a admin "$admin" || { record invalidation-permission FAIL "admin login failed"; return; }
+    # A student session on each node checks (and caches) the denial first
+    for n in a b; do
+        login "$n" student "$JARS/perm-early-$n" && denied_on "$n" "$JARS/perm-early-$n" ||
+            { record invalidation-permission FAIL "student could already open $PERMISSION_FNAME on node $n (HTTP $(status_of))"; return; }
+    done
     update_permission "$admin" GRANT || { record invalidation-permission FAIL "grant on node A failed (HTTP $(status_of))"; return; }
     log "invalidation-permission: UP_PERMISSION rows for the target: $(sql "select principal_type, principal_key, activity, permission_type from up_permission
          where target = 'PORTLET_ID.$PORTLET_ID'" | tr '\n' ' ')"
+    # The existing sessions first: a new login of the student could refresh what they read
+    for n in a b; do
+        poll "$PERMISSION_SESSION_BOUND_S" allowed_on "$n" "$JARS/perm-early-$n" ||
+            session+=("node $n: the session denied before the grant was still denied $PERMISSION_SESSION_BOUND_S s after it$(late_by 120 allowed_on "$n" "$JARS/perm-early-$n")")
+    done
     started=$(now_ms)
     if ! poll 30 new_session_allowed a; then
         record invalidation-permission FAIL "a new session on node A, where the grant was made, still denied the portlet 30 s later"
@@ -440,28 +449,28 @@ check_permission_invalidation() {
         return
     fi
     log "invalidation-permission: a new session on node B allowed the grant after $(( $(now_ms) - started )) ms"
-    # A session that checked the permission before the change
-    poll 30 allowed_on a "$early" ||
-        session+=("the student's session that was denied before the grant was still denied 30 s after it")
-    login a student "$granted" && allowed_on a "$granted" || { record invalidation-permission FAIL "a new session on node A was not allowed"; return; }
+    for n in a b; do
+        login "$n" student "$JARS/perm-granted-$n" && allowed_on "$n" "$JARS/perm-granted-$n" ||
+            { record invalidation-permission FAIL "a new student session on node $n was not allowed"; update_permission "$admin" INHERIT; return; }
+    done
 
-    # Revoke: the security-relevant direction
+    # Revoke: the security-relevant direction. The existing sessions first again.
     update_permission "$admin" INHERIT || { record invalidation-permission FAIL "revoke on node A failed (HTTP $(status_of))"; return; }
     started=$(now_ms)
+    for n in a b; do
+        poll "$PERMISSION_SESSION_BOUND_S" denied_on "$n" "$JARS/perm-granted-$n" ||
+            session+=("node $n: the session allowed before the revocation was still allowed $PERMISSION_SESSION_BOUND_S s after it$(late_by 120 denied_on "$n" "$JARS/perm-granted-$n")")
+    done
     if ! poll 30 new_session_denied a; then
         record invalidation-permission FAIL "a new session on node A, where the permission was revoked, was still allowed 30 s later"
-        return
-    fi
-    if poll "$PERMISSION_BOUND_S" new_session_denied b; then
+    elif poll "$PERMISSION_BOUND_S" new_session_denied b; then
         elapsed=$(( $(now_ms) - started ))
         record invalidation-permission PASS "a new session on node B was denied ${elapsed} ms after node A revoked the permission (bound ${PERMISSION_BOUND_S} s)"
     else
         record invalidation-permission FAIL "a new session on node B was still allowed $PERMISSION_BOUND_S s after node A revoked the permission"
     fi
-    poll 30 denied_on a "$granted" ||
-        session+=("the student's session that was allowed before the revocation was still allowed 30 s after it")
     if [ ${#session[@]} -eq 0 ]; then
-        record permission-session PASS "sessions that checked the permission before a change follow the grant and the revocation within 30 s"
+        record permission-session PASS "existing sessions on both nodes followed the grant and the revocation within $PERMISSION_SESSION_BOUND_S s"
     else
         record permission-session FAIL "$(IFS=';'; echo "${session[*]}")"
     fi
@@ -595,7 +604,7 @@ mutex_row() {  # server_id|locked|lock_start|lock_update of the aggregation lock
 }
 
 check_failover() {
-    local since locker row holder survivor last_update start took deadline
+    local since locker row holder survivor last_update start took deadline stolen=false
     if ! wait_aggregated 180; then
         record failover-takeover FAIL "events from the earlier checks were not aggregated"
         return
@@ -630,8 +639,20 @@ check_failover() {
     fi
     KILLED_NODE=${holder#node-}
     survivor=$(other "$KILLED_NODE")
-    log "failover: $holder holds $AGGREGATION_MUTEX and waits on up_event_aggr_status; killing it"
-    sleep 3  # a few more lock updates
+    # The holder stays alive past the abandonment age: while it keeps updating the lock, the
+    # other node must not take it
+    log "failover: $holder holds $AGGREGATION_MUTEX and waits on up_event_aggr_status; keeping it for $(( LIVE_HOLD_MS / 1000 )) s"
+    deadline=$(( $(date +%s) + LIVE_HOLD_MS / 1000 ))
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+        IFS='|' read -r server locked _ _ <<< "$(mutex_row)"
+        if [ "${server%%_*}" = "node-$survivor" ]; then
+            record failover-takeover FAIL "node $survivor took $AGGREGATION_MUTEX from $holder while $holder was alive and updating it"
+            stolen=true
+            break
+        fi
+        sleep 1
+    done
+    log "failover: killing $holder"
     KILL_MS=$(now_ms)
     kill -9 "$(node_pid "$KILLED_NODE")"
     sql "select pg_terminate_backend(pid) from pg_stat_activity where application_name = 'cluster-test-lock'" > /dev/null
@@ -642,7 +663,7 @@ check_failover() {
     # The survivor may take the lock once it is abandoned: 60 s after its last update
     deadline=$(( last_update / 1000 + (ABANDONED_LOCK_AGE_MS + SERVER_BIAS_MS) / 1000 + 60 ))
     took=
-    while [ "$(date +%s)" -lt "$deadline" ]; do
+    while [ "$stolen" = false ] && [ "$(date +%s)" -lt "$deadline" ]; do
         IFS='|' read -r server locked start _ <<< "$(mutex_row)"
         if [ "${server%%_*}" = "node-$survivor" ] && [ "$start" -gt "$last_update" ]; then
             took=$start
@@ -650,7 +671,9 @@ check_failover() {
         fi
         sleep 1
     done
-    if [ -z "$took" ]; then
+    if [ "$stolen" = true ]; then
+        :  # already recorded
+    elif [ -z "$took" ]; then
         record failover-takeover FAIL "node $survivor did not take $AGGREGATION_MUTEX over within $(( deadline - last_update / 1000 )) s of node $KILLED_NODE's last lock update"
     elif [ $(( took - last_update )) -lt "$ABANDONED_LOCK_AGE_MS" ]; then
         record failover-takeover FAIL "node $survivor took the lock $(( took - last_update )) ms after node $KILLED_NODE's last update, before it counted as abandoned (${ABANDONED_LOCK_AGE_MS} ms)"
