@@ -21,10 +21,9 @@ test.describe("Waffle menu", () => {
     await waffleButton.click();
 
     // After clicking, quicklink items should appear
-    // The links are rendered inside the shadow DOM
+    // The links are rendered inside the shadow DOM, after the click
     const links = waffle.locator("a");
-    const linkCount = await links.count();
-    expect(linkCount).toBeGreaterThan(0);
+    await expect(links.first()).toBeVisible();
   });
 
   test("waffle menu contains expected quicklinks for student", async ({
