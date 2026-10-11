@@ -9,6 +9,7 @@ import {
   Account,
   importLocalAccount,
   loginToken,
+  loginTokenIssued,
 } from "../utils/local-account-utils";
 
 /*
@@ -30,8 +31,11 @@ import {
  * - The page says the email was sent whether or not it was:
  *   EmailPasswordResetNotificationImpl logs a failed send and carries on.
  *   The test portal has no mail server, so every test here sends nothing.
- * - Reset tokens do not expire; a token is valid until it is used or a new
- *   one replaces it.
+ *
+ * Fixed (uPortal, approved by the project owner): reset tokens expire. The
+ * flow stores when it issued the token in the loginTokenIssued attribute, and
+ * the reset link works for org.apereo.portal.portlets.account.resetTokenLifetime
+ * (default PT1H) after that (see reset-password.spec.ts).
  *
  * Each test imports its own local account and runs as a guest. The locators
  * use roles and names only, so the same tests describe the portlet and any
@@ -79,8 +83,11 @@ test.describe("Forgot password", () => {
     ).toBeVisible();
   });
 
-  test("stores a reset token and says the email was sent", async ({ page }) => {
+  test("stores a dated reset token and says the email was sent", async ({
+    page,
+  }) => {
     expect(await loginToken(admin, account.username)).toBeUndefined();
+    const before = Date.now();
     await openForgotPassword(page);
     await requestReset(page, account.username);
 
@@ -98,6 +105,12 @@ test.describe("Forgot password", () => {
     expect(await loginToken(admin, account.username)).toMatch(
       /^[\dA-Za-z]{20}$/,
     );
+    // The portal and the tests run on the same machine, so share a clock
+    const issued = Date.parse(
+      (await loginTokenIssued(admin, account.username)) ?? "",
+    );
+    expect(issued).toBeGreaterThanOrEqual(before - 1000);
+    expect(issued).toBeLessThanOrEqual(Date.now() + 1000);
   });
 
   test("a second request replaces the token", async ({ page }) => {
