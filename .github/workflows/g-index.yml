@@ -121,7 +121,7 @@ jobs:
         with:
           cache-provider: basic
       - name: Build and install uPortal
-        run: ./gradlew -S --stacktrace --no-daemon --no-parallel install
+        run: ./gradlew -S --stacktrace --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
         id: uportal
         env:
