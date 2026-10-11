@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 import {
   expectLoginForm,
   expectLoginRefused,
@@ -56,10 +56,52 @@ test("a wrong password is refused", async ({ page }) => {
   await expectSignedOut(page);
 });
 
-test("a guest opening a page that needs a login gets the login form", async ({
+const DEEP_LINK_FNAME = "user-administration";
+
+/* The portlet the deep link opens, for a signed-in admin (MOD-I180) */
+async function expectDeepLinkPage(page: Page): Promise<void> {
+  await expect(page).toHaveURL((url) =>
+    url.href.startsWith(`${config.url}p/${DEEP_LINK_FNAME}`)
+  );
+  await expect(
+    page.locator(`.up-portlet-wrapper.${DEEP_LINK_FNAME} .up-portlet-content-wrapper`)
+  ).toBeVisible();
+  await expect(page.locator("div.user-name")).toHaveText(
+    `You are signed in as ${config.users.admin.displayName}`
+  );
+}
+
+test("a guest opening a page that needs a login gets the login form, then the page", async ({
   page,
 }) => {
-  const response = await page.goto(`${config.url}p/user-administration`);
+  const response = await page.goto(`${config.url}p/${DEEP_LINK_FNAME}`);
   expect(response?.status()).toBe(200);
   await expectLoginForm(page);
+
+  await submitLoginForm(
+    page,
+    config.users.admin.username,
+    config.users.admin.password
+  );
+  await expectDeepLinkPage(page);
+});
+
+test("after a wrong password from a deep link, signing in still opens the page", async ({
+  page,
+}) => {
+  await page.goto(`${config.url}p/${DEEP_LINK_FNAME}`);
+  await expectLoginForm(page);
+  await submitLoginForm(
+    page,
+    config.users.admin.username,
+    `${config.users.admin.password}-wrong`
+  );
+  await expectLoginRefused(page);
+
+  await submitLoginForm(
+    page,
+    config.users.admin.username,
+    config.users.admin.password
+  );
+  await expectDeepLinkPage(page);
 });
