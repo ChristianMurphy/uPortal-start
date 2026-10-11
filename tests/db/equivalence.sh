@@ -107,16 +107,14 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 FAILED=()
 RESULTS=()
-TIMINGS=()
 
-step() {  # step <name> <log> <command...>: run, log and time a step; remember a failure
-    local name="$1" log="$OUT/$2" started status
+step() {  # step <name> <log> <command...>: run, log and time a step (see phase_begin); remember a failure
+    local name="$1" log="$OUT/$2" status
     shift 2
-    echo "==== $NAME: $name"
-    started=$(date +%s)
+    phase_begin "$name"
     "$@" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
-    TIMINGS+=("$(printf '%-58s %5ss  %s' "$name" "$(( $(date +%s) - started ))" "$([ "$status" -eq 0 ] && echo ok || echo FAILED)")")
+    phase_end "$status"
     if [ "$status" -ne 0 ]; then FAILED+=("$name (see $log)"); fi
     return "$status"
 }
@@ -267,8 +265,8 @@ report_result() {  # report_result <title> <report> <status>: log, summary and a
 
 cleanup() {
     if [ "$KEEP" = false ]; then
-        stop_database "$SOURCE"
-        if [ "$TARGET" != "$SOURCE" ]; then stop_database "$TARGET"; fi
+        timed "stop the $SOURCE database" stop_database "$SOURCE"
+        if [ "$TARGET" != "$SOURCE" ]; then timed "stop the $TARGET database" stop_database "$TARGET"; fi
     fi
 }
 
@@ -302,7 +300,8 @@ if [ "$MODE" = copy ] && [ "$(family "$SOURCE")" != "$(family "$TARGET")" ]; the
 fi
 
 echo "==== Migration equivalence $NAME: uPortal $OLD writes, uPortal $NEW reads"
-if ! start_database "$SOURCE" || { [ "$TARGET" != "$SOURCE" ] && ! start_database "$TARGET"; }; then
+if ! timed "start the $SOURCE database" start_database "$SOURCE" ||
+    { [ "$TARGET" != "$SOURCE" ] && ! timed "start the $TARGET database" start_database "$TARGET"; }; then
     FAILED+=("starting the databases")
     cleanup
     write_summary

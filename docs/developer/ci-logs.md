@@ -46,6 +46,16 @@ step on your own machine with the full output.
   The note that requests were still in flight after 3 seconds appears only for a test that failed;
   for a passing test it is in the HTML report.
 
+## Time per phase
+
+The DB harness, G-migrate, migration-equivalence and G-index scripts each run as one workflow step,
+so the step list shows only their total time. Each script prints its phases (start the database,
+deploy and load the data, start the portal, the Playwright run, stop the portal) as a log group,
+and ends each one with a line such as `---- start the portal: 41s, ok`. A phase that failed ends
+with `FAILED`, and its output is inside the group above that line. At the end the script prints the
+table of all its phases and adds it to the run's job summary. Locally the groups are `====`
+headings.
+
 ## Output that stays
 
 Warnings and errors from the code under test, the output of failed steps, and the result of every

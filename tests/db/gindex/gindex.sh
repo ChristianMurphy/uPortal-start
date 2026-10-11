@@ -101,7 +101,8 @@ GEN=(python3 -I tests/db/gindex/generate.py)
 mkdir -p "$OUT"
 rm -f "$OUT"/*.md "$OUT"/findings.json "$OUT"/plans.json*
 
-step() { echo; echo "==== G-index $VENDOR: $*"; }
+# Each step is a phase: it ends when the next step starts or when run returns (see phase_next)
+step() { phase_next "$*"; }
 
 summary() {  # summary <file>: append to the GitHub job summary
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "$1" ]; then cat "$1" >> "$GITHUB_STEP_SUMMARY"; fi
@@ -340,18 +341,22 @@ workload() {
     capture on || { echo "could not reset the statement statistics" >&2; return 1; }
     local started
     started=$(date +%s)
+    step "workload: start the portal"
     start_portal "$VENDOR" || return 1
     if [ "$SUITE" = true ]; then
+        step "workload: the whole Playwright suite"
         PORTAL_BASE_URL="$URL" npx playwright test --config=tests/uportal-pw.config.ts --reporter=list \
             --output="$OUT/playwright" > "$OUT/playwright.log" 2>&1
         echo "Playwright suite: $(grep -E '^ +[0-9]+ (passed|failed|flaky|skipped)' "$OUT/playwright.log" | tr -s ' ' | tr '\n' ',')"
     fi
+    step "workload: the driver and the analytics jobs"
     node tests/db/gindex/driver.mjs --url "$URL" --users "$(python3 -c "print(max(50, round(100000 * $SCALE)))")" \
         --concurrency "$CONCURRENCY" --duration "$DURATION" --seed "$SEED" > "$OUT/driver.json" 2> "$OUT/driver.log" || status=1
     cat "$OUT/driver.json" "$OUT/driver.log"
     # The analytics jobs start 120 s after the portal and then run every ~20 s; give them three rounds
     while [ $(( $(date +%s) - started )) -lt 200 ]; do sleep 10; done
     # Stop the portal first: its pools hold most of the database's connections
+    step "workload: stop the portal, freeze the statistics"
     stop_own_tomcat "$VENDOR"
     capture off || { echo "could not freeze the captured statements" >&2; return 1; }
     local elapsed=$(( $(date +%s) - started ))
@@ -392,10 +397,14 @@ workload() {
     return $status
 }
 
+remove_database() { docker rm -f "$CONTAINER" > /dev/null 2>&1 || true; }
+
 run
 status=$?
+phase_end "$status"
 if [ "$KEEP" = false ] && [ "$EXTERNAL" = false ]; then
-    docker rm -f "$CONTAINER" > /dev/null 2>&1 || true
+    timed "stop the database" remove_database
 fi
+phase_summary "G-index $VENDOR phases"
 echo "==== G-index $VENDOR: $([ $status -eq 0 ] && echo PASSED || echo FAILED)"
 exit $status
