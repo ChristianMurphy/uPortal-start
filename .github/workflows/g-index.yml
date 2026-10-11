@@ -68,7 +68,30 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.uportal.outputs.version }}
+      runs: ${{ steps.runs.outputs.runs }}
     steps:
+      # The planning of the G-index runs (MOD-I303) runs first in this job, not in a job of its own
+      # that the build would wait for
+      - name: Choose the push or the nightly set
+        id: runs
+        env:
+          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
+          SCALE: ${{ inputs.scale }}
+        run: |
+          if [ -n "$SCALE" ] && ! [[ "$SCALE" =~ ^(0\.[0-9]+|1(\.0+)?)$ ]]; then
+            echo "Unexpected scale '$SCALE'" >&2
+            exit 1
+          fi
+          if [ "$NIGHTLY" = true ]; then
+            runs='[{"vendor":"postgres-18","scale":"0.05","duration":"600","faults":false},{"vendor":"mariadb-12.3","scale":"0.05","duration":"600","faults":false}]'
+          else
+            runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true}]'
+          fi
+          if [ -n "$SCALE" ]; then
+            runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
+          fi
+          echo "runs=$runs" >> "$GITHUB_OUTPUT"
+          echo "G-index runs: $runs" >> "$GITHUB_STEP_SUMMARY"
       - name: Choose the uPortal repository and ref
         id: source
         env:
@@ -155,43 +178,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  plan:
-    name: "Plan the G-index runs"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      runs: ${{ steps.set.outputs.runs }}
-    steps:
-      - name: Choose the push or the nightly set
-        id: set
-        env:
-          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
-          SCALE: ${{ inputs.scale }}
-        run: |
-          if [ -n "$SCALE" ] && ! [[ "$SCALE" =~ ^(0\.[0-9]+|1(\.0+)?)$ ]]; then
-            echo "Unexpected scale '$SCALE'" >&2
-            exit 1
-          fi
-          if [ "$NIGHTLY" = true ]; then
-            runs='[{"vendor":"postgres-18","scale":"0.05","duration":"600","faults":false},{"vendor":"mariadb-12.3","scale":"0.05","duration":"600","faults":false}]'
-          else
-            runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true}]'
-          fi
-          if [ -n "$SCALE" ]; then
-            runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
-          fi
-          echo "runs=$runs" >> "$GITHUB_OUTPUT"
-          echo "G-index runs: $runs" >> "$GITHUB_STEP_SUMMARY"
-
   g-index:
     name: "G-index: ${{ matrix.vendor }} at ${{ matrix.scale }}"
-    needs: [uportal, plan]
+    needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.plan.outputs.runs) }}
+        include: ${{ fromJSON(needs.uportal.outputs.runs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

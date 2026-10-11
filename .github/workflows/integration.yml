@@ -77,7 +77,34 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.uportal.outputs.version }}
+      set: ${{ steps.set.outputs.set }}
+      migrate: ${{ steps.migrate.outputs.matrix }}
     steps:
+      # The planning of the database jobs (MOD-I303) runs first in this job, not in a job of its
+      # own that the build would wait for: which set this event runs, and the G-migrate pairs. It
+      # needs only the matrix files of this repository.
+      - name: Checkout the plan files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            tests/db/migrate
+            tests/db/vendors
+          path: plan
+      # nightly: the schedule or a manual nightly run; workstream (prototype only, MOD-D30): a
+      # push to a ccr-43ba0785-hzlrj5-<topic> branch; push: everything else, manual runs included
+      - name: Choose the set
+        id: set
+        env:
+          SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && 'workstream' || 'push' }}
+        run: echo "set=$SET" >> "$GITHUB_OUTPUT"
+      # Checks the coverage rules too, so a pair list that misses a source or target fails here
+      - name: G-migrate pairs
+        id: migrate
+        env:
+          SET: ${{ steps.set.outputs.set }}
+        working-directory: plan
+        run: node tests/db/migrate/matrix.mjs "$SET" >> "$GITHUB_OUTPUT"
       - name: Choose the uPortal repository and ref
         id: source
         env:
@@ -168,32 +195,6 @@ jobs:
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 7
-
-  plan:
-    name: "Plan the database jobs"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      set: ${{ steps.set.outputs.set }}
-      migrate: ${{ steps.migrate.outputs.matrix }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # nightly: the schedule or a manual nightly run; workstream (prototype only, MOD-D30): a
-      # push to a ccr-43ba0785-hzlrj5-<topic> branch; push: everything else, manual runs included
-      - name: Choose the set
-        id: set
-        env:
-          SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && 'workstream' || 'push' }}
-        run: echo "set=$SET" >> "$GITHUB_OUTPUT"
-      # Checks the coverage rules too, so a pair list that misses a source or target fails here
-      - name: G-migrate pairs
-        id: migrate
-        env:
-          SET: ${{ steps.set.outputs.set }}
-        run: node tests/db/migrate/matrix.mjs "$SET" >> "$GITHUB_OUTPUT"
 
   playwright:
     name: "Playwright: hsqldb"
@@ -482,14 +483,14 @@ jobs:
   # database: PostgreSQL 18 and MariaDB 12.3 on every push, MySQL 9.7 nightly as well.
   playwright-database:
     name: "Playwright: ${{ matrix.vendor }}"
-    needs: [uportal, plan]
+    needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       # Prototype only (MOD-D30): a workstream branch runs PostgreSQL 18 only
       matrix:
-        vendor: ${{ fromJSON(needs.plan.outputs.set == 'workstream' && '["postgres-18"]' || needs.plan.outputs.set == 'nightly' && '["postgres-18", "mariadb-12.3", "mysql-9.7"]' || '["postgres-18", "mariadb-12.3"]') }}
+        vendor: ${{ fromJSON(needs.uportal.outputs.set == 'workstream' && '["postgres-18"]' || needs.uportal.outputs.set == 'nightly' && '["postgres-18", "mariadb-12.3", "mysql-9.7"]' || '["postgres-18", "mariadb-12.3"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -561,15 +562,15 @@ jobs:
 
   # G-migrate (MOD-D11, MOD-D25): a used 5.17 portal's database on an old server, copied with
   # dbMigrate into a current server and verified; for some pairs the whole Playwright suite then
-  # runs on the migrated portal. The pairs come from tests/db/migrate/matrix.json (plan job).
+  # runs on the migrated portal. The pairs come from tests/db/migrate/matrix.json (the first steps of the uPortal job).
   migrate:
     name: "G-migrate: ${{ matrix.source }} to ${{ matrix.target }}"
-    needs: [uportal, plan]
+    needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.migrate) }}
+      matrix: ${{ fromJSON(needs.uportal.outputs.migrate) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
