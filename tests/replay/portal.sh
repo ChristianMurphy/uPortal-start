@@ -16,12 +16,12 @@ base="${PORTAL_BASE_URL:-http://localhost:8080/uPortal/}"
 
 wait_for_portal() {
     local url="${1:-$base}"
-    # /api/session.json answers without rendering a portlet. A page render while Pluto still
+    # /health-check answers without rendering a portlet. A page render while Pluto still
     # initialises the portlets makes Tomcat mark a portlet's servlet unavailable until the next
     # restart (NotificationPortlet's EmergencyAlert, see docs/http-replay.md), so the first render
     # waits until the portlets have had time to start.
     for i in $(seq 1 90); do
-        if curl -s -o /dev/null -w '%{http_code}' "${url}api/session.json" | grep -q 200; then
+        if curl -s -o /dev/null -w '%{http_code}' "${url}health-check" | grep -q 200; then
             echo "Portal is up at $url; letting the portlets initialise for ${PORTAL_SETTLE_SECONDS:-30}s"
             sleep "${PORTAL_SETTLE_SECONDS:-30}"
             return 0
