@@ -37,6 +37,7 @@ Tomcat's `catalina.*` logs and the portal log.
 
 | Check | What it does | Bound |
 | --- | --- | --- |
+| `cluster-join` | From both nodes' Tomcat logs (`tests/cluster/cluster-join.mjs`): node B joins node A's JGroups cluster when it starts, so both nodes install the same view of two members, counted from node B's first JGroups line | 30 s |
 | `invalidation-portlet` | Node B reads a portlet definition (`/api/portlet/what-is-uportal.json`), node A imports it with a new title (`/api/import`), node B must show the new title | 30 s |
 | `invalidation-layout` | Node B loads the student's layout, node A adds a tab to it (`/api/layout?action=addTab`), a new student session on node B must have the tab | 30 s |
 | `invalidation-permission` | Both nodes deny the student the Permissions Manager portlet; node A grants SUBSCRIBE on it, and a new student session on node A, then on node B must allow it; node A revokes it, and a new session on node B must be denied again | 330 s (see below) |
@@ -47,12 +48,19 @@ Tomcat's `catalina.*` logs and the portal log.
 | `events-aggregated` | At the end of the run, no raw event is still not aggregated although it is older than the aggregator's last event date (the aggregator never reads it again) | |
 | `no-overlap` | From both nodes' `TRACE` logs (`tests/cluster/lock-overlap.mjs`): no clustered job held its lock on both nodes at once, over the whole run | |
 
-Permissions are the exception to replication: uPortal caches permission checks on each node and
-does not replicate those caches (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` for 180 s and
-`AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT` for 300 s). A permission revoked on one
-node is still granted on the others until those entries expire. The check allows that bound
-for new sessions. Sessions that checked the permission before the change are covered by
-`permission-session`.
+uPortal caches permission checks on each node (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` for
+180 s and `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT` for 300 s). Since 6.0 a
+permission change clears both caches and the removal is replicated. `invalidation-permission`
+still allows the old bound of 330 s for new sessions, and `permission-session` holds sessions
+that checked the permission before the change to 30 s.
+
+A node that fails to join is split from the cluster: in a local run node B's JOIN timed out
+four times (`GMS join_timeout=1000`, `max_join_attempts=4` in `jgroups.xml`) because node A
+could not yet reach it to answer. Node B then formed a cluster of its own, and dropped node A's
+messages as coming from a non-member until `MERGE3` merged the two 92 s later. A cache entry node B
+read in that time is never invalidated and keeps its old value until it expires (6 hours for
+portlet definitions). `cluster-join` checks the join itself. The invalidation checks start
+after the 60 s wait for a shared view, as before, and catch a split only when it lasts into them.
 
 The layout check does not depend on replication: uPortal reads a user's layout from the
 database when a session starts and keeps it in the session, so a new session on node B sees the
@@ -84,6 +92,7 @@ seeded fault and passes only if the checks meant to catch it fail:
 | `lock-ignored` | `org.apereo.portal.concurrency.locking.ClusterLockDao.abandonedLockAge=PT0S`: a held lock counts as abandoned at once | `failover-takeover` |
 | (fixture) | `tests/cluster/fixtures/overlap-*.log`: two node logs where the aggregation job runs on both at once, checked before each run | `no-overlap` |
 | `event-flush-delayed` | `org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S`: events are written 120 s after start, as in uPortal 5 | `events-aggregated` |
+| `join-gives-up` | Node B's `jgroups.xml` with `join_timeout="1" max_join_attempts="1"`: node B gives up on its JOIN at once and forms a cluster of its own | `cluster-join` |
 
 `lock-ignored` makes node B take a lock node A still holds, but in runs 38110056978 to 38120174431
 node B rarely ran the job while node A was inside it, so `no-overlap` failed under it only once in
@@ -101,7 +110,11 @@ tests/cluster/cluster.sh                          # deploy, start both nodes, ru
 tests/cluster/cluster.sh --fault replication-off  # a seeded fault must be caught
 tests/cluster/cluster.sh --keep                   # leave the nodes and the database running
 tests/cluster/cluster.sh --no-deploy              # reuse them (after --keep)
+tests/cluster/cluster.sh --join-starts 20         # start node B 20 times, count the joins
 ```
+
+`--join-starts` runs no other check. It starts node A, then starts and stops node B the given
+number of times, and writes each start's `cluster-join` outcome to `build/cluster/join-starts.txt`.
 
 Arguments after `--` are passed to every Gradle call, and results are in `build/cluster/results.txt`, with
 both nodes' logs in `build/cluster/logs-a` and `logs-b`; on GitHub Actions failed checks also
