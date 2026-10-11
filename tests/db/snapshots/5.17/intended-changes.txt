@@ -2,8 +2,8 @@
 # delta to every vendor's baseline before comparing; see "Intended data changes" in
 # docs/db-upgrade-harness.md. One line per table: <TABLE> rows <+n|-n> <MOD reference>
 #
-# Favorites and the user locale selector as Web Component channels: the Web Component portlet
-# type, and the webComponent.tagName and webComponent.moduleUrl parameters of the favorites and
-# user-locales-selector definitions
+# Favorites, Popular Portlets and the user locale selector as Web Component channels: the Web
+# Component portlet type, and the webComponent.tagName and webComponent.moduleUrl parameters of
+# the favorites, popular-portlets and user-locales-selector definitions (two each)
 UP_PORTLET_TYPE rows +1 MOD-I134
-UP_PORTLET_DEF_PARAM rows +4 MOD-I134
+UP_PORTLET_DEF_PARAM rows +6 MOD-I134

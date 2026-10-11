@@ -1,0 +1,4 @@
+<entity-type script="classpath://org/jasig/portal/io/import-entity-type_v3-2.crn">
+  <name>org.apereo.portal.portlet.om.IPortletDefinition</name>
+  <desc-name>Portlet</desc-name>
+</entity-type>

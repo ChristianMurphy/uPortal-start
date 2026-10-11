@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: the fixture's own owner and activity, a Unicode literal target and
+ | a group target.
+ +-->
+<permission-set script="classpath://org/jasig/portal/io/import-permission_set_v3-1.crn">
+  <owner>FIXTURE_OWNER</owner>
+  <principal-type>org.apereo.portal.groups.IEntityGroup</principal-type>
+  <principal>
+    <group>Fixture Root ✨</group>
+  </principal>
+  <activity>FIXTURE_ACT</activity>
+  <target permission-type="GRANT">
+    <literal>Ünïcödé-target ✨</literal>
+  </target>
+  <target permission-type="DENY">
+    <group>PAGS Fixture Ünïcødé</group>
+  </target>
+</permission-set>

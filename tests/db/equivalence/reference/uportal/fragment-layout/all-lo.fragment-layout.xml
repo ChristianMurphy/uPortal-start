@@ -1,0 +1,30 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="all-lo">
+  <folder ID="s1" hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder ID="s20" hidden="true" immutable="true" name="Page Top folder" type="page-top" unremovable="true">
+      <channel ID="n22" fname="dynamic-respondr-skin" hidden="false" immutable="false" unremovable="false"/>
+      <channel ID="n24" fname="fragment-admin-exit" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s40" hidden="true" immutable="true" name="Customize folder" type="customize" unremovable="true">
+      <channel ID="n42" fname="personalization-gallery" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s100" hidden="false" immutable="true" name="Header Right folder" type="header-right" unremovable="true">
+      <channel ID="n110" fname="search-launcher" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s200" hidden="false" immutable="true" name="Header Bottom folder" type="header-bottom" unremovable="true">
+      <channel ID="n210" fname="emergency-alert" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s400" hidden="false" immutable="true" name="Pre Content folder" type="pre-content" unremovable="true">
+      <channel ID="n420" fname="feedback-navigation" hidden="true" immutable="false" unremovable="true"/>
+    </folder>
+    <folder ID="s421" hidden="false" immutable="true" name="First Footer" type="footer-first" unremovable="true">
+      <channel ID="n510" fname="sitemap" hidden="false" immutable="false" unremovable="true"/>
+    </folder>
+    <folder ID="s511" hidden="false" immutable="true" name="Legal Footer" type="footer-second" unremovable="true">
+      <channel ID="n610" fname="legal-footer" hidden="false" immutable="false" unremovable="true"/>
+    </folder>
+    <folder ID="s700" hidden="false" immutable="true" name="Page Bottom folder" type="page-bottom" unremovable="true">
+      <channel ID="n710" fname="attachments" hidden="false" immutable="false" unremovable="true"/>
+      <channel ID="n720" fname="google-analytics-config" hidden="false" immutable="false" unremovable="true"/>
+    </folder>
+  </folder>
+</layout>

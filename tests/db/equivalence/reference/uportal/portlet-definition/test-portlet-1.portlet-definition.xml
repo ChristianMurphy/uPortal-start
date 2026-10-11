@@ -1,0 +1,31 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Test Portlet 1</title>
+  <name>Test Portlet 1</name>
+  <fname>test-portlet-1</fname>
+  <desc>Test portlet 1 from Apache Pluto</desc>
+  <type>Portlet</type>
+  <timeout>600000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/pluto-testsuite</up:webAppName>
+    <up:portletName>TestPortlet1</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Testing</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/categories/applications-development.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>TestName4</name>
+    <readOnly>true</readOnly>
+    <value>TestValue4</value>
+  </portlet-preference>
+</portlet-definition>

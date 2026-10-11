@@ -1,0 +1,28 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Translator</title>
+  <name>Translator</name>
+  <fname>translator</fname>
+  <desc>Provides means to translate database entities</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>Translator</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>uPortal</category>
+  <group>Portal Administrators</group>
+  <group>Portal Developers</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Portal Administrators</group>
+      <group>Portal Developers</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/apps/preferences-desktop-locale.png</value>
+  </parameter>
+</portlet-definition>
