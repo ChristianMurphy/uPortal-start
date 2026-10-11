@@ -10,8 +10,10 @@
 # webComponent.tagName and webComponent.moduleUrl (two more)
 # The user locale selector as a Web Component channel: the user-locales-selector definition's
 # webComponent.tagName and webComponent.moduleUrl (two more)
+# Session Timeout as a Web Component channel: the session-timeout definition's
+# webComponent.tagName, webComponent.moduleUrl and webComponent.preferenceAttributes (three more)
 UP_PORTLET_TYPE rows +1 MOD-I134
-UP_PORTLET_DEF_PARAM rows +8 MOD-I134
+UP_PORTLET_DEF_PARAM rows +11 MOD-I134
 # Hibernate 5.2 (P2-3): the 49 @TableGenerator definitions in hibernate_sequences, each under the
 # name of the entity's @SequenceGenerator, are removed. Hibernate always used the sequence
 # definition, and no database ever had a hibernate_sequences table (MOD-D33, ADR 0006).
