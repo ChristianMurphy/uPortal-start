@@ -3,6 +3,7 @@ import { config } from "../../general-config";
 import {
   loginViaUrl,
   logout,
+  sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 
@@ -74,6 +75,7 @@ async function addToLayout(
 ): Promise<void> {
   const response = await page.request.post<unknown>(LAYOUT_API, {
     form: { action: "addPortlet", fname, tabName },
+    headers: await sessionCsrfHeaders(page.request),
   });
   expect(response.status(), `add ${fname}`).toBe(200);
 }
@@ -83,6 +85,7 @@ async function removeFromLayout(page: Page, fname: string): Promise<void> {
   for (let removed = 0; removed < 10; removed++) {
     const response = await page.request.post<unknown>(LAYOUT_API, {
       form: { action: "removeByFName", fname },
+      headers: await sessionCsrfHeaders(page.request),
     });
     // 400: no channel with the fname is left
     if (response.status() === 400) return;

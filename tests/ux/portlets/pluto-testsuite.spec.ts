@@ -2,6 +2,7 @@ import { test, expect, Browser, Locator, Page } from "@playwright/test";
 import { config } from "../../general-config";
 import {
   loginViaUrl,
+  sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 import {
@@ -438,7 +439,7 @@ async function layoutAction(
   await waitForPortalRequestsToSettle(page);
   const response = await page.request.post<Record<string, string>>(
     `${config.url}api/layout`,
-    { form },
+    { form, headers: await sessionCsrfHeaders(page.request) },
   );
   expect(response.status(), `layout action ${form.action}`).toEqual(200);
   return response.json();
@@ -648,8 +649,9 @@ test.describe("Pluto JSR-286 test suite", () => {
           PLUTO_286_COMPANION_DEFINITION,
         ],
       ]) {
+        const headers = await sessionCsrfHeaders(page.request);
         const status = await page.evaluate(
-          async ({ name, body, url }) => {
+          async ({ name, body, url, csrf }) => {
             const data = new window.FormData();
             data.append(
               "file",
@@ -657,11 +659,12 @@ test.describe("Pluto JSR-286 test suite", () => {
             );
             const response = await window.fetch(`${url}api/import`, {
               method: "POST",
+              headers: csrf,
               body: data,
             });
             return response.status;
           },
-          { name: fileName, body: xml, url: config.url },
+          { name: fileName, body: xml, url: config.url, csrf: headers },
         );
         expect(status, `import ${fileName}`).toEqual(200);
       }
@@ -705,6 +708,7 @@ test.describe("Pluto JSR-286 test suite", () => {
       for (const fname of [FNAME_286, FNAME_286_COMPANION]) {
         await page.request.delete<unknown>(
           `${config.url}api/entity/portlet-definition/${fname}`,
+          { headers: await sessionCsrfHeaders(page.request) },
         );
       }
     });
