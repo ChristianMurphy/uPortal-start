@@ -136,7 +136,7 @@ const STRING_MASKS = [
     // layout node id (l1n210) comes from the fragment's data; the user part (u26) does not.
     // Inside generated names such as rateThisPortletu26l1n7 the whole id varies (the node is the
     // one the marketplace subscribes the portlet to), so all of it is masked there.
-    [/(?<=[A-Za-z])u\d+l\d+[ns]\d+(?!\d)/g, '{node}'],
+    [/(?<=[A-Za-z])(u\d+l\d+[ns]\d+|ctf\d+)(?!\d)/g, '{node}'],
     [/u\d+(l\d+[ns]\d+)(?!\d)/g, 'u{id}$1'],
     // Pluto namespaces carry the portlet entity and window ids: Pluto_43_u26l1n210_11_
     [/\bPluto_\d+_/g, 'Pluto_{id}_'],
@@ -144,7 +144,9 @@ const STRING_MASKS = [
     // group keys (local.14), principal keys (12.local.14) and portlet ids (PORTLET_ID.25)
     [/\blocal\.\d+/g, 'local.{id}'],
     [/\bPORTLET_ID\.\d+/g, 'PORTLET_ID.{id}'],
-    [/\bgroup_local__\d+/g, 'group_local__{id}'],
+    [/_local__\d+/g, '_local__{id}'],
+    // error portlet namespaces (Pluto_..._-20_ctf3_12-)
+    [/_-\d+_ctf\{n\}_\d+-/g, '_-{id}_ctf{n}_{id}-'],
     // the entity type in a principal key (12.local.3, 13.pags.Authenticated Users)
     [/\b\d+\.(local|pags)\./g, '{type}.$1.'],
     // Session ids are random per session (Tomcat's SecureRandom); URL rewriting embeds them.
@@ -179,8 +181,13 @@ const HTTP_DATE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} [A-Z][a-z]{2} \d{4} \d
 const shape = (text) => text.replaceAll(/\d/g, '9');
 
 export function maskString(text) {
+    // Some masks only match after others have run (ctf12_20_ needs ctf{n} first), so the masks
+    // are applied until nothing changes: masking once more must not change a masked value.
     let masked = text;
-    for (const [pattern, replacement] of STRING_MASKS) masked = masked.replace(pattern, replacement);
+    for (let previous = null; previous !== masked; ) {
+        previous = masked;
+        for (const [pattern, replacement] of STRING_MASKS) masked = masked.replace(pattern, replacement);
+    }
     // JAXB writes no fraction when the milliseconds are zero, so whether there is one depends on
     // the time. In ISO timestamps with a T (xsd:dateTime) the fraction's presence is therefore not
     // compared; other formats, such as the portlet-list audit dates, keep it strict.
@@ -413,8 +420,8 @@ const EPOCH_MS_MIN = 946_684_800_000;
 const EPOCH_MS_MAX = 4_102_444_800_000;
 
 // Keys whose values are measurements or random per session, not data: the health checks'
-// response times and memory figures, and the session key in /api/session.json.
-const MEASUREMENT = /Response Time|Memory|^sessionKey$/;
+// response times and memory figures, and the session key and host name in /api/session.json.
+const MEASUREMENT = /Response Time|Memory|^sessionKey$|^serverName$/;
 // Keys whose numeric values are generated ids (see the generated ids in STRING_MASKS)
 const ID_KEYS = /^(id|chanID|channelId|typeId|typeID|fragment|portletId|entityTypeId)$/;
 
@@ -535,8 +542,9 @@ function describe(node, origin) {
         const name = node.attributes.name ?? node.attributes.property;
         if (name) line += `[meta=${name}]`;
     }
-    if (TEXT_ELEMENTS.has(node.tag) && node.text) line += ` "${maskString(collapse(node.text))}"`;
-    return line;
+    if (TEXT_ELEMENTS.has(node.tag) && node.text) line += ` "${collapse(node.text)}"`;
+    // Classes and names carry generated ids too (rateThisPortletu26l1n9, Pluto_43_..._optionsForm)
+    return maskString(line);
 }
 
 function keep(node) {

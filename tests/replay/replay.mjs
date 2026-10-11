@@ -45,9 +45,13 @@ const writeJson = (path, value) => writeFileSync(path, `${JSON.stringify(value, 
 // ---------------------------------------------------------------------------------------------
 
 // Suite requests that are not replayed on another portal: GET /api/updatePermission writes, and
-// a principal key names its entity type by a generated id (14.admin), which differs from machine
-// to machine (see the generated ids in lib.mjs).
-const replayable = (path) => !path.startsWith('/uPortal/api/updatePermission') && !/[?&](principal|principals%5B%5D|principals\[\]|pP_principalKey)=\d+\./.test(path);
+// the others name something by a generated id, which differs from machine to machine (see the
+// generated ids in lib.mjs): a typed principal key (14.admin), a group or category key
+// (local.22), a permission activity (/permissions/13/) or a portlet id (pP_portletId=97).
+const replayable = (path) =>
+    !path.startsWith('/uPortal/api/updatePermission') &&
+    !/[?&](principal|principals%5B%5D|principals\[\]|pP_principalKey)=\d+\./.test(path) &&
+    !/\blocal\.\d+|\/permissions\/\d+\/|[?&]pP_portletId=\d+|PORTLET_ID\.\d+/.test(path);
 
 function plan(routes, suite) {
     const suiteRoles = [...new Set((suite?.requests ?? []).map((r) => r.role))].filter((r) => !ROLES.includes(r)).sort();
