@@ -40,13 +40,19 @@ import {
  * - The link works only in a session whose login portlet has not started its
  *   flow yet: after the login form has been shown, the link shows the login
  *   form again.
- * - Tokens do not expire.
  * - The update-password flow, which asks for the current password, is not
  *   reachable: no portlet maps a flowId to it.
  *
  * Fixed (uPortal, MOD-D19 workstream): a failed token check logged the
  * account's real token and the submitted one at INFO, and the reset email
  * logged the link; neither logs a token now.
+ *
+ * Fixed (uPortal, approved by the project owner): tokens expire. The link
+ * works for org.apereo.portal.portlets.account.resetTokenLifetime (default
+ * PT1H) after the time in the account's loginTokenIssued attribute. An older
+ * link, or one whose token has no issue time (issued before uPortal 6.0),
+ * shows "This password reset URL has expired". The tests here date the
+ * imported token now, or two hours ago for an expired one.
  *
  * Each test imports its own account and uses its own browser context.
  */
@@ -104,6 +110,7 @@ test.describe("Reset password", () => {
     token = `Tok${Date.now()}`.padEnd(20, "x").slice(0, 20);
     account = await importLocalAccount(admin, "reset", "Rhea", {
       loginToken: token,
+      loginTokenIssued: new Date().toISOString(),
     });
   });
 
@@ -189,6 +196,43 @@ test.describe("Reset password", () => {
     ).toBeVisible();
     // The wrong attempt left the real token as it was
     expect(await loginToken(admin, account.username)).toBe(token);
+  });
+
+  test("an expired link says so and offers a new email", async ({ page }) => {
+    const expired = await importLocalAccount(admin, "reset", "Rhea", {
+      loginToken: token,
+      loginTokenIssued: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    });
+    await openResetLink(page, expired.username, token);
+    await expect(
+      page.getByRole("heading", { name: "Invalid password reset URL" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "This password reset URL has expired. Send a new email to get a new one.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Set new account password" }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("link", { name: "Send a new password reset email" })
+      .click();
+    await waitForPortalRequestsToSettle(page);
+    await expect(
+      page.getByRole("heading", { name: "Reset my password" }),
+    ).toBeVisible();
+  });
+
+  test("a token without an issue time has expired", async ({ page }) => {
+    const undated = await importLocalAccount(admin, "reset", "Rhea", {
+      loginToken: token,
+    });
+    await openResetLink(page, undated.username, token);
+    await expect(
+      page.getByText("This password reset URL has expired."),
+    ).toBeVisible();
+    expect(await loginToken(admin, undated.username)).toBe(token);
   });
 
   test("after the login form, the link shows the login form (defect)", async ({
