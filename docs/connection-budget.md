@@ -73,6 +73,26 @@ load. A site under real load comes closer to the budget's maximums.
 
 ## Sizing a site
 
+The budget is sized for the quickstart, with a few people signed in at once. **If more people use
+your portal at once, size `PortalDb` from your own peak** before you go live, and again after the
+busiest day of the term. A `maxActive` of 30 that is too small for your load makes requests
+wait for a connection and then fail, where 5.x would have opened more.
+
+To read the peak, uPortal registers each of its pools with the JVM's MBean server as
+`uPortal:section=DataSource,name=PortalDb` (and `RawEventsDb`, `AggrEventsDb`). Connect with
+JConsole, VisualVM or a JMX exporter during your busiest hour and watch:
+
+* `Active`: connections in use right now. Its highest value is your peak.
+* `WaitCount`: requests waiting for a connection. Anything above 0 means the pool is too small.
+* `Size`: connections open, in use and idle together.
+
+On PostgreSQL, you can also add `?ApplicationName=uPortal` to the JDBC URL in
+`portal.home/uPortal.properties` and count `select count(*) from pg_stat_activity where
+application_name = 'uPortal' and state <> 'idle'`. A "Pool empty. Unable to fetch a connection"
+error in `uPortal.log` means requests have already failed.
+
+Set `maxActive` to about one and a half times the peak `Active`, then work out the database's limit:
+
 1. Add up `maxActive` of every pool, the unpooled portlets and the tools you run alongside the
    portal (the table above). That is the portal's budget.
 2. Multiply it by the number of portal nodes that share the database.
