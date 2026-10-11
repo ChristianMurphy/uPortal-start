@@ -10,8 +10,10 @@ name: Migration equivalence
 #      export must match tests/db/equivalence/reference. The build under test then starts on the
 #      same database and exports again; the two exports must be identical;
 #   3. copy: 5.17.9 fills a database on an old server the same way, dbMigrate (from the build under
-#      test) copies it into a current server of another vendor, and the build under test, started
-#      on the copy, must export exactly what 5.17.9 exported from the original.
+#      test) copies it into a current server of another vendor, converting the timestamps 5.17
+#      stored in the JVM's zone to UTC (MOD-I141), and the build under test, started on the copy,
+#      must export exactly what 5.17.9 exported from the original. A copy may run in another zone
+#      than UTC (matrix.json).
 #
 # The vendors come from tests/db/equivalence/matrix.json: on the integration branch HSQLDB,
 # PostgreSQL 18 and MariaDB 12.3 in place and two cross-vendor copies; on a workstream branch
@@ -232,7 +234,7 @@ jobs:
             .gradle/tomcat/logs/
 
   copy:
-    name: "Copy: ${{ matrix.source }} to ${{ matrix.target }}"
+    name: "Copy: ${{ matrix.source }} to ${{ matrix.target }}${{ matrix.zone && format(' in {0}', matrix.zone) || '' }}"
     needs: [uportal, plan]
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -277,6 +279,9 @@ jobs:
         env:
           SOURCE: ${{ matrix.source }}
           TARGET: ${{ matrix.target }}
+          # The zone of every JVM in the run, which the copy converts 5.17's local times from
+          # (MOD-I141)
+          EQUIVALENCE_ZONE: ${{ matrix.zone || 'UTC' }}
         run: tests/db/equivalence.sh copy "$SOURCE" "$TARGET" -- -PdbWaitSeconds=600
       - name: Upload the exports, reports and logs
         if: always()

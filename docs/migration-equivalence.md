@@ -33,7 +33,8 @@ The vendor names are the files in `tests/db/vendors`. Every vendor but HSQLDB ne
 5. The build under test (`uPortalVersion`, or `NEW_UPORTAL_VERSION`) reads the data:
    * **In place:** it is deployed on the same database without `dataInit` and starts once.
    * **Copy:** it creates the target database with `dataInit`, `dbMigrate` copies the 5.17 database
-     into it, and it starts once on the copy.
+     into it with `--target-profile 6.0` and `--source-zone` (see "Time zones"), and it starts once
+     on the copy.
 6. The build under test exports everything. Its export must equal 5.17's second export with
    nothing masked.
 
@@ -74,8 +75,8 @@ changes with its reason.
   permission owner activities, and layout structure attributes. Layout nodes, preference values
   and attribute values keep their order, because uPortal stores it.
 * **Timestamps with an offset** are printed as the same instant in UTC. uPortal prints an
-  `xs:dateTime` with the offset of the JVM's zone, and a run in another zone than UTC must still
-  match the reference, which was recorded in UTC.
+  `xs:dateTime` with the offset of the JVM's zone, and a run in another zone (see "Time zones")
+  must still match the reference, which was recorded in UTC.
 * **One mask** applies, and only in the comparison with the reference. `dataInit` stamps a
   PUBLISHED lifecycle entry (user `system`) on each portlet definition that has no
   `<lifecycle>`. Its date is the time the job ran.
@@ -154,6 +155,24 @@ them, but 5.17's export on Oracle can't be the comparison. When the 5.17 side of
 under test, masked like the reference, must then equal the reference, apart from
 `vendors/oracle.diff` if 5.17 stores the fixture differently on Oracle.
 
+## Time zones
+
+uPortal 5.17 stored seven timestamp columns as the clock time of the portal JVM's zone, and 6.0
+stores them in UTC (MOD-I141). Both export the instant the value stands for. A copy into 6.0
+converts those columns from the zone given as `--source-zone`. The exports
+show two of them: the portlets' lifecycle entries (`UP_PORTLET_LIFECYCLE`) and the password change
+of `fixture-zoe` (`UP_PERSON_DIR`).
+
+Every JVM of a run (5.17's, the build under test's and the copy tool's) runs in one zone,
+`EQUIVALENCE_ZONE` (default UTC). `equivalence.sh` exports it as `TZ` and passes it to the copy as
+`--source-zone`. In UTC the conversion leaves the values unchanged. In another zone, 5.17 stores
+local clock times, and the export of the build under test equals 5.17's only if the copy converted
+them with the right offset. The copy from MariaDB 11.4 to PostgreSQL 18 in the push set runs in
+America/New_York for that reason (`zone` in `matrix.json`).
+
+An in-place run accepts UTC only. In place, the build under test reads 5.17's local clock times as
+UTC, and 6.0 upgrades by copying only (MOD-D11).
+
 ## Reading a failure
 
 Each comparison writes a report in `build/db-equivalence/<run>/`. `reference-report.txt` compares
@@ -186,9 +205,9 @@ same way `integration.yml` builds it. `tests/db/equivalence/matrix.json` lists t
 
 * **Push set** (a manual run without `nightly`, and every push to a `ccr-*` branch in this
   prototype, MOD-I74): in place on HSQLDB, PostgreSQL 18 and MariaDB 12.3. Copies from PostgreSQL 16
-  to MariaDB 12.3 and from MariaDB 11.4 to PostgreSQL 18.
+  to MariaDB 12.3 and, in America/New_York, from MariaDB 11.4 to PostgreSQL 18.
 * **Workstream branches** (prototype only, MOD-D30): in place on PostgreSQL 18 and the copy from
-  MariaDB 11.4 to PostgreSQL 18.
+  MariaDB 11.4 to PostgreSQL 18, in America/New_York.
 * **Nightly:** in place on every 6.0 runtime server, and one copy per vendor from its oldest source
   into the next vendor's runtime server. Each vendor is copied from once and into once.
 

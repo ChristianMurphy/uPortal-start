@@ -20,9 +20,10 @@
 #   in-place  The build under test (NEW_UPORTAL_VERSION) is deployed on the same database, starts
 #             once and exports everything; that export must be identical to 5.17's, unmasked.
 #   copy      The build under test creates <target> with dataInit, dbMigrate copies <source> into
-#             it, and the build under test starts on <target> and exports; identical to 5.17's
-#             export of <source>, unmasked. Timestamps compare in whole seconds when one side keeps
-#             less precision than the other (MySQL/MariaDB DATETIME, SQL Server datetime: MOD-I95).
+#             it (--target-profile 6.0, --source-zone of the run's zone: MOD-I141), and the build
+#             under test starts on <target> and exports; identical to 5.17's export of <source>,
+#             unmasked. Timestamps compare in whole seconds when one side keeps less precision than
+#             the other (MySQL/MariaDB DATETIME, SQL Server datetime: MOD-I95).
 #
 # Options:
 #   --record   in-place only: write the masked 5.17 export as the new reference instead of comparing
@@ -34,6 +35,9 @@
 #   NEW_UPORTAL_VERSION   the build under test (default: uPortalVersion in gradle.properties)
 #   EQUIVALENCE_CODE_PAGE the code page to convert the fixture to (default: cp1252 when the 5.17
 #                         side is SQL Server, else none); e.g. cp1252 to try SQL Server's on hsqldb
+#   EQUIVALENCE_ZONE      the time zone of every JVM the run starts (default UTC); 5.17 stores some
+#                         timestamps in it, and the copy converts them from it. Copy only, for any
+#                         zone but UTC: 6.0 reads those timestamps as UTC (MOD-I141)
 #
 # Needs Docker for every vendor but hsqldb, and the build under test's uPortal-db-migrate for copy.
 # Everything a run produces is in build/db-equivalence/<in-place-vendor|source-to-target>/. On GitHub
@@ -54,7 +58,7 @@ while [ $# -gt 0 ]; do
         --record) RECORD=true ;;
         --keep) KEEP=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,42p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,46p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
         *) ARGS+=("$1") ;;
     esac
@@ -88,6 +92,20 @@ if [ "$RECORD" = true ] && [ "${OLD%%.*}" != 5 ]; then
     echo "The reference is recorded with uPortal 5.17 code only (OLD_UPORTAL_VERSION=$OLD)" >&2
     exit 2
 fi
+
+# 5.17 stores some timestamps as the JVM's local clock time; the build under test stores them in
+# UTC and a copy into 6.0 converts them (MOD-I141). Every JVM of the run (5.17's, the build under
+# test's, the copy tool's) runs in one zone, which the copy is told as --source-zone
+ZONE=${EQUIVALENCE_ZONE:-UTC}
+if [ ! -f "/usr/share/zoneinfo/$ZONE" ]; then
+    echo "Unknown time zone EQUIVALENCE_ZONE=$ZONE (no /usr/share/zoneinfo/$ZONE)" >&2
+    exit 2
+fi
+if [ "$MODE" = in-place ] && [ "$ZONE" != UTC ]; then
+    echo "EQUIVALENCE_ZONE=$ZONE works with copy only: in place, the build under test reads 5.17's local times as UTC, and 6.0 upgrades by copying (MOD-D11)" >&2
+    exit 2
+fi
+export TZ="$ZONE"
 
 HTTP_PORT=8080
 for arg in "${GRADLE_EXTRA[@]+"${GRADLE_EXTRA[@]}"}"; do
@@ -278,7 +296,7 @@ write_summary() {
     {
         echo "### Migration equivalence: $NAME"
         echo
-        echo "uPortal $OLD wrote the data; the build under test is uPortal $NEW."
+        echo "uPortal $OLD wrote the data; the build under test is uPortal $NEW. Time zone: $ZONE."
         echo
         echo "| Check | Result | Files |"
         echo "| --- | --- | --- |"
@@ -303,7 +321,7 @@ if [ "$MODE" = copy ] && [ "$(family "$SOURCE")" != "$(family "$TARGET")" ]; the
     esac
 fi
 
-echo "==== Migration equivalence $NAME: uPortal $OLD writes, uPortal $NEW reads"
+echo "==== Migration equivalence $NAME: uPortal $OLD writes, uPortal $NEW reads, in $ZONE"
 if ! start_database "$SOURCE" || { [ "$TARGET" != "$SOURCE" ] && ! start_database "$TARGET"; }; then
     FAILED+=("starting the databases")
     cleanup
@@ -360,7 +378,8 @@ if [ "$RECORD" = false ] && [ "$OLD_OK" = true ]; then
     else
         migrate() {
             use_vendor ''
-            gradle -PuPortalVersion="$NEW" dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget
+            gradle -PuPortalVersion="$NEW" dbMigrate -PsourceDbVendor="$SOURCE" -PtargetDbVendor="$TARGET" -PdbMigrateClearTarget \
+                -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone="$ZONE"
         }
         prepare() {
             step "$NEW on $TARGET: deploy, dataInit" new-init.log create_database "$TARGET" "$NEW" &&

@@ -1,5 +1,5 @@
 {
-  "description": "Migration equivalence (MOD-D29 item 1, .github/workflows/migration-equivalence.yml). Names are files in tests/db/vendors; which servers are 6.0 targets and which are 5.17 sources comes from tests/db/migrate/matrix.json (MOD-D25). matrix.mjs turns this into the job matrices: push (the integration branch) and workstream (a ccr-43ba0785-hzlrj5-<topic> branch, MOD-D30) as listed; nightly in place on every target, and copies that take every vendor once as a source and once as a target, each into another vendor.",
+  "description": "Migration equivalence (MOD-D29 item 1, .github/workflows/migration-equivalence.yml). Names are files in tests/db/vendors; which servers are 6.0 targets and which are 5.17 sources comes from tests/db/migrate/matrix.json (MOD-D25). matrix.mjs turns this into the job matrices: push (the integration branch) and workstream (a ccr-43ba0785-hzlrj5-<topic> branch, MOD-D30) as listed; nightly in place on every target, and copies that take every vendor once as a source and once as a target, each into another vendor. A copy may name the time zone every JVM of the run uses (EQUIVALENCE_ZONE, default UTC): 5.17 stores some timestamps in it and the copy converts them to UTC (MOD-I141).",
   "push": {
     "in-place": [
       "hsqldb",
@@ -13,7 +13,8 @@
       },
       {
         "source": "mariadb-11.4",
-        "target": "postgres-18"
+        "target": "postgres-18",
+        "zone": "America/New_York"
       }
     ]
   },
@@ -24,7 +25,8 @@
     "copy": [
       {
         "source": "mariadb-11.4",
-        "target": "postgres-18"
+        "target": "postgres-18",
+        "zone": "America/New_York"
       }
     ]
   }
