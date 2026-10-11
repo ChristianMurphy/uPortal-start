@@ -1,14 +1,21 @@
-import { test, expect, APIRequestContext } from "@playwright/test";
+import { expect, APIRequestContext } from "@playwright/test";
 import { config } from "../general-config";
-import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
+import {
+  loginViaApi,
+  logoutViaApi,
+  sessionCsrfHeaders,
+} from "../ux/utils/ux-general-utils";
+import { test } from "./utils/csrf-request";
 
 /*
  * The REST API behind the Reset My Layout web component (uPortal
  * ResetMyLayoutRESTController): GET /api/v6-0/layout/reset names the user
  * whose layout a reset acts on, POST /api/v6-0/layout/reset resets that
  * layout. The request names no user: it is always the signed-in one.
- * Guests get 401, and the POST needs the CSRF token the portal puts on
- * web-component elements. No browser: these run in the database harness too.
+ * Guests get 401, and the POST needs the session's CSRF token, which this
+ * spec's `request` sends (utils/csrf-request.ts); the portal puts the same
+ * token on web-component elements. No browser: these run in the database
+ * harness too.
  */
 const RESET_API = `${config.url}api/v6-0/layout/reset`;
 const LAYOUT_API = `${config.url}api/layout`;
@@ -31,7 +38,7 @@ async function csrfHeaders(
   return { [header]: token };
 }
 
-/** The Welcome page's HTML: the user's tabs and a CSRF token. */
+/** The Welcome page's HTML: the user's tabs. */
 async function welcomePage(request: APIRequestContext): Promise<string> {
   const response = await request.get<unknown>(WELCOME_URL);
   expect(response.status()).toBe(200);
@@ -40,11 +47,8 @@ async function welcomePage(request: APIRequestContext): Promise<string> {
 
 /** Adds a one-column tab to the signed-in user's layout. */
 async function addTab(request: APIRequestContext, name: string): Promise<void> {
-  const token = /[&?]_csrf=([\da-f-]+)/.exec(await welcomePage(request))?.[1];
-  expect(token, "a _csrf parameter on the page").toBeTruthy();
   const response = await request.post<unknown>(LAYOUT_API, {
     form: {
-      _csrf: token ?? "",
       action: "addTab",
       "widths[]": "100",
       tabName: name,
@@ -66,15 +70,11 @@ test.describe("Reset My Layout API as a guest", () => {
   });
 
   test("refuses a guest's reset, CSRF token and all", async ({ request }) => {
-    // Guests do not get the channel, but up-favorites on /p/favorites gives
-    // them a session and a CSRF token
-    const page = await request.get<unknown>(`${config.url}p/favorites`);
-    const element = /<up-favorites\b[^>]*>/.exec(await page.text())?.[0] ?? "";
-    const token = /\scsrf-token="([^"]+)"/.exec(element)?.[1] ?? "";
-    expect(token, "csrf-token on up-favorites").not.toBe("");
-    const headers = { "X-CSRF-TOKEN": token };
+    // The guest page gives the guest a session; the request sends its token
+    const guestPage = await request.get<unknown>(config.url);
+    expect(guestPage.status()).toBe(200);
 
-    const response = await request.post<unknown>(RESET_API, { headers });
+    const response = await request.post<unknown>(RESET_API);
 
     expect(response.status()).toBe(401);
   });
@@ -108,9 +108,14 @@ test.describe("Reset My Layout API as a user", () => {
   test("refuses a reset without the CSRF token", async ({ request }) => {
     await addTab(request, tab);
 
-    const missing = await request.post<unknown>(RESET_API);
+    const [header = "X-CSRF-TOKEN"] = Object.keys(
+      await sessionCsrfHeaders(request),
+    );
+    const missing = await request.post<unknown>(RESET_API, {
+      headers: { [header]: "" },
+    });
     const forged = await request.post<unknown>(RESET_API, {
-      headers: { "X-CSRF-TOKEN": "forged" },
+      headers: { [header]: "forged" },
     });
 
     expect(missing.status()).toBe(403);
@@ -126,6 +131,7 @@ test.describe("Reset My Layout API as a user", () => {
   }) => {
     await addTab(request, tab);
 
+    // The token on the channel's element, as the component sends it
     const response = await request.post<unknown>(RESET_API, {
       headers: await csrfHeaders(request),
       data: { userName: config.users.staff.username },
@@ -145,8 +151,6 @@ test.describe("Reset My Layout API as a user", () => {
 
 /** Resets the signed-in user's layout, so the test leaves the default one. */
 async function resetWithToken(request: APIRequestContext): Promise<void> {
-  const response = await request.post<unknown>(RESET_API, {
-    headers: await csrfHeaders(request),
-  });
+  const response = await request.post<unknown>(RESET_API);
   expect(response.status()).toBe(200);
 }
