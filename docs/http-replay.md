@@ -1,9 +1,9 @@
 # HTTP differential replay and security matrix
 
 The replay answers one question for every change to uPortal or its stack: does the portal still
-answer every request the way uPortal 5.17 did? It records what 5.17 answers once, keeps the
-normalised answers as fixtures in `tests/replay/fixtures/5.17/`, and compares every later build
-with them. A difference fails the check unless it is listed, with its reason, in
+answer every request the way uPortal 5.17 did? It records what 5.17 answers once and keeps the
+normalised answers as fixtures in `tests/replay/fixtures/5.17/`. Later builds are compared with
+them. A difference fails the check unless it is listed, with its reason, in
 `tests/replay/intended-differences.json`. This is item 2 (HTTP differential replay) and item 8
 (security matrix) of MOD-D29 in uPortal's `docs/developer/modernization/LOG.md`.
 
@@ -17,7 +17,7 @@ It is aimed at changes that the Playwright suite can miss because the page still
 
 ## What is requested
 
-Every request runs as each quickstart role, in a fixed order, on a portal that `dataInit` has just
+The replay sends each request as each quickstart role, in a fixed order, on a portal that `dataInit` has just
 filled (the state matters, so the recorder and the replayer both reset the portal first):
 
 | Role | Account |
@@ -46,7 +46,7 @@ The requests come from two sources.
      `exclusive` window states, plus one that does not exist;
    * the CSRF probes, which run last. These are state-changing endpoints called without a token,
      from another origin, or with an unusual method. They use unknown ids and empty or invalid
-     bodies, so on 5.17 they change nothing.
+     bodies, so they don't change anything on 5.17.
 2. **The Playwright suite**. When the reference is recorded, the whole suite runs against 5.17 with a
    network trace (`tests/replay/suite-pw.config.mjs`). `tests/replay/harvest.mjs` then lists every
    request it made to the portal's host, with the role that was logged in at the time, the
@@ -54,7 +54,7 @@ The requests come from two sources.
    The GET and HEAD requests are replayed. The others are listed under `mutations` in
    `suite-requests.json` as the suite's state-changing endpoints; they are not replayed, because
    what they do depends on the state the suite built up. Login and logout requests and requests
-   that carry a CAS ticket are left out, because the security checks cover login.
+   with a CAS ticket in them are left out, because the security checks cover login.
 
 ## What is compared
 
@@ -65,7 +65,7 @@ For each request:
 | Status | exactly |
 | Redirect target | `Location`, made relative to the portal host |
 | Headers | `Content-Type` with its charset, `Content-Encoding`, `Cache-Control`, `Pragma`, `Expires`, `Last-Modified` and `ETag` (shape only), `Vary`, `Allow`, `WWW-Authenticate`, the CORS headers, and the security headers (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`, `Strict-Transport-Security`, `Content-Security-Policy`, `Referrer-Policy`, `Permissions-Policy`, and the `Cross-Origin-*` headers) |
-| Cookies | each `Set-Cookie`: its name, whether its value is empty, and its attributes (`Path`, `HttpOnly`, `Secure`, `SameSite`, `Max-Age`, whether `Expires` is set) |
+| Cookies | the name of each `Set-Cookie`, whether its value is empty, and its attributes (`Path`, `HttpOnly`, `Secure`, `SameSite`, `Max-Age`, whether `Expires` is set) |
 | JSON bodies | parsed, keys sorted, volatile values masked |
 | HTML bodies | an outline: one line per element that has an id, a landmark tag (`form`, `input`, headings, `nav` and so on), a stylesheet or external script, or a portal class (`up-*`, `portlet`, `region` and so on); with its classes, `name`, `type`, `method`, `action`, `href` and `src` (path and parameter names only), and the text of titles, headings and buttons |
 | Other bodies | a hash and the length rounded up to 64 bytes |
@@ -73,34 +73,45 @@ For each request:
 ### Masks
 
 The values below differ between two runs of the same build, so they are replaced before the
-comparison. Each is justified in `tests/replay/lib.mjs`:
+comparison. `tests/replay/lib.mjs` gives the reason for each one:
 
 * session ids (`JSESSIONID`, `;jsessionid=`), which are random per session;
 * CAS tickets (`ST-`, `TGT-`, `LT-` and so on) and CAS login-flow execution keys, which are random
   and single-use;
 * UUIDs, which are generated;
+* the host and port of the portal, also inside other URLs, which become `{origin}`;
 * jQuery's `_=<time>` cache-busting parameter;
-* dates and times: in JSON strings, headers and HTML they keep their shape, with every digit
-  replaced by 9, so a changed format still shows; JSON numbers between the years 2000 and 2100 in
+* transient portlet subscribe ids (`search.ctf1`), which count up in the order portlets render on
+  parallel threads;
+* the names of aggregated skin resources, which are hashes of their content;
+* dates and times. In JSON strings, headers and HTML, every digit becomes 9, so a changed format
+  still shows. HTTP dates become `{http-date}`. JSON numbers between the years 2000 and 2100 in
   milliseconds become `{epoch-ms:number}`, so a switch from numbers to strings still shows;
-* the host and port of the portal, which become `{origin}`;
-* `ETag` values, which are built from the size and modification time of a deployed file; only
-  their shape is compared;
+* `ETag` values, which hash the body or the size and modification time of a deployed file. The
+  tag's length and whether it is weak are compared;
+* the signed token from `/api/v5-1/userinfo`, whose header and claims are compared without its
+  times and signature;
+* the health checks' response times and memory figures, and the session key;
+* arrays that 5.17 builds from hash sets (groups, permission assignments, entity search results,
+  marketplace entries, portlet lists), which are sorted first;
+* two values that 5.17 itself returns differently from run to run: the marketplace's random
+  sample of related portlets (only its size is compared), and permission target names (see the
+  findings in `docs/developer/modernization/notes/http-replay.md`);
 * cookie values, which are never stored.
 
-Nothing else is masked. Generated database ids, layout node ids and portlet window ids are
-deterministic on a freshly initialised portal, so they are compared too. A change in how ids are
-generated (for example a different Hibernate ID generator) shows up as a difference.
+Generated database ids, layout node ids and portlet window ids are deterministic on a freshly
+initialised portal. The replay compares them. A change in how ids are generated, such as a
+different Hibernate ID generator, shows up as a difference.
 
 When recording, the 5.17 portal replays its own recording against itself after another reset. That
-self-check must show no differences; when it does, a value needs a mask.
+self-check must pass. When it fails, a value needs a mask.
 
 ## Security checks
 
 * **Security matrix** (`fixtures/5.17/security-matrix.md` and `.json`): for every crawled route and
   every role, the status and its auth outcome (`allowed`, `redirect-to-login`, `redirect`,
   `unauthorized`, `forbidden`, `not-found`, `method-not-allowed`, `client-error`, `server-error`).
-  Every cell is asserted. A changed cell is unexplained unless the registry lists the status
+  The replay checks each cell. A changed cell is unexplained unless the registry lists the status
   difference for that request.
 * **Local accounts**: every local account with a password in the 5.17 data (`admin`, `student`,
   `staff`, `faculty`, `developer`, all stored as uPortal's salted `(MD5)` hash) must still log in
@@ -122,8 +133,8 @@ Each entry matches requests by `path` (a glob in which `*` matches anything), an
 `status`, `location`, `header:<name>`, `cookie:<name>`, `body`, or a glob of these. Optional
 `from` and `to` values must match exactly, so a later change of the new value is reported again.
 An entry with `security` instead of `path` matches a change in the security checks by its path,
-for example `logins.admin.cas.password` or `csrf.*`. Every entry has a `reason` and a `log`
-reference, for example:
+such as `logins.admin.cas.password` or `csrf.*`. Each entry has a `reason` and a `log`
+reference:
 
 ```json
 {
@@ -138,7 +149,7 @@ reference, for example:
 }
 ```
 
-The report lists entries that matched nothing, so stale entries can be removed.
+The report lists the entries that didn't match anything, so stale entries can be removed.
 
 ## Running it
 
@@ -153,7 +164,7 @@ The report goes to `build/replay/report.md` (and to the job summary on GitHub Ac
 error annotation for every unexplained difference). `build/replay/actual.json` holds everything
 the replay saw. The exit status is 1 when there are unexplained differences. A replay takes a few
 minutes. Requests run one after another, because some of them change state that later ones see
-(for example who is online).
+(who is online, say).
 
 `tests/replay/portal.sh reset <checkout> [gradle args]` stops Tomcat, runs `dataInit`, starts
 Tomcat and waits for the portal. Run it before every replay, because a replay changes state (it
@@ -187,7 +198,7 @@ Re-record after changing `routes.json` or a normaliser in `lib.mjs` (then bump
 suite gains specs whose requests should be covered. Review the fixture diff like code: a
 recording replaces the reference.
 
-To record locally against a 5.17 portal of your own (for example uPortal-start `master` on port
+To record locally against a 5.17 portal of your own (uPortal-start `master` on port
 8080):
 
 ```bash
@@ -201,15 +212,15 @@ node tests/replay/replay.mjs record --origin http://localhost:8080 --suite build
 
 The crawl was built from a survey of every `@RequestMapping` (and `@GetMapping`, `@PostMapping`
 and so on) on uPortal's servlet-side controllers, the servlet mappings in `web.xml`, and the
-dispatcher contexts in `uPortal-webapp/src/main/resources/properties/contexts/servlet/`. Things
-worth knowing when you extend it:
+dispatcher contexts in `uPortal-webapp/src/main/resources/properties/contexts/servlet/`. These details
+matter when you extend it:
 
 * `/api/*` is a `DispatcherServlet` with `<mvc:annotation-driven/>` and Spring 4.3's defaults:
   suffix pattern matching and trailing-slash matching are on, and nothing in uPortal configures
   them.
 * `/api/analytics` and `/api/analytics/level` are exact mappings of a separate dispatcher, so
-  `/api/analytics/` falls through to `/api/*`.
+  `/api/analytics/` goes to the `/api/*` dispatcher instead.
 * Spring Security has no URL rules (`intercept-url pattern="**"` without `access`).
   Authorization happens in the controllers and through `@PreAuthorize`, `@PostAuthorize` and
-  `@PostFilter`, which is why the matrix is per route and role.
+  `@PostFilter`, so the matrix has one cell per route and role.
 * `GET /api/updatePermission` writes through a GET, so the CSRF matcher never sees it.
