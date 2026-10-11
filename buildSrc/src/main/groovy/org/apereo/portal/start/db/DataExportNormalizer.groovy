@@ -1,6 +1,9 @@
 package org.apereo.portal.start.db
 
 import java.nio.charset.StandardCharsets
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import javax.xml.XMLConstants
@@ -30,6 +33,10 @@ import org.w3c.dom.Node
  * marker (MASKS below; each entry says why). That form is the one compared with the recorded
  * reference. Without it, nothing is masked; that form compares two exports of one database, such
  * as 5.17 and the current build reading the same rows.
+ *
+ * An xs:dateTime value with an offset is printed as the same instant in UTC (Z): uPortal prints it
+ * with the offset of the JVM's zone, and a run in another zone than UTC (EQUIVALENCE_ZONE, MOD-I141)
+ * must still match the reference recorded in UTC. The instant itself is compared unchanged.
  *
  * With wholeSeconds, the fractional seconds of every xs:dateTime value are dropped: 5.17 stores
  * timestamps without fractions on MySQL and MariaDB (MOD-I95), so a copy into those servers cannot
@@ -98,6 +105,8 @@ class DataExportNormalizer {
 
     static final Pattern DATE_TIME =
             Pattern.compile(/^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(\.\d+)?(Z|[+-]\d\d:\d\d)?$/)
+
+    static final DateTimeFormatter SECONDS = DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss")
 
     final boolean maskVolatile
     final boolean wholeSeconds
@@ -235,13 +244,21 @@ class DataExportNormalizer {
                 }
             }
         }
-        if (wholeSeconds) {
-            Matcher m = DATE_TIME.matcher(text)
-            if (m.matches()) {
-                return m.group(1) + (m.group(3) ?: '')
-            }
+        Matcher m = DATE_TIME.matcher(text)
+        if (m.matches()) {
+            return dateTime(m.group(1), wholeSeconds ? '' : (m.group(2) ?: ''), m.group(3))
         }
         return text
+    }
+
+    /** An xs:dateTime in UTC when it has an offset; the fraction is printed as given. */
+    static String dateTime(String seconds, String fraction, String offset) {
+        if (offset == null || offset == 'Z') {
+            return seconds + fraction + (offset ?: '')
+        }
+        String utc = LocalDateTime.parse(seconds).atOffset(ZoneOffset.of(offset))
+                .withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime().format(SECONDS)
+        return utc + fraction + 'Z'
     }
 
     private static List<Element> childElements(Element element) {
