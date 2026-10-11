@@ -145,9 +145,22 @@ create_database() {  # create_database <vendor> <version>: an empty uPortal data
 }
 
 import_fixture() {  # import_fixture <vendor> <version>
+    local report
     use_vendor "$1"
-    gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:uPortal:dataImport -Ddir="$ROOT/$EQ/fixture/uportal" &&
-        gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:NewsReaderPortlet:dataImport -Ddir="$ROOT/$EQ/fixture/news-reader"
+    rm -rf overlays/*/build/data-import-reports
+    if gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:uPortal:dataImport -Ddir="$ROOT/$EQ/fixture/uportal" &&
+        gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:NewsReaderPortlet:dataImport -Ddir="$ROOT/$EQ/fixture/news-reader"; then
+        return 0
+    fi
+    # Why an entity failed is only in the import's reports: keep them with the logs, and show
+    # their start in the job log
+    while IFS= read -r report; do
+        mkdir -p "$OUT/$(dirname "$report")"
+        cp "$report" "$OUT/$report"
+        echo "==== $report"
+        head -n 40 "$report"
+    done < <(find overlays/*/build/data-import-reports -type f 2>/dev/null | sort)
+    return 1
 }
 
 start_once() {  # start_once <vendor>: start the deployed portal, wait for it, stop it
