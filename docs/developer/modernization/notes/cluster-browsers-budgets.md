@@ -53,11 +53,15 @@ Seeded faults, each run nightly with `--fault` and caught when the listed checks
 | `lock-ignored` | `abandonedLockAge=PT0S` | `failover-takeover` |
 | `event-flush-delayed` | `flushInitialDelay=PT120S`, uPortal 5's delay | `events-aggregated` |
 | `join-gives-up` | node B's `jgroups.xml` with `join_timeout="1" max_join_attempts="1"` | `cluster-join` |
-| `merge-clear-off` | `org.apereo.portal.cache.clearReplicatedCachesOnMerge=false` | `split-heal` |
+| `merge-clear-off` | `org.apereo.portal.cache.clearCachesOnMerge=false` | `split-heal` |
 | (fixture) | `tests/cluster/fixtures/overlap-*.log`, checked before each run | `no-overlap` |
 
 `lock-ignored` rarely makes two nodes run a job at the same moment, so `no-overlap` is shown to
-work on the fixture logs instead. `permission-session` has no fault in the matrix, at the
+work on the fixture logs instead. That check was empty in CI until `a610706e8`: `.gitignore`
+kept `fixtures/*.log` out of the repository, `lock-overlap.mjs` stopped on a missing file, and the
+check accepted any non-zero status. So no earlier run showed that the check catches an overlap.
+It now requires exit status 1 and the line "time(s) a job ran on two nodes at once", and both
+fixtures are committed. `permission-session` has no fault in the matrix, at the
 owner's request: the local demo below showed it fails without the cache clear, and
 `AuthorizationImplCacheTest` in uPortal guards the clear. `KNOWN_FAILURES` in `cluster.sh` is
 empty.
@@ -106,7 +110,7 @@ under "Clusters: permission changes and portal events".
 | Stale permission decisions | `411a0111b` + `d1acaca7e`: `AuthorizationImplCacheTest` | `134e56ec1`: `AuthorizationImpl` clears `PRINCIPAL_HAS_PERMISSION` and `HAS_UNBLOCKED_GRANT` on every add, remove and update, and `ehcache.xml` replicates only their removals | Local eviction demo below, and `permission-session` in CI run 38136427089 |
 | Events lost at node start | `EventFlushScheduleTest` | `4cc3ecb1c`: the event queue is flushed by its own scheduler, `uPortalEventFlushScheduler`, from the start (`...PortalEventDaoQueuingEventHandler.flushInitialDelay`, default PT0S) | `events-aggregated` in CI runs 38120174431 and 38136427089, `event-flush-delayed` caught |
 | A starting node splits from the cluster | `cluster-join` in uPortal-start | `58168e0fe`: `jgroups.xml` GMS `max_join_attempts` 4 → 8, `join_timeout` kept at 1000 ms | Local measurement below |
-| Stale entries after a split heals (owner's decision, MOD-D54) | `ReplicatedCachesMergeClearerTest`, and `split-heal` in uPortal-start | `07ecf0939`: on a JGroups MergeView each node empties every cache with a JGroups replicator, locally, and logs one INFO line. Setting `org.apereo.portal.cache.clearReplicatedCachesOnMerge`, default true | Local split-heal runs below |
+| Stale entries after a split heals (owner's decision, MOD-D54, option A) | `MergeViewCacheClearerTest`, and `split-heal` in uPortal-start | `caf190feb` (replacing `07ecf0939`, which broke the `noNewEhcache2` freeze rule): `MergeViewNotifier`, a JGroups protocol last in `jgroups.xml`, reports each MergeView, and `MergeViewCacheClearer` then empties every cache of Spring's `CacheManager` on that node and logs one INFO line. Setting `org.apereo.portal.cache.clearCachesOnMerge`, default true. It leaves the user creation locks, the CAS proxy-granting tickets and both `UpdateTimestampsCache` caches alone, with the reasons in `cacheContext.xml` next to `excludedCacheNames` | Local split-heal runs below |
 
 Unit test runs:
 
@@ -192,7 +196,7 @@ tree, because the integration branch then failed to load layouts on PostgreSQL, 
   attempt (`ClientGmsImpl.joinInternal`, JGRP-687), so more attempts catch the answer that came
   after the fourth. uPortal 5.x (`master`, 5.17.10-SNAPSHOT) has the same `join_timeout="1000"
   max_join_attempts="4"` and JGroups 3.6.20, which makes it an upstream candidate. A real
-  network split can still leave stale entries after the merge. Clearing replicated caches on a
+  network split can still leave stale entries after the merge. Emptying the caches on a
   MergeView, which the owner chose (MOD-D54), covers that.
 * **The only node of a cluster waits on its own row after a crash.** JDBC_PING 3.6.20 returns every
   `JGROUPSPING` row as a discovery response with its coordinator flag, dead members' rows
@@ -247,7 +251,8 @@ LOG.md is the coordinator's. Numbers from this workstream's block, MOD-I210 to M
   push (main leg), with seeded faults nightly. A permission change clears both
   permission-decision caches on every node (whole caches, removals replicated, values never),
   and the JCache provider that replaces Ehcache 2 must keep `clear()` cluster-wide. The owner
-  chose to clear replicated caches on a JGroups MergeView (MOD-D54).
+  chose to empty the caches on a JGroups MergeView (MOD-D54, option A: every cache of Spring's
+  `CacheManager` but four).
 
 ## Environment notes
 

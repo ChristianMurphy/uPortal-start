@@ -99,7 +99,10 @@ seeded fault and passes only if the checks meant to catch it fail:
 
 `lock-ignored` makes node B take a lock node A still holds, but in runs 38110056978 to 38120174431
 node B rarely ran the job while node A was inside it, so `no-overlap` failed under it only once in
-three runs. The overlap check is instead shown to work on the fixture logs. `permission-session`
+three runs. The overlap check is instead shown to work on the fixture logs. Until `a610706e8` that
+check was empty in CI: `.gitignore` kept the fixtures out of the repository, so the script stopped
+on a missing file, and the check took that non-zero status as the expected failure. It now passes
+only on exit status 1 with the line "time(s) a job ran on two nodes at once". `permission-session`
 has no fault in the matrix: removing the cache clear from uPortal was shown once to make it fail
 (see the handoff note), and `AuthorizationImplCacheTest` in uPortal guards the clear since.
 
