@@ -42,7 +42,7 @@ Seeded faults (`--fault`, nightly matrix): `replication-off` (uPortal's own
 not depend on replication (uPortal reads a layout from the database when a session starts), so
 no seeded fault covers it yet.
 
-`invalidation-permission` and `events-aggregated` fail because of the uPortal problems under
+`permission-session` and `events-aggregated` fail because of the uPortal problems under
 "Findings". They are listed in `KNOWN_FAILURES` in `cluster.sh`, which reports them as warnings
 without failing the run.
 
@@ -119,8 +119,33 @@ Status at the checkpoint (2026-10-11 01:40 UTC). Nothing is green yet.
     first evidence that failover works.
   * Cluster, `lock-ignored`: stopped at `jobs-once` like the main leg, so the checks that
     must catch the fault never ran.
-* Run for `ff634d161` (cluster test waits for node B's tasks, known failures, JGroups views,
-  query diagnostics, visual timeout, load baseline) is next.
+* Run 38110056978 (head `ff634d161`, the cluster test waits for node B's tasks and reports
+  known failures):
+  * Cluster, all three legs passed. Main leg: `invalidation-portlet` 1 337 ms,
+    `invalidation-layout` 639 ms, `jobs-once` (48 logins, 888 renders), `failover-takeover`
+    61 389 ms after node A's last lock update, `failover-jobs-once`, `no-overlap` (191 runs).
+    The known failures were reported as warnings: `events-aggregated` (96 events of node B
+    from its first seconds) and the permission check.
+  * `replication-off` caught: `invalidation-portlet` failed (no catch-up in 300 s), the other
+    checks passed, failover included (61 303 ms).
+  * `lock-ignored` caught: node B took the lock 32 102 ms after node A's last update, before
+    it counted as abandoned, and `no-overlap` found the raw-event purge running on both nodes
+    at 04:31:14.910.
+  * Node A's existing student session, which had been denied, was still denied about 6
+    minutes after node A's own grant, while a new session on node A was allowed at once. The
+    decision is kept per session. The check now polls new sessions for the cluster part, and
+    `permission-session` covers the existing ones.
+  * Query budgets: `sql.log` held 755 statements, but uPortal renames its threads
+    (`http-nio-8080-exec-3-student`, `uP-PortletExec-12-student-RENDER-[calendar]`), so the
+    exact pattern counted none. Fixed.
+  * Visual: the guest page on the desktop project hung this time, again the first page of one of two workers
+    started together on a fresh portal. The suite now loads the guest page once first.
+  * JGroups views: none was logged, because the loggers wrote to a log the deployed
+    configuration does not fill. They now go to the portal log.
+  * Playwright postgres-18: 8 Announcements tests failed. The same job passed on the
+    integration branch at the merged commit (run 38107357490), and this branch does not touch
+    those tests. Watched in the next run.
+* Run for `54e37edfe` (the fixes above, merged with the integration branch) is next.
 
 ## Findings
 
@@ -134,11 +159,11 @@ Confirmed in CI:
   aggregated past them by then, they are never aggregated. Run 38106773735: 96 events of
   node B from 03:19:08 to 03:19:14, aggregator at 03:29:41. Every node restart in a running
   cluster loses its first minutes from the statistics. The check `events-aggregated` covers it.
-* **Permission changes do not reach the other node.** After node B checked the student's denied
-  SUBSCRIBE, node A's grant (stored in `UP_PERMISSION`, enforced on node A) did not reach node B
-  within 330 s, with or without replication, in all three legs of run 38106773735. The next run
-  checks node A's own cached denial first and what a new session on node B gets, which tells
-  a missing eviction from a missing replication.
+* **A session keeps its permission decisions.** A session that was denied a portlet stayed
+  denied about 6 minutes after an administrator granted it on the same node (run 38110056978,
+  all three legs), while a new session was allowed at once. Whether a session that was allowed
+  keeps a revoked permission as long, the security-relevant direction, is what
+  `permission-session` reports next.
 * **The server names are right.** Since `a63e95a` both nodes report their own `portal.home`
   and server name, and the raw events hold `node-a` and `node-b`.
 
@@ -169,8 +194,8 @@ Draft, to finalise once CI confirms the findings:
 * `MOD-I?`: events a node stores in its first 120 s are never aggregated when another node's
   aggregator has passed their time (the event flush waits for the task scheduler's initial
   delay).
-* `MOD-I?`: a permission granted on one node does not reach another node's checks within
-  330 s. The next run says whether a new session sees it.
+* `MOD-I?`: an existing session keeps the permission decisions it made for minutes after a
+  grant or revocation, on every node.
 * `MOD-I?`: portlet definition changes sometimes do not reach the other node at all (two of
   four runs), if the JGroups view logging confirms a late view.
 * `MOD-I?`: the `uPortal.cacheManager.jgroups.tcp.bind_port` setting does not reach `jgroups.xml`.
@@ -189,14 +214,12 @@ Draft, to finalise once CI confirms the findings:
 
 ## What's left
 
-Next step: read the jobs of the run for `ff634d161` (or its successor) on this branch.
+Next step: read the jobs of the run for `54e37edfe` (or its successor) on this branch.
 
-1. Cluster: the main leg must pass with only the known failures. The `replication-off` and
-   `lock-ignored` legs must each report the fault caught. Update "Findings" from the JGroups
-   views, the permission diagnosis and the unaggregated events.
-2. Query budgets: fix the counting with the help of the `sql.log` summary. Record
-   `tests/query-budget/budgets.json` from the `observed=` line once the counts are not zero.
-3. Visual: should pass with the longer timeout.
+1. Cluster: the three legs must still pass. Read the new permission checks, both directions,
+   and the JGroups views.
+2. Query budgets: record `tests/query-budget/budgets.json` from the `observed=` line.
+3. Visual: should pass with the warm-up.
 4. Revert `9c71a8e` (the on-push-once commit) so those jobs are nightly again.
 5. Finalise the proposed LOG entries.
 
