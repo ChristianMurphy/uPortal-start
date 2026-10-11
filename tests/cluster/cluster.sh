@@ -200,7 +200,16 @@ trace_cluster_locks() {  # trace_cluster_locks <node>: log every cluster-lock ch
     grep -q 'ClusterLockServiceImpl" level="TRACE"' "$file" && return 0
     sed -i 's#</configuration>#  <logger name="org.apereo.portal.concurrency.locking.ClusterLockServiceImpl" level="TRACE"/>\n</configuration>#' "$file"
     # JGroups' warnings and each cluster view the node installs, to the portal log
-    sed -i 's#</configuration>#  <logger name="org.jgroups" level="INFO"/>\n  <logger name="org.jgroups.protocols.pbcast.GMS" level="TRACE"/>\n  <logger name="org.jgroups.protocols.MERGE3" level="DEBUG"/>\n</configuration>#' "$file"
+    sed -i 's#</configuration>#  <logger name="org.jgroups" level="INFO"/>\n  <logger name="org.jgroups.protocols.pbcast.GMS" level="TRACE"/>\n  <logger name="org.jgroups.protocols.MERGE3" level="DEBUG"/>\n  <logger name="org.jgroups.protocols.ASYM_ENCRYPT" level="TRACE"/>\n</configuration>#' "$file"
+    # ASYM_ENCRYPT discards a message sent or received while the node has no secret key or an
+    # older one, and logs that below INFO. JGroups writes through java.util.logging, which
+    # Tomcat's logging.properties filters, so its levels are raised there too.
+    local jul
+    jul=$(node_home "$1")/conf/logging.properties
+    [ -f "$jul" ] && printf '%s\n' 'org.jgroups.protocols.ASYM_ENCRYPT.level = FINEST' \
+        '1catalina.org.apache.juli.AsyncFileHandler.level = ALL' \
+        'java.util.logging.ConsoleHandler.level = ALL' >> "$jul"
+    return 0
 }
 
 deploy() {
@@ -765,7 +774,7 @@ jgroups_report() {  # the cluster views and JGroups problems each node logged
     local n
     for n in a b; do
         log "node $n JGroups: $(jgroups_lines "$n" | grep -c .) lines; the views, merges and problems:"
-        jgroups_lines "$n" | grep -iE 'view|merg|suspect|SEVERE|WARN|ERROR' | cut -c1-240 | head -n 20
+        jgroups_lines "$n" | grep -iE 'view|merg|suspect|secret key|cipher|discard|SEVERE|WARN|ERROR' | cut -c1-240 | head -n 40
     done
 }
 
