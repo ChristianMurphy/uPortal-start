@@ -23,7 +23,7 @@ async function csrfHeaders(page: Page): Promise<Record<string, string>> {
 }
 
 test.describe("Session API as a guest", () => {
-  test("refuses to describe a guest's session", async ({ request }) => {
+  test("refuses a request without a session", async ({ request }) => {
     const response = await request.get<unknown>(SESSION_API);
 
     expect(response.status()).toBe(401);
@@ -32,6 +32,15 @@ test.describe("Session API as a guest", () => {
       status: 401,
       message: "Sign in to have a session timeout",
     });
+  });
+
+  test("refuses a guest who has a session", async ({ page }) => {
+    await page.goto(config.url);
+    await expect(page.locator("div.user-name")).toHaveCount(0);
+
+    const response = await page.request.get<unknown>(SESSION_API);
+
+    expect(response.status()).toBe(401);
   });
 });
 
