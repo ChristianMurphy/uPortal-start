@@ -96,12 +96,13 @@ guest following a link that needs a login gets the login form.
    `CasLoginUrl=${portal.context}/p/login?refUrl=`. uPortal has `LocalLoginRefUrlEncoder` but never
    wires it. The local login form also posts to `/Login` without the `refUrl`, and after signing in
    the user gets the default page instead of the one they asked for. Upstream fix: choose the encoder by configuration, and carry
-   `refUrl` through the login portlet.
+   `refUrl` through the login portlet. **Fixed** in uPortal (MOD-I180): `login.refUrlEncoder=local`
+   replaces the workaround.
 2. **A failed local login doesn't tell the user.** `/Login` with a wrong password redirects to the
    guest page. The "Invalid username or password" message appears only when the user opens the
    login form again (session attribute `up_attemptedUserName`). The CAS form shows its error at
    once. The spec asserts the current behaviour. Upstream fix: redirect a failed local login back
-   to `/p/login`.
+   to `/p/login`. **Fixed** in uPortal (MOD-I181).
 3. **`cas-proxy-test-portlet` never received a proxy ticket before this branch.** uPortal keeps
    `casTicketUserInfoService` commented out in `portletContainerContext.xml`, and uPortal-start
    never set `proxyReceptorUrl` or `proxyCallbackUrl`. On CAS 3.6 the portlet could only show "No
@@ -179,7 +180,8 @@ uPortal's own login form (`SimpleSecurityContextFactory`) against the accounts i
 database:
 
 * `org.apereo.portal.security.provider.cas.CasAssertionSecurityContextFactory.enabled=false`
-* `org.apereo.portal.channels.CLogin.CasLoginUrl=${portal.context}/p/login?refUrl=`
+* `org.apereo.portal.channels.CLogin.CasLoginUrl=${portal.context}/p/login` and
+  `login.refUrlEncoder=local` (MOD-I180 replaced the `?refUrl=` workaround)
 * `logout.redirect=` (empty: back to the guest page)
 
 To keep signing in through CAS, build with `authMode=cas` and `casServerUrl` pointing at your CAS
