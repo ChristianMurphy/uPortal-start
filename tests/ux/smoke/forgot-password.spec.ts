@@ -18,19 +18,20 @@ import {
  * Flow), which the login form also opens as a subflow from "Forgot your
  * username or password?". MOD-D19 maps it to a Thymeleaf full-page flow.
  *
- * The form asks for a username. For a local account it stores a new
- * 20-character reset token in the account's loginToken attribute, emails a
- * link to the login portlet with the user name and token (see
- * reset-password.spec.ts), and says the email was sent.
+ * The form asks for a username. For a local account with an email address
+ * it stores a new 20-character reset token in the account's loginToken
+ * attribute and emails a link to the login portlet with the user name and
+ * token (see reset-password.spec.ts).
  *
- * Known defects (uPortal 5.17), recorded as they are:
- * - An unknown username fails with the channel error, because the flow calls
- *   setAttribute on the null account it found. A known username gets the
- *   "Reset email sent" page, so the form tells anyone which local accounts
- *   exist.
- * - The page says the email was sent whether or not it was:
- *   EmailPasswordResetNotificationImpl logs a failed send and carries on.
- *   The test portal has no mail server, so every test here sends nothing.
+ * Fixed (uPortal, MOD-D45, approved by the project owner): every user name
+ * gets the same "Check your email" page, which says instructions were sent
+ * if the account exists and to contact the help desk if nothing arrives. In
+ * 5.17 an unknown username failed with the channel error and a known one got
+ * "Reset email sent", so the form told anyone which local accounts exist. It
+ * also claimed the email was sent when sending failed; a failed send is now
+ * logged at ERROR for administrators, without the token, and the page stays
+ * the same. The test portal has no mail server, so every send here fails and
+ * these tests cover that path; uPortal's unit tests cover a send that works.
  *
  * Fixed (uPortal, approved by the project owner): reset tokens expire. The
  * flow stores when it issued the token in the loginTokenIssued attribute, and
@@ -59,6 +60,24 @@ async function requestReset(page: Page, username: string): Promise<void> {
   await waitForPortalRequestsToSettle(page);
 }
 
+const NEUTRAL_TEXT =
+  "If that user name has a local account with an email address, reset instructions were sent. Contact the help desk if nothing arrives.";
+
+/** The text of the page after a request, which must not depend on the name. */
+async function expectNeutralPage(page: Page): Promise<string> {
+  const heading = page.getByRole("heading", { name: "Check your email" });
+  await expect(heading).toBeVisible();
+  await expect(page.getByText(NEUTRAL_TEXT)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Return to log in form" }),
+  ).toBeVisible();
+  await expect(page.getByText("Reset email sent")).toHaveCount(0);
+  return (
+    (await page.locator("div.card.portlet", { has: heading }).textContent()) ??
+    ""
+  );
+}
+
 test.describe("Forgot password", () => {
   let admin: APIRequestContext;
   let account: Account;
@@ -83,7 +102,7 @@ test.describe("Forgot password", () => {
     ).toBeVisible();
   });
 
-  test("stores a dated reset token and says the email was sent", async ({
+  test("stores a dated reset token and shows the neutral page when the send fails", async ({
     page,
   }) => {
     expect(await loginToken(admin, account.username)).toBeUndefined();
@@ -91,17 +110,7 @@ test.describe("Forgot password", () => {
     await openForgotPassword(page);
     await requestReset(page, account.username);
 
-    await expect(
-      page.getByRole("heading", { name: "Reset email sent" }),
-    ).toBeVisible();
-    await expect(
-      page.getByText(
-        "Password reset instructions have been sent to your email address.",
-      ),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Return to log in form" }),
-    ).toBeVisible();
+    await expectNeutralPage(page);
     expect(await loginToken(admin, account.username)).toMatch(
       /^[\dA-Za-z]{20}$/,
     );
@@ -125,17 +134,25 @@ test.describe("Forgot password", () => {
     expect(second).not.toEqual(first);
   });
 
-  test("an unknown username fails with the channel error (defect)", async ({
+  test("known and unknown user names get the identical page", async ({
+    browser,
     page,
   }) => {
     await openForgotPassword(page);
-    await requestReset(page, `${account.username}-unknown`);
+    await requestReset(page, account.username);
+    const known = await expectNeutralPage(page);
+
+    const other = await browser.newContext();
+    const guest = await other.newPage();
+    await openForgotPassword(guest);
+    await requestReset(guest, `${account.username}-unknown`);
+    const unknown = await expectNeutralPage(guest);
     await expect(
-      page.getByText("An error occurred loading this content."),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Reset email sent" }),
+      guest.getByText("An error occurred loading this content."),
     ).toHaveCount(0);
+    await other.close();
+
+    expect(unknown).toEqual(known);
   });
 
   test("the login form opens it", async ({ page }) => {
@@ -150,8 +167,6 @@ test.describe("Forgot password", () => {
       page.getByRole("heading", { name: "Reset my password" }),
     ).toBeVisible();
     await requestReset(page, account.username);
-    await expect(
-      page.getByRole("heading", { name: "Reset email sent" }),
-    ).toBeVisible();
+    await expectNeutralPage(page);
   });
 });
