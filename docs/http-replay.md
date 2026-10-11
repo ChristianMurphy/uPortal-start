@@ -135,16 +135,18 @@ self-check must pass. When it fails, a value needs a mask.
   every role, the status and its auth outcome (`allowed`, `redirect-to-login`, `redirect`,
   `unauthorized`, `forbidden`, `not-found`, `method-not-allowed`, `client-error`, `server-error`).
   The replay checks each cell. A changed cell is unexplained unless the registry lists the status
-  difference for that request.
+  or location difference for that request (a redirect's outcome depends on where it points).
 * **Local accounts**: every local account with a password in the 5.17 data (`admin`, `student`,
   `staff`, `faculty`, `developer`, all stored as uPortal's salted `(MD5)` hash) must still log in
   with its password and be refused with a wrong one. This is checked both through uPortal's own
-  `/uPortal/Login` and through the CAS login form.
+  `/uPortal/Login` and through the CAS login form. uPortal-start no longer deploys CAS. The CAS
+  logins are refused now, and the registry says why.
 * **Session cookie**: the attributes of the cookies the portal sets when a user logs in.
-* **CSRF**: the status and outcome of every CSRF probe. On 5.17, `PortalCsrfSecurityRequestMatcher`
-  exempts `/api.*`, `/Login.*` and `/Logout.*`, so CSRF is enforced only on portal POSTs such as
-  portlet actions. A change in either direction (an endpoint that now refuses a request without a
-  token, or one that no longer does) fails until it is registered as intended.
+* **CSRF**: the status and outcome of every CSRF probe, compared probe by probe
+  (`csrf.<role> <method> <path>`). On 5.17, `PortalCsrfSecurityRequestMatcher` exempts `/api.*`,
+  `/Login.*` and `/Logout.*`, so CSRF is enforced only on portal POSTs such as portlet actions.
+  A change in either direction (an endpoint that now refuses a request without a token, or one
+  that no longer does) fails until it is registered as intended.
 * **Security header snapshot**: the security headers and cookies of representative pages, for
   guest and admin.
 
@@ -152,13 +154,16 @@ self-check must pass. When it fails, a value needs a mask.
 
 `tests/replay/intended-differences.json` lists the differences that are reviewed and intended.
 Each entry matches requests by `path` (a glob in which `*` matches anything), and optionally by
-`roles`, `method` and `set` (`crawl` or `suite`). It matches one kind of difference by `field`:
+`roles`, `method` or `methods`, `set` (`crawl` or `suite`) and `status`, the status the request
+answers now. It matches one kind of difference by `field`:
 `status`, `location`, `header:<name>`, `cookie:<name>`, `body`, or a glob of these. Optional
 `from` and `to` values must match exactly, so a later change of the new value is reported again.
 `fromMatch` and `toMatch` are regular expressions for long values, and `detail` is a regular
-expression that every changed line of a JSON or HTML body must match. An entry with `security`
+expression that every changed line of a JSON or HTML body must match. A body that changed for more
+than one reason, such as a guest page with the CSRF meta tags and the new Sign In link, is
+explained when every changed line matches the `detail` of some entry. An entry with `security`
 instead of `path` matches a change in the security checks by its path, such as
-`logins.admin.cas.password` or `csrf`.
+`logins.admin.cas.password` or `csrf.guest POST /uPortal/api/layout`.
 
 Every entry has these fields:
 
@@ -184,8 +189,12 @@ Every entry has these fields:
 }
 ```
 
-The CSRF protection of every unsafe `/api` request (MOD-I130) will change CSRF probe results. Their
-entries cite MOD-I130 and its UPGRADING-6.0.md section.
+The CSRF protection of every unsafe `/api` request (MOD-I130) changed the CSRF probe results and
+the status of every unsafe `/api` request in the crawl: they answer 403 without a token. Their
+entries (`csrf-*`) cite MOD-I130 and the section "Unsafe requests to /api need the CSRF token".
+The crawl's one setup request is the POST that creates a portlet list. It sends the session's
+CSRF header like the portal's own scripts (`"csrfHeader": true` in `routes.json`), with the token
+from the last page the session loaded. 5.17 has no such meta tag and ignores the header.
 
 ## Rules
 
