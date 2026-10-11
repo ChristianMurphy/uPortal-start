@@ -34,8 +34,8 @@ MOD-D29 items 2 and 8. The full description of the tool is in `docs/http-replay.
     Tomcat 8.5, Gradle 6.9.4) after a `workflow_dispatch` with `record`, or after a push whose
     message contains `[replay-record]`. With `commit`, the fixtures are committed back to the
     branch.
-* `eslint.config.js` declares Node globals for `.mjs` files. This also fixes `npm run lint`,
-  which failed on `tests/db/migrate/matrix.mjs`.
+* Each Node script declares the globals it uses in a `/* global */` comment, as the integration
+  branch's scripts do. `tests/db/migrate/matrix.mjs` gets one too, which fixes `npm run lint`.
 
 ## Coverage
 
@@ -82,6 +82,12 @@ uPortal-start with released uPortal 5.17.9 on Tomcat 8.5.100. The current build 
 * **Final reference** recorded from real `master` with normaliser version 2, committed as
   7eb4311. It holds 2387 exchanges, of which 1386 come from the crawl, and its matrix has 277
   routes. Its self-check passes with no differences.
+* **CI replay with the rules: green**, run 38117263527 (uPortal-start 0bcfb46, uPortal
+  968c57dd29). The `rules` job passed its 10 checks. The replay compared 2387 exchanges with none
+  unexplained, applied 362 registered differences, and found 35 changed matrix cells, all
+  registered and none a privilege gain. Logins, CSRF and headers did not change. Every entry's
+  UPGRADING-6.0.md section exists. `skin-css-pinned-compilers` is reported as unused here
+  (`where: local`) and does not fail the run.
 * **CI replay of the current build: green**, run 38109159151. 2387 exchanges compared, none
   unexplained. 362 registered differences in 9 registry entries, and 35 matrix cells changed, all
   of them the registered 405 to 404 change. 10 suite requests are not replayed because they write
@@ -225,7 +231,7 @@ CI run 38109159151.
 | The reset empties HSQLDB and waits 30 seconds for portlets after the health check | | `portal.sh`, findings 5 and 10 |
 | The record job may push fixtures to the branch it runs for (never the default branch), and a `[replay-record]` commit message triggers it | | `replay.yml` |
 | On workstream branches the replay runs only when `tests/replay` or the workflow changes | | `replay.yml`, MOD-D30 |
-| Node globals declared for `*.mjs` in `eslint.config.js` | | `eslint.config.js` |
+| Node globals declared per script, including `tests/db/migrate/matrix.mjs` | | `/* global */` comments |
 
 Each registry entry now says whether users, admins or API clients see the change (`visible`), and
 visible entries give the UPGRADING-6.0.md section about them (`upgrading`):
