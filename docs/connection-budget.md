@@ -46,11 +46,30 @@ Each pool takes four sizes:
 | --- | --- |
 | `initialSize` | connections opened when the pool starts |
 | `minIdle` | idle connections the pool keeps open between requests |
-| `maxIdle` | idle connections above which a returned connection is closed |
+| `maxIdle` | idle connections the pool keeps when its idle sweeper is off; uPortal's pools run the sweeper, which closes a connection once it has been idle for `minEvictableIdleTimeMillis` (5 minutes for `PortalDb`, down to `minIdle`) |
 | `maxActive` | connections the pool opens at most; a request waits up to `maxWait` milliseconds for one, then fails |
 
-`maxActive` is what counts against the database's limit. Keep `maxIdle` below it so that a burst
-of requests doesn't hold its connections afterwards.
+`maxActive` is what counts against the database's limit. After a burst of requests the pool keeps
+its connections open for a few minutes, so a portal under steady load holds close to its peak.
+
+## Measured use
+
+On PostgreSQL 18, with every bundled portlet deployed and the whole Playwright suite running, the
+database had 32 client connections at the median and 38 at the peak, with the 5.x pool sizes and
+with the budget alike. Tagging each web application's connections (`ApplicationName` in the JDBC
+URL) showed where they were:
+
+| Web application | Median | Peak |
+| --- | ---: | ---: |
+| uPortal (its three pools) | 27 | 27 |
+| NotificationPortlet | 2 | 2 |
+| SimpleContentPortlet | 2 | 2 |
+| Announcements | 1 | 3 |
+| NewsReaderPortlet | 1 | 2 |
+| BookmarksPortlet, CalendarPortlet | 0 | 1 each |
+
+Nearly all were idle connections kept by the pools between requests. The Playwright suite is light
+load. A site under real load comes closer to the budget's maximums.
 
 ## Sizing a site
 
