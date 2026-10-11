@@ -180,6 +180,8 @@ show_reports() {  # show_reports <import|export>
         cp "$report" "$OUT/$report"
         echo "==== $report"
         head -n 40 "$report"
+        # A stack trace's cause comes after its first 40 lines
+        grep -E '^(Caused by|[[:space:]]*[A-Za-z0-9_.$]+(Exception|Error):)' "$report" | sort -u | head -n 10
     done < <(find overlays/*/build/data-"$1"-reports -type f 2>/dev/null | sort)
 }
 
