@@ -240,6 +240,35 @@
             "upgrading": "Popular Portlets is a web component"
         },
         {
+            "id": "search-web-component-page",
+            "path": "/uPortal/*",
+            "field": "body",
+            "detail": "^(- .*(div#webSearchContainer\\.portal-search|_webSearchForm\\[method=POST\\]\\[action=/uPortal/p/search\\.ctf\\{n\\}/normal/action\\.uP\\?_csrf\\]\\[role=form\\]|_webSearchInput\\.form-control\\.searchInput\\[name=query\\]\\[type=search\\]|button#webSearchSubmit\\.btn\\.btn-secondary\\[name=submit\\]\\[type=submit\\] \"Search\"|link\\[type=text/css\\]\\[rel=stylesheet\\]\\[href=/uPortal/css/search/autosuggest\\.css\\]|script\\[type=text/javascript\\]\\[src=/uPortal/scripts/search/autosuggestHandler\\.js\\])$|\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-search-[^\\]]+\\.js\\]$)",
+            "reason": "The search-launcher channel, in the header region of every page, guest pages included, renders <up-search-launcher>: the Search portlet's form, field and Search button and the page's autosuggest script and stylesheet are gone from the outline, and the page loads the up-search module. The component's own box is in its shadow root, which the outline doesn't show.",
+            "log": "uPortal-start 46fc5e3",
+            "visible": true,
+            "upgrading": "Search is a web component, and the Search portlet is gone"
+        },
+        {
+            "id": "search-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "(webComponent\\.(moduleUrl|tagName): added .*up-search|webComponent\\.attributes: added .*search-fname=search|portletName: \"Search\" -> \"WebComponent\")",
+            "reason": "The layout and portlet registry APIs describe the search and search-launcher channels as Web Component channels: their portletName becomes WebComponent, and the webComponent parameters are added, including the launcher's search-fname attribute. Their type change is the Favorites registry entry's type line.",
+            "log": "uPortal-start 46fc5e3",
+            "visible": true,
+            "upgrading": "Search is a web component, and the Search portlet is gone"
+        },
+        {
+            "id": "search-autosuggest-removed",
+            "path": "/uPortal/*/search/autosuggest*",
+            "field": "*",
+            "reason": "uPortal removes the Search portlet's type-ahead script (scripts/search/autosuggestHandler.js) and stylesheet (css/search/autosuggest.css); the type-ahead is part of <up-search-box>. Both answer 404, with Tomcat's error page and its headers.",
+            "log": "uPortal c565460d2",
+            "visible": true,
+            "upgrading": "The type-ahead script and stylesheet are gone"
+        },
+        {
             "id": "web-components-admin-marketplace",
             "path": "/uPortal/api/marketplace/entries.json",
             "roles": [
