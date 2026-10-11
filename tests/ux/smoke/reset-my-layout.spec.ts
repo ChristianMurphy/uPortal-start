@@ -6,6 +6,7 @@ import {
   sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
+import { setUserLocale } from "../utils/user-locale";
 
 /*
  * What the Reset My Layout channel (fname reset-my-layout) does for users.
@@ -347,4 +348,51 @@ test.describe("Reset My Layout web component", () => {
       "Your session has expired. Sign in again to reset your layout.",
     );
   });
+});
+
+/*
+ * The component in the user's language (MOD-D49): its texts come from the
+ * portal's Spanish and French messages.
+ */
+test.describe("Reset My Layout in Spanish and French", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, config.users.developer);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await setUserLocale(page, "en_US");
+    await logout(page);
+  });
+
+  for (const { code, language, resetNow, heading } of [
+    {
+      code: "es_ES",
+      language: "es",
+      resetNow: "Reiniciar ahora",
+      heading: "Restablecer diseño de usuario",
+    },
+    {
+      code: "fr_FR",
+      language: "fr",
+      resetNow: "Réinitialiser maintenant",
+      heading: "Réinitialiser la mise en page de l'utilisateur",
+    },
+  ]) {
+    test(`speaks ${language} to a user whose language is ${code}`, async ({
+      page,
+    }) => {
+      await setUserLocale(page, code);
+
+      const content = await openChannel(page);
+
+      await expect(content.locator("up-reset-my-layout")).toHaveAttribute(
+        "locale",
+        new RegExp(`^${language}`),
+      );
+      await content.getByRole("button", { name: resetNow }).click();
+      await expect(
+        content.getByRole("heading", { name: heading, exact: true }),
+      ).toBeVisible();
+    });
+  }
 });
