@@ -156,6 +156,21 @@ tree, because the integration branch then failed to load layouts on PostgreSQL, 
 | Main, 15:24 to 15:36 UTC | PASS. The ports were blocked at 15:30:05 and each node had a view of one member at 15:30:19. After node A's two changes, the ports opened at 15:30:25, and JGroups merged the nodes at 15:31:55. Node B then showed both changes within 186 ms. Each node logged "cleared 112 replicated caches on this node" | 11 of 11 |
 | `merge-clear-off`, 15:36 to 15:48 UTC | FAIL as it should: 30 s after the merge node B still showed the old title and denied the student (HTTP 403) | The others passed |
 
+That first proof used `ReplicatedCachesMergeClearer`, which broke the `noNewEhcache2` freeze rule.
+Option A (uPortal `caf190feb`) replaced it, and the same legs ran again on 17:01 to 17:42 UTC with
+`SPLIT_HEAL_STATEMENTS=1`, which counts the statements in PostgreSQL's log:
+
+| uPortal | `split-heal` | Caches emptied per node | Statements in the 30 s after the merge | In the 30 s before the split | The rest |
+| --- | --- | --- | --- | --- | --- |
+| `343c6b395`, replicated caches only, 17:01 to 17:16 UTC | PASS, node B followed within 175 ms of the merge at 17:12:11 | 112 | 500 | 1 788 | 10 of 10 |
+| `caf190feb`, option A, 17:17 to 17:29 UTC | PASS, node B followed within 227 ms of the merge at 17:25:08 | 191 | 859 | 1 487 | 10 of 10 |
+| `caf190feb` with `merge-clear-off`, 17:29 to 17:42 UTC | FAIL as it should: 30 s after the merge node B showed the old title and the student got HTTP 403 | none | not counted | not counted | The others passed |
+
+Option A costs about 360 more statements in the 30 s after a merge than emptying only the
+replicated caches, on one test portal. Both bursts stayed below the statement rate the test's own
+traffic caused before the split. `MigrationFreezeRulesTest`, `noNewEhcache2` included, passed on
+`caf190feb`, and `check-freeze-store.py` finds that no rule grew.
+
 ## CI results
 
 * Runs 38095302669 to 38113631592 built the test: the first working setup, the `updatePermission`
