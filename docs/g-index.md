@@ -1,7 +1,7 @@
 # G-index: large-campus workload and index audit
 
 G-index answers one question for the uPortal 6.0 schema: does every index a high-traffic portal
-needs exist, and is every index there worth keeping? It is the `G-index` gate of the uPortal 6.0
+needs exist, and which indexes cost writes without serving a query? It is the `G-index` check of the uPortal 6.0
 modernization plan (MOD-D12), and its findings define the 6.0 index set (MOD-D11, MOD-D25).
 
 For one database (PostgreSQL 18 or MariaDB 12.3), `tests/db/gindex/gindex.sh`:
@@ -11,8 +11,8 @@ For one database (PostgreSQL 18 or MariaDB 12.3), `tests/db/gindex/gindex.sh`:
 2. deploys every overlay against it and runs `dataInit`;
 3. starts the portal, has the quickstart `student` customize their layout through the layout API
    (a new tab with two columns, a favorite), stops the portal and reads that layout as the template
-   for generated users; the student's layout is then reset, so the Playwright specs see the usual
-   one;
+   for generated users. The student's layout is then reset to the one the Playwright specs
+   expect;
 4. generates a synthetic campus with a seeded generator and bulk-loads it (`COPY` on PostgreSQL,
    `LOAD DATA` on MariaDB), with foreign keys on, then positions every ID generator and counter
    above the new keys and analyzes the tables;
@@ -32,7 +32,7 @@ tests/db/gindex/gindex.sh --reuse --fault drop-index:idx_upp_prefs_id postgres-1
 
 `--reuse` starts the webapps already deployed in the checkout, and each is built with one vendor's
 JDBC driver: after a run on another vendor, run `./gradlew -PdbVendor=<vendor> tomcatDeploy` first.
-`gindex.sh --help` lists the options. It needs what `tests/db/harness.sh --full-suite` needs:
+`gindex.sh --help` lists the options. It needs what `tests/db/harness.sh --full-suite` needs, that is
 Docker, Java 11 plus a JDK 21 for Gradle, `npm ci`, Chromium for Playwright, and Python 3 (standard
 library only). Everything a run writes is in `build/g-index/<vendor>/`: `load.md` (rows and seconds
 per table), `workload.md` (what ran, and how often each analytics job's statements did),
@@ -55,42 +55,43 @@ Scale 1 is the large campus of MOD-Q7. `--scale` takes a fraction of it.
 | Aggregations of the last 2 years (login, portlet execution, tab render, portlet layout, search, concurrent users) at the configured intervals, for the aggregated groups | 14 M | 1.8 M |
 
 Everything is a function of `(seed, table, row)`: a table or a part of one can be generated alone
-and comes out the same each time. `--now` pins the dataset's present (default: the current
-minute, so the analytics jobs find work). The generator keeps the portal working on the data:
+and comes out the same each time. `--now` pins the dataset's present. The default is the current
+minute, which gives the analytics jobs fresh events to process. The generator keeps the portal working on the data:
 values that uPortal stores through `NullSafeStringColumnMapper` get its `_` prefix, profiles point
 at a layout only when the user has one of their own, raw events newer than 20 minutes are left
-for the aggregation job (each with its own large object on PostgreSQL, as 5.17 stores them; older,
+for the aggregation job (each with its own large object on PostgreSQL, as 5.17 stores them, while older,
 already aggregated events share one per event type), and the aggregation status says where the
-jobs left off. Aggregations fan out per portlet and search term; below scale 0.1 that fan-out
-shrinks with the scale, since a smaller campus has as many intervals but fewer portlets in use.
+jobs left off. Aggregations have a row per interval and portlet (or search term). Below scale 0.1 the
+number of portlets and terms shrinks with the scale, since a smaller campus has as many intervals but
+fewer portlets in use.
 
 ## The checks
 
-| Check | Fails the gate | How |
+| Check | Fails the audit | How |
 | --- | --- | --- |
-| `seq-scan` | yes | A `Seq Scan` in a plan the workload executed (`auto_explain` with `ANALYZE, BUFFERS`) on a table with at least `--min-rows` rows (1,000). The statement is planned again with sequential scans disabled: if no index condition on the table appears, the finding says "no usable index" and suggests one from the scan's filter or join condition; if one does, it counts only on a table ten times the threshold. |
+| `seq-scan` | yes | A `Seq Scan` in a plan the workload executed (`auto_explain` with `ANALYZE, BUFFERS`) on a table with at least `--min-rows` rows (1,000). The statement is planned again with sequential scans disabled. Without an index condition on the table in that plan, the finding reports "no usable index" with a suggested index from the scan's filter or join condition. With one, the scan counts only on a table ten times the threshold. |
 | `fk-no-index` | yes | A foreign key whose columns are not the leading columns of an index |
-| `duplicate-index` | yes | Two indexes with the same key columns (a unique index is never made redundant by a plain one) |
+| `duplicate-index` | yes | Indexes with the same key columns (a plain index never makes a unique one redundant) |
 | `redundant-index` | yes | A plain index whose key columns are a left prefix of another index's |
 | `unused-index` | no, reported | `idx_scan = 0` after the workload: removal candidates, marked when they back a constraint |
 | `top-total`, `top-mean` | no, reported | The workload's statements with the highest total and mean time |
 
-MariaDB gets the same checks from `performance_schema` (statement digests that used no index,
-index I/O per index) and `information_schema`. InnoDB creates an index for every foreign key, so
-`fk-no-index` cannot fire there; those indexes show up as redundant when another index covers them.
+MariaDB gets the same checks from `performance_schema` (statement digests that ran without an index,
+index I/O per index) and `information_schema`. InnoDB creates an index for every foreign key, which
+keeps `fk-no-index` empty there. Those indexes show up as redundant when another index covers them.
 
 Only uPortal's own tables (`up_*`) are audited (`audit.py --tables`); the bundled portlets keep
 their tables in the same database and their 5.x schema in 6.0 (MOD-D11).
 
 ### The allowlist
 
-`tests/db/gindex/allowlist.txt` lists the findings that do not fail the gate, each with a reason:
+`tests/db/gindex/allowlist.txt` lists the findings that do not fail the audit, each with a reason:
 `<check> <subject glob> [vendor=x] -- <reason>`. The subject is `<table>.<constraint or index>`,
 or `<table>@<statement>` for a sequential scan, where the eight hex digits identify one SQL
 statement (shown in the summary). Entries marked `6.0:` are 5.17 gaps that the 6.0 index set
-removes; drop them when it lands. A new statement that scans a large table, a new foreign key
-without an index or a new duplicate index fails the gate until it is fixed or reviewed into the
-list. Entries that matched nothing are listed under the summary.
+removes. Delete them when that change is merged. A new statement that scans a large table fails the
+audit until it is fixed or reviewed into the list, and so do new foreign keys and duplicate indexes
+the checks report. The summary lists the entries that didn't match a finding.
 
 On GitHub Actions the load, workload and audit tables go to the job summary and every failing
 finding becomes an annotation with its suggested DDL.
@@ -109,8 +110,8 @@ the same name, else its parent branch, else `master`) and runs:
 ## Full scale
 
 The whole campus (scale 1) needs a machine with about 16 cores, 64 GB of memory and 200 GB of
-disk: 155 million raw events take about 60 GB in PostgreSQL plus their indexes, and generating them
-takes about one CPU-hour, spread over up to 32 parts. Run it with a longer driver and more users:
+disk. 155 million raw events take about 60 GB in PostgreSQL plus their indexes. Generating them
+uses about one CPU-hour, split into up to 32 parts that load in parallel. Run it with a longer driver and more users:
 
 ```bash
 tests/db/gindex/gindex.sh --scale 1 --duration 1800 --concurrency 200 --keep postgres-18
