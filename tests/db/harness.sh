@@ -27,8 +27,9 @@
 #                   pool raised past the connection budget and check that the budget check fails
 #
 # With --portal on PostgreSQL the database's client connections are counted every second from
-# Tomcat's start to the end of the specs; a peak above the connection budget (80, or
-# HARNESS_CONNECTION_BUDGET) fails the vendor (docs/connection-budget.md).
+# Tomcat's start to the end of the specs; a peak above the connection budget (110, or
+# HARNESS_CONNECTION_BUDGET) or above the server's max_connections less 10, whichever is lower,
+# fails the vendor (docs/connection-budget.md).
 #
 # Environment:
 #   HARNESS_DB_CONTAINER  with --external: the container to `docker exec` into for vacuumlo
@@ -230,10 +231,12 @@ run_portal() {
 }
 
 seeded_pool_fault() {  # the budget check must fail when one pool holds more than the budget allows
-    local vendor="$1" out="$2" container="$3" url="$4" size=$((CONNECTION_BUDGET - 5)) caught=false
+    local vendor="$1" out="$2" container="$3" url="$4" size caught=false
     local p=tomcat.jdbc.pool.PortalDb
-    echo "==== $vendor: seeded fault, the portal's PortalDb pool keeps $size connections"
     start_connection_sampler "$container" "$out/connections-seeded-fault.txt"
+    # PortalDb alone 5 below the limit; the other pools take the portal over it
+    size=$((CONNECTION_LIMIT - 5))
+    echo "==== $vendor: seeded fault, the portal's PortalDb pool keeps $size connections"
     if CATALINA_OPTS="${CATALINA_OPTS:-} -D$p.initialSize=$size -D$p.minIdle=$size -D$p.maxIdle=$size -D$p.maxActive=$size" \
             start_portal "$vendor"; then
         PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts tests/api \
@@ -243,13 +246,13 @@ seeded_pool_fault() {  # the budget check must fail when one pool holds more tha
     # Its error annotation would mark the run as failed; this one is meant to fail, and only by
     # going over the budget (not for want of samples)
     GITHUB_ACTIONS=false stop_connection_sampler "$out/connections-seeded-fault.txt" "$vendor, seeded fault" ||
-        caught=$(awk -v b="$CONNECTION_BUDGET" '$2 > b { o = 1 } END { print (o ? "true" : "false") }' \
+        caught=$(awk -v b="$CONNECTION_LIMIT" '$2 > b { o = 1 } END { print (o ? "true" : "false") }' \
             "$out/connections-seeded-fault.txt")
     if [ "$caught" = true ]; then
         github_annotation notice "$vendor: seeded pool fault caught" "The connection budget check failed with PortalDb at $size connections"
         return 0
     fi
-    github_annotation error "$vendor: seeded pool fault missed" "PortalDb at $size connections stayed within the budget of $CONNECTION_BUDGET"
+    github_annotation error "$vendor: seeded pool fault missed" "PortalDb at $size connections stayed within the limit of $CONNECTION_LIMIT"
     return 1
 }
 

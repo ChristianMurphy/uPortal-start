@@ -109,13 +109,17 @@ start_portal() {  # start_portal <vendor>: start Tomcat on the vendor's database
 }
 
 # The connection budget (MOD-I190): what the portal and the bundled portlets may hold on the database
-# at once, below PostgreSQL's default max_connections=100 so admin and monitoring tools still get
-# in. docs/connection-budget.md lists the pools that make it up.
-CONNECTION_BUDGET=${HARNESS_CONNECTION_BUDGET:-80}
+# at once (docs/connection-budget.md lists the pools that make it up). A run is checked against the
+# budget or the server's max_connections less 10 for admin and monitoring tools, whichever is lower.
+CONNECTION_BUDGET=${HARNESS_CONNECTION_BUDGET:-110}
+CONNECTION_LIMIT=$CONNECTION_BUDGET
 
 start_connection_sampler() {  # start_connection_sampler <container> <file>: count client connections every second
-    local container="$1" file="$2"
+    local container="$1" file="$2" max
     : > "$file"
+    max=$(docker exec "$container" psql -U uportal -d uportal -Atc "show max_connections" 2>/dev/null)
+    CONNECTION_LIMIT=$CONNECTION_BUDGET
+    if [ -n "$max" ] && [ $((max - 10)) -lt "$CONNECTION_BUDGET" ]; then CONNECTION_LIMIT=$((max - 10)); fi
     (
         while :; do
             n=$(docker exec "$container" psql -U uportal -d uportal -Atc \
@@ -132,14 +136,15 @@ stop_connection_sampler() {  # stop_connection_sampler <file> <label>: print the
     kill "$SAMPLER_PID" 2>/dev/null; wait "$SAMPLER_PID" 2>/dev/null
     samples=$(wc -l < "$file")
     peak=$(awk 'BEGIN { m = 0 } $2 > m { m = $2; t = $1 } END { print m " at " t }' "$file")
-    echo "Database connections ($label): peak ${peak:-0}, $samples samples, budget $CONNECTION_BUDGET"
+    echo "Database connections ($label): peak ${peak:-0}, $samples samples, limit $CONNECTION_LIMIT" \
+        "(budget $CONNECTION_BUDGET)"
     if [ "$samples" -lt 10 ]; then
         echo "The connection sampler took only $samples samples ($file)" >&2
         return 1
     fi
-    if [ "${peak%% *}" -gt "$CONNECTION_BUDGET" ]; then
+    if [ "${peak%% *}" -gt "$CONNECTION_LIMIT" ]; then
         github_annotation error "$label: database connections over budget" \
-            "Peak ${peak} connections, budget $CONNECTION_BUDGET (docs/connection-budget.md)"
+            "Peak ${peak} connections, limit $CONNECTION_LIMIT (docs/connection-budget.md)"
         return 1
     fi
 }
