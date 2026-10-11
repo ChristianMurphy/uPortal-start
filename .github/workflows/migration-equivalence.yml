@@ -71,7 +71,38 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.uportal.outputs.version }}
+      in-place: ${{ steps.matrix.outputs.in-place }}
+      copy: ${{ steps.matrix.outputs.copy }}
     steps:
+      # The planning of the database jobs (MOD-I303) runs first in this job, not in a job of its
+      # own that the build would wait for. It needs only the test files of this repository.
+      - name: Checkout the plan files
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            tests/db/equivalence
+            tests/db/migrate
+            tests/db/vendors
+          path: plan
+      - name: Test the code page conversion of the fixture (MOD-I196)
+        working-directory: plan
+        run: python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'
+      # Prototype only (MOD-D30): a workstream branch runs the light set
+      - name: Choose the push, workstream or nightly set
+        id: matrix
+        working-directory: plan
+        env:
+          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
+          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+        run: |
+          set_name=push
+          if [ "$NIGHTLY" = true ]; then
+            set_name=nightly
+          elif [ "$WORKSTREAM" = true ]; then
+            set_name=workstream
+          fi
+          node tests/db/equivalence/matrix.mjs "$set_name" >> "$GITHUB_OUTPUT"
       - name: Choose the uPortal repository and ref
         id: source
         env:
@@ -158,43 +189,14 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  plan:
-    name: "Plan the database jobs"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      in-place: ${{ steps.matrix.outputs.in-place }}
-      copy: ${{ steps.matrix.outputs.copy }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Test the code page conversion of the fixture (MOD-I196)
-        run: python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'
-      # Prototype only (MOD-D30): a workstream branch runs the light set
-      - name: Choose the push, workstream or nightly set
-        id: matrix
-        env:
-          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
-          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
-        run: |
-          set_name=push
-          if [ "$NIGHTLY" = true ]; then
-            set_name=nightly
-          elif [ "$WORKSTREAM" = true ]; then
-            set_name=workstream
-          fi
-          node tests/db/equivalence/matrix.mjs "$set_name" >> "$GITHUB_OUTPUT"
-
   in-place:
     name: "In place: ${{ matrix.vendor }}"
-    needs: [uportal, plan]
+    needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.in-place) }}
+      matrix: ${{ fromJSON(needs.uportal.outputs.in-place) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -245,12 +247,12 @@ jobs:
 
   copy:
     name: "Copy: ${{ matrix.source }} to ${{ matrix.target }}"
-    needs: [uportal, plan]
+    needs: uportal
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.plan.outputs.copy) }}
+      matrix: ${{ fromJSON(needs.uportal.outputs.copy) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
