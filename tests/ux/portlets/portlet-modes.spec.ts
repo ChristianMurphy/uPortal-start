@@ -68,9 +68,10 @@ const EXCEPTIONS: Record<string, Exception> = {
       "portlet WAR, not in uPortal",
   },
   // MOD-I159: a portlet that is also in a region of admin's layout renders
-  // twice on its /p/ page, with the same window namespace. Both copies define
-  // the portlet's custom element, and in config mode both start CKEditor on
-  // the same element.
+  // twice on its /p/ page, with the same window namespace. Both copies load
+  // the portlet's script, which defines its custom element, and in config
+  // mode both start CKEditor on the same element. Each browser words the
+  // second define differently: Chromium, WebKit, Firefox.
   ...Object.fromEntries(
     [
       "feedback-navigation",
@@ -82,7 +83,7 @@ const EXCEPTIONS: Record<string, Exception> = {
       fname,
       {
         consoleErrors:
-          /\[CKEDITOR].*editor-element-conflict|has already been used with this registry/,
+          /\[CKEDITOR].*editor-element-conflict|has already been used with this registry|Cannot define multiple custom elements with the same tag name|has already been defined as a custom element/,
         reason:
           "MOD-I159: the portlet is also in a region of the layout and renders twice with " +
           "one namespace: the second CKEditor finds its element taken, and the second " +
@@ -97,17 +98,12 @@ const EXCEPTIONS: Record<string, Exception> = {
       "does not have (404)",
   },
   "js-demo": {
-    consoleErrors: /reading 'reorderList'/,
+    // The TypeError's wording differs by browser: "reading 'reorderList'",
+    // "evaluating 'up.fluid.reorderList'", "can't access property "reorderList""
+    consoleErrors: /reorderList/,
     reason:
       "MOD-I159: js-demo's content (quickstart data) calls up.fluid.reorderList, and " +
       "the portal does not load up.fluid",
-  },
-  "uportal-home-page": {
-    consoleErrors:
-      /Refused to display 'https:\/\/www\.apereo\.org\/' in a frame/,
-    reason:
-      "MOD-I159: the portlet frames www.apereo.org, which allows framing by its own " +
-      "pages only (X-Frame-Options: sameorigin)",
   },
 };
 
@@ -133,11 +129,27 @@ const PORTAL_ORIGIN = new URL(config.url).origin;
  * API, a framed web site). Whether those load depends on the hosts and the
  * network, not on the portal, so they are reported as annotations. Every
  * message from the portal's own pages and resources counts.
+ *
+ * A site of another host that refuses to be framed (uportal-home-page frames
+ * www.apereo.org, which sends X-Frame-Options: SAMEORIGIN) is one of them.
+ * WebKit gives that message no location, so its text names the frame:
+ * "Refused to display '<url>' in a frame" (Chromium, WebKit) or "The
+ * loading of “<url>” in a frame is denied" (Firefox).
  */
+const REFUSED_FRAME =
+  /Refused to display '([^']+)' in a frame|The loading of “([^”]+)” in a frame is denied/;
+
 function isOtherHostMessage(message: ConsoleMessage): boolean {
   const url = message.location().url;
   if (url.startsWith("chrome-error:")) return true;
-  return url.startsWith("http") && new URL(url).origin !== PORTAL_ORIGIN;
+  if (url.startsWith("http") && new URL(url).origin !== PORTAL_ORIGIN) {
+    return true;
+  }
+  const refused = REFUSED_FRAME.exec(message.text());
+  const frameUrl = refused?.[1] ?? refused?.[2] ?? "";
+  return (
+    frameUrl.startsWith("http") && new URL(frameUrl).origin !== PORTAL_ORIGIN
+  );
 }
 
 /*
