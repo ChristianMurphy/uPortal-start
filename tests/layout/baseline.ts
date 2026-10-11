@@ -6,11 +6,6 @@ import type { Baseline } from "./layout-checks";
  * a fix removes its entries in the same commit. Keep it sorted.
  */
 export const baseline: Baseline = {
-  "admin permissionsmanager 390": {
-    spill: [
-      "#portletContent_ctf#.fl-widget-content.fl-fix.up-portlet-content-wrapper a",
-    ],
-  },
   "admin permissionsmanager 768": {
     spill: [
       "#portletContent_ctf#.fl-widget-content.fl-fix.up-portlet-content-wrapper a",
@@ -358,10 +353,7 @@ export const baseline: Baseline = {
     spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "guest login 320": {
-    spill: [
-      "#Pluto_#_ctf#_#_search.portlet-section div.col-sm-#",
-      "#Pluto_#_ctf#_#_search.portlet-section form",
-    ],
+    spill: ["#Pluto_#_ctf#_#_search.portlet-section form"],
   },
   "guest login 390": {
     spill: ["#Pluto_#_ctf#_#_search.portlet-section form"],
