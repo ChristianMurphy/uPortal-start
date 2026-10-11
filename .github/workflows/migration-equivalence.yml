@@ -45,7 +45,11 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # A group holds one running and one pending run, and a newer pending run cancels the older one.
+  # The nightly sets get their own group, so that a push to the same branch can't cancel them.
+  group: >-
+    ${{ github.workflow }}-${{ github.ref }}-${{
+    (github.event_name == 'schedule' || inputs.nightly) && 'nightly' || 'push' }}
   # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
   # cancels the older run.
   cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
