@@ -1,6 +1,11 @@
-import { test, expect, APIRequestContext } from "@playwright/test";
+import { expect, APIRequestContext } from "@playwright/test";
 import { config } from "../general-config";
-import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
+import {
+  loginViaApi,
+  logoutViaApi,
+  sessionCsrfHeaders,
+} from "../ux/utils/ux-general-utils";
+import { test } from "./utils/csrf-request";
 
 /*
  * The REST API behind the Background Preference web component (uPortal
@@ -9,14 +14,11 @@ import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
  * choose and the one they chose; PUT saves a choice, which must be one of the
  * offered images (or null for none). The choice is stored on the user's own
  * portlet entity of the channel, where the portlet kept it. Guests get 401,
- * and the PUT needs the CSRF token the portal puts on web-component
- * elements. No browser: these run in the database harness too.
+ * and the PUT needs the session's CSRF token, which this spec's `request`
+ * sends (utils/csrf-request.ts). No browser: these run in the database
+ * harness too.
  */
 const API = `${config.url}api/v6-0/background-preference/background-preference`;
-// The channel's element, on every page in the Customize panel, carries the CSRF
-// header and token
-const ELEMENT_PAGE = `${config.url}f/welcome/normal/render.uP`;
-const ELEMENT = "up-background-preference";
 const IMAGES = `${new URL(config.url).pathname}media/skins/common/backgroundImages`;
 
 interface BackgroundPreference {
@@ -26,27 +28,12 @@ interface BackgroundPreference {
   selected: string | null;
 }
 
-/** The CSRF header and token on the page's web-component element. */
-async function csrfHeaders(
-  request: APIRequestContext,
-): Promise<Record<string, string>> {
-  const response = await request.get<unknown>(ELEMENT_PAGE);
-  const html = await response.text();
-  const element = new RegExp(`<${ELEMENT}\\b[^>]*>`).exec(html)?.[0] ?? "";
-  const header = /\scsrf-header="([^"]+)"/.exec(element)?.[1] ?? "";
-  const token = /\scsrf-token="([^"]+)"/.exec(element)?.[1] ?? "";
-  expect(header, `csrf-header on ${ELEMENT}`).not.toBe("");
-  expect(token, `csrf-token on ${ELEMENT}`).not.toBe("");
-  return { [header]: token };
-}
-
 /** Saves a choice; without an image, the body has no selected value: none. */
 async function choose(
   request: APIRequestContext,
   selected?: string,
 ): Promise<number> {
   const response = await request.put<BackgroundPreference>(API, {
-    headers: await csrfHeaders(request),
     data: { selected },
   });
   return response.status();
@@ -72,6 +59,16 @@ test.describe("Background Preference API as a guest", () => {
       status: 401,
       message: "Sign in to choose a background",
     });
+  });
+
+  test("refuses a guest's choice, CSRF token and all", async ({ request }) => {
+    // The guest page gives the guest a session; the request sends its token
+    const guestPage = await request.get<unknown>(config.url);
+    expect(guestPage.status()).toBe(200);
+
+    const status = await choose(request, `${IMAGES}/galaxy.jpg`);
+
+    expect(status).toBe(401);
   });
 });
 
@@ -129,11 +126,15 @@ test.describe("Background Preference API as a user", () => {
   });
 
   test("refuses a choice without the CSRF token", async ({ request }) => {
+    const [header = "X-CSRF-TOKEN"] = Object.keys(
+      await sessionCsrfHeaders(request),
+    );
     const missing = await request.put<unknown>(API, {
+      headers: { [header]: "" },
       data: { selected: `${IMAGES}/galaxy.jpg` },
     });
     const forged = await request.put<unknown>(API, {
-      headers: { "X-CSRF-TOKEN": "forged" },
+      headers: { [header]: "forged" },
       data: { selected: `${IMAGES}/galaxy.jpg` },
     });
 
