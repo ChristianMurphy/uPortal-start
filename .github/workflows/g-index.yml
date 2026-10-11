@@ -1,0 +1,277 @@
+name: G-index
+#
+# G-index (MOD-D12): a large-campus database workload and index audit. tests/db/gindex/gindex.sh
+# loads a seeded synthetic campus (tests/db/gindex/generate.py) into the database with the vendor's
+# bulk loader, runs the whole Playwright suite, a concurrent browsing and login driver and the
+# analytics jobs against uPortal built from source, captures every statement, and fails on
+# sequential scans of large tables, foreign keys without an index and duplicate or redundant
+# indexes that tests/db/gindex/allowlist.txt does not list (docs/g-index.md).
+#
+#   push      PostgreSQL 18 at 1/100 of the MOD-Q7 campus (1,000 users, 50,000 raw events a day
+#             for 31 days, 2 years of aggregations), then the same database with seeded faults
+#             (a dropped index the workload needs, a duplicate index), which must fail the audit
+#   nightly   PostgreSQL 18 and MariaDB 12.3 at 1/20 (5,000 users, 250,000 raw events a day), on
+#             the schedule or a manual run with "nightly"; workstream branches run only the push
+#             job (Prototype only, MOD-D30: CI capacity is shared by the workstreams)
+#
+# The full campus (scale 1: 100,000 users, 155 million raw events) does not fit a GitHub runner;
+# docs/g-index.md describes running it on real hardware.
+#
+on:
+  push:
+    branches:
+      # Prototype only (MOD-I74): run on the modernization branches. Drop before upstreaming.
+      - 'ccr-*'
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      nightly:
+        description: 'Run the nightly set (PostgreSQL 18 and MariaDB 12.3 at 1/20 scale)'
+        type: boolean
+        required: false
+        default: false
+      scale:
+        description: 'Scale for every vendor of the set (fraction of the MOD-Q7 campus); empty keeps the set default'
+        required: false
+        default: ''
+      uportal-repository:
+        description: 'uPortal repository (owner/name) to build; empty means <this owner>/uPortal'
+        required: false
+        default: ''
+      uportal-ref:
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else its nearest parent branch (ccr-x-topic -> ccr-x), else master'
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Prototype only (MOD-D30): a workstream branch runs the one push job, and a newer push cancels
+  # the older run; the integration branch keeps every run
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+
+jobs:
+  uportal:
+    name: "Build uPortal"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.uportal.outputs.version }}
+    steps:
+      - name: Choose the uPortal repository and ref
+        id: source
+        env:
+          INPUT_REPOSITORY: ${{ inputs.uportal-repository }}
+          INPUT_REF: ${{ inputs.uportal-ref }}
+          OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          repository="${INPUT_REPOSITORY:-$OWNER/uPortal}"
+          ref="$INPUT_REF"
+          # A workstream branch (MOD-D30) such as ccr-x-topic uses uPortal's ccr-x-topic if it
+          # exists, else drops one -suffix at a time until a uPortal branch matches (ccr-x).
+          candidate="$BRANCH"
+          while [ -z "$ref" ] && [ -n "$candidate" ]; do
+            if git ls-remote --exit-code --heads "https://github.com/$repository" "refs/heads/$candidate" > /dev/null; then
+              ref="$candidate"
+            elif [[ "$candidate" == *-* ]]; then
+              candidate="${candidate%-*}"
+            else
+              candidate=""
+            fi
+          done
+          ref="${ref:-master}"
+          if ! [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "$ref" =~ ^[A-Za-z0-9_./-]+$ ]]; then
+            echo "Unexpected repository '$repository' or ref '$ref'" >&2
+            exit 1
+          fi
+          echo "repository=$repository" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - name: Checkout uPortal
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.source.outputs.repository }}
+          ref: ${{ steps.source.outputs.ref }}
+          persist-credentials: false
+      # uPortal's CI matrix includes the JDK its .sdkmanrc pins; build with that major version
+      - name: Read uPortal's JDK
+        id: jdk
+        run: |
+          sdk=$(sed -n 's/^java=//p' .sdkmanrc | tr -d '\r')
+          version=${sdk%%.*}
+          case "${sdk##*-}" in
+            amzn) distribution=corretto ;;
+            zulu) distribution=zulu ;;
+            *) distribution=temurin ;;
+          esac
+          if ! [[ "$version" =~ ^[0-9]+$ ]]; then
+            echo "Cannot read the JDK from uPortal's .sdkmanrc ('$sdk')" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "distribution=$distribution" >> "$GITHUB_OUTPUT"
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: ${{ steps.jdk.outputs.distribution }}
+          java-version: ${{ steps.jdk.outputs.version }}
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+      - name: Build and install uPortal
+        run: ./gradlew -S --stacktrace --no-daemon --no-parallel install
+      - name: Read the uPortal version
+        id: uportal
+        env:
+          REPOSITORY: ${{ steps.source.outputs.repository }}
+          REF: ${{ steps.source.outputs.ref }}
+        run: |
+          version=$(sed -n 's/^version=//p' gradle.properties | tr -d '\r')
+          if ! [[ "$version" =~ ^[0-9A-Za-z._+-]+$ ]]; then
+            echo "Unexpected uPortal version '$version'" >&2
+            exit 1
+          fi
+          ls ~/.m2/repository/org/jasig/portal/uPortal-webapp/"$version"/
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Built uPortal $version from $REPOSITORY@$REF ($(git rev-parse HEAD))" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the uPortal build
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: uportal-maven-local
+          path: ~/.m2/repository/org/jasig/portal/
+          if-no-files-found: error
+          retention-days: 7
+
+  plan:
+    name: "Plan the G-index runs"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      runs: ${{ steps.set.outputs.runs }}
+    steps:
+      - name: Choose the push or the nightly set
+        id: set
+        env:
+          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
+          SCALE: ${{ inputs.scale }}
+        run: |
+          if [ -n "$SCALE" ] && ! [[ "$SCALE" =~ ^(0\.[0-9]+|1(\.0+)?)$ ]]; then
+            echo "Unexpected scale '$SCALE'" >&2
+            exit 1
+          fi
+          if [ "$NIGHTLY" = true ]; then
+            runs='[{"vendor":"postgres-18","scale":"0.05","duration":"600","faults":false},{"vendor":"mariadb-12.3","scale":"0.05","duration":"600","faults":false}]'
+          else
+            runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true}]'
+          fi
+          if [ -n "$SCALE" ]; then
+            runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
+          fi
+          echo "runs=$runs" >> "$GITHUB_OUTPUT"
+          echo "G-index runs: $runs" >> "$GITHUB_STEP_SUMMARY"
+
+  g-index:
+    name: "G-index: ${{ matrix.vendor }} at ${{ matrix.scale }}"
+    needs: [uportal, plan]
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.runs) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the uPortal build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: uportal-maven-local
+          path: ~/.m2/repository/org/jasig/portal
+      - name: Bootstrap gradle.properties for the uPortal build
+        env:
+          UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
+        run: |
+          cp gradle.properties.example gradle.properties
+          sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
+          grep '^uPortalVersion=' gradle.properties
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          # 21 runs the Gradle daemon; 11 (listed last, so JAVA_HOME) runs the portal
+          java-version: |
+            21
+            11
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-provider: basic
+      - name: Point Gradle at the JDK 21 for its daemon
+        run: |
+          gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+          mkdir -p "$gradle_user_home"
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Load the campus, run the workload, audit
+        env:
+          VENDOR: ${{ matrix.vendor }}
+          SCALE: ${{ matrix.scale }}
+          DURATION: ${{ matrix.duration }}
+        run: tests/db/gindex/gindex.sh --keep --scale "$SCALE" --duration "$DURATION" "$VENDOR" -- -PdbWaitSeconds=600
+      # The audit must fail when an index the workload uses is gone or a duplicate appears
+      - name: Seeded faults must fail the audit
+        if: ${{ matrix.faults }}
+        env:
+          VENDOR: ${{ matrix.vendor }}
+          GINDEX_ANNOTATION_LEVEL: notice
+        run: |
+          if tests/db/gindex/gindex.sh --reuse --no-suite --duration 150 \
+              --fault drop-index:idx_upp_prefs_id --fault duplicate-index:up_user:user_name "$VENDOR"; then
+            echo "::error title=G-index seeded faults::the audit passed with a dropped and a duplicated index"
+            exit 1
+          fi
+          findings="build/g-index/$VENDOR/findings.json"
+          # The catalog checks must catch both faults; a seq-scan finding also appears when the
+          # driver happened to load portlet preferences, and is reported when it does
+          for expected in 'fk-no-index up_portlet_pref.' 'duplicate-index up_user.gx_fault_dup' 'seq-scan up_portlet_pref@'; do
+            check=${expected%% *}
+            subject=${expected#* }
+            if jq -e --arg c "$check" --arg s "$subject" \
+                '[.findings[] | select(.check == $c and (.subject | startswith($s)) and (.allowed | not))] | length > 0' \
+                "$findings" > /dev/null; then
+              echo "Seeded fault caught: $check $subject"
+            elif [ "$check" = seq-scan ]; then
+              echo "No seq-scan of up_portlet_pref in this workload (optional)"
+            else
+              echo "::error title=G-index seeded faults::no failing $check finding on $subject"
+              exit 1
+            fi
+          done
+          echo "### Seeded faults: caught (a dropped index the workload uses, a duplicate index)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove the database
+        if: always()
+        env:
+          VENDOR: ${{ matrix.vendor }}
+        run: docker rm -f "uportal-dbh-$VENDOR" || true
+      - name: Upload the findings and logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: g-index-${{ matrix.vendor }}-${{ matrix.scale }}
+          path: |
+            build/g-index/*/*.md
+            build/g-index/*/*.json
+            build/g-index/*/*.log
+            .gradle/tomcat/logs/
+          retention-days: 7
