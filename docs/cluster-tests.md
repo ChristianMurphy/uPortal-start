@@ -29,7 +29,7 @@ it in `.gradle/tomcat-b` on port 8180 (shutdown port 8105), without CAS. The tes
 to both nodes' `uPortal.properties`, shortens the clustered jobs' periods to about 7 s and the
 aggregation delay to 5 s, so the test does not wait minutes for each run. The lock-abandonment age
 stays at the default 60 s. The harness also logs `ClusterLockServiceImpl` at `TRACE` and each
-JGroups view to `logs/jgroups/portal.jgroups.log` on both nodes, and starts the checks once both
+JGroups view to the portal log on both nodes, and starts the checks once both
 nodes have logged a view of two members.
 
 ## The checks
@@ -38,7 +38,8 @@ nodes have logged a view of two members.
 | --- | --- | --- |
 | `invalidation-portlet` | Node B reads a portlet definition (`/api/portlet/what-is-uportal.json`), node A imports it with a new title (`/api/import`), node B must show the new title | 30 s |
 | `invalidation-layout` | Node B loads the student's layout, node A adds a tab to it (`/api/layout?action=addTab`), a new student session on node B must have the tab | 30 s |
-| `invalidation-permission` | Both nodes deny the student the Permissions Manager portlet; node A grants SUBSCRIBE on it, and node A, then node B must allow it; node A revokes it, and node B must deny it again | 330 s (see below) |
+| `invalidation-permission` | Both nodes deny the student the Permissions Manager portlet; node A grants SUBSCRIBE on it, and a new student session on node A, then on node B must allow it; node A revokes it, and a new session on node B must be denied again | 330 s (see below) |
+| `permission-session` | The student's sessions that checked the portlet before the grant and before the revocation must follow each change | 30 s |
 | `jobs-once` | Once node B's scheduled tasks run (120 s after it starts), every test user logs in and renders their layout three times on each node; once the aggregator has read all raw events, each interval's login and portlet-render aggregates (group Everyone) must have grown by exactly the number of raw events | |
 | `failover-takeover` | A table lock on `UP_EVENT_AGGR_STATUS` makes the next aggregation run wait inside its cluster lock; the node holding the lock is killed (`kill -9`), the table lock released. The other node must take the lock over no sooner than 60 s after the dead node's last update (it is not abandoned before), and no later than 60 s + the 28 s server bias + 60 s | 148 s |
 | `failover-jobs-once` | Like `jobs-once`, over events made before the kill (on both nodes) and after it: the survivor aggregates them all, once | |
@@ -49,7 +50,8 @@ Permissions are the exception to replication: uPortal caches permission checks o
 does not replicate those caches (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` for 180 s and
 `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT` for 300 s). A permission revoked on one
 node is still granted on the others until those entries expire. The check allows that bound
-and, when it fails, reports what a new session on the node gets.
+for new sessions. Sessions that checked the permission before the change are covered by
+`permission-session`.
 
 The layout check does not depend on replication: uPortal reads a user's layout from the
 database when a session starts and keeps it in the session, so a new session on node B sees the
@@ -62,8 +64,9 @@ The checks in `KNOWN_FAILURES` (`tests/cluster/cluster.sh`) fail because of uPor
 this test found. Their failure shows as a warning without failing the run. When one of them
 passes, the run says so, and its entry can go once uPortal is fixed.
 
-* `invalidation-permission`: once a node has checked a permission, a grant or revocation made
-  through the Permissions Manager does not reach that node's checks within 330 s.
+* `permission-session`: a session keeps the permission decisions it has made. In run
+  38110056978 the student's session on node A, where the grant was made, was denied the portlet
+  for about 6 minutes after the grant, while a new session was allowed at once.
 * `events-aggregated`: a node queues its events in memory and stores them only once its
   scheduled tasks run, 120 s after it starts. If another node's aggregator has passed their
   time by then, those events are never aggregated. Every node restart in a running cluster
