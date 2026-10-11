@@ -12,9 +12,9 @@ const config: PlaywrightTestConfig = {
   testDir: "visual",
   testMatch: "**/*.visual.ts",
   retries: 0,
-  // The first pages after the portal starts load its caches: in run
-  // 38106773735 the phone's guest page took over 30 s to load
+  // The first pages after the portal starts load its caches
   timeout: 60_000,
+  globalSetup: "./visual/warm-up.ts",
   updateSnapshots: "missing",
   snapshotPathTemplate: "{testDir}/snapshots/{projectName}/{arg}{ext}",
   expect: {
