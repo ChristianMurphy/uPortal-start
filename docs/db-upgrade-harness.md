@@ -185,6 +185,39 @@ A broken rule counts as `GENERATORS` drift and is listed in the report. The rest
 exactly: the sequence definitions (increment, bounds, cache), row counts and `max(id)`. A vendor
 file without the key uses `verify.sequenceValues=exact`.
 
+### Intended data changes
+
+A change to uPortal-start's data changes the rows of a fresh database. Publishing Favorites as a
+Web Component channel adds one `UP_PORTLET_TYPE` row and two `UP_PORTLET_DEF_PARAM` rows
+(MOD-I134). The 5.17 baselines keep what 5.17 produced, because every upgrade check compares with
+them. The change goes in `tests/db/snapshots/<baseline>/intended-changes.txt`, one table per line:
+
+```text
+# <TABLE> rows <+n|-n> <MOD reference>
+UP_PORTLET_TYPE rows +1 MOD-I134
+UP_PORTLET_DEF_PARAM rows +2 MOD-I134
+```
+
+`dbVerify` reads the file next to the vendor directories of its baseline and applies it to every
+vendor before comparing:
+
+* It adds each delta to the table's row count in the baseline, in `[row counts]` and on the
+  table's `generators.txt` line.
+* It masks the current value of every generator that serves a listed table (its sequence,
+  generator table or generator-table row) and the table's `max(id)`, in both snapshots. These move
+  with the new rows by amounts that depend on each database's sequence semantics and caches. In
+  their place, each of those generators must show a value of at least `max(id)` in this run.
+
+The report lists every entry after the four drift lines, as in
+`~ UP_PORTLET_TYPE rows +1 (MOD-I134): baseline 9, expected 10, this run 10: found`. On GitHub
+Actions the harness shows the found entries as a notice on the job.
+
+The rest of the comparison is unchanged. A row added to a table that isn't listed still fails as
+`DATA` drift. A listed change that the run doesn't show fails too: the table's row count then
+differs from the adjusted baseline, and its entry reads `NOT FOUND`. A malformed line, a table
+listed twice or a table missing from the baseline also fails `dbVerify`. Remove an entry once a
+new baseline directory is recorded from data that has the change.
+
 ## Choosing the baseline
 
 Without `--baseline` (or `-PdbBaseline` for the Gradle tasks), the harness compares with
