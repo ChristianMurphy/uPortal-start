@@ -272,6 +272,16 @@
             "upgrading": "Background Preference is a web component"
         },
         {
+            "id": "self-edit-account-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "webComponent\\.(moduleUrl|tagName): added .*up-self-edit-acc",
+            "reason": "The portlet registry and marketplace APIs describe Password Management (passwordmgr) as a Web Component channel: the webComponent parameters naming up-self-edit-account are added. Its type change is the Web Component type line that the Favorites entry already covers. passwordmgr is in no quickstart layout, so no page outline changes.",
+            "log": "uPortal-start 85329a9",
+            "visible": true,
+            "upgrading": "Password Management is a web component"
+        },
+        {
             "id": "user-locale-web-component-page",
             "path": "/uPortal/p/user-locales-selector/*",
             "field": "body",
