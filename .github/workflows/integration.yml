@@ -596,7 +596,7 @@ jobs:
   browsers:
     name: "Browsers: ${{ matrix.suite }}"
     needs: [uportal, plan]
-    if: ${{ needs.plan.outputs.nightly == 'true' }}
+    if: ${{ needs.plan.outputs.set == 'nightly' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
