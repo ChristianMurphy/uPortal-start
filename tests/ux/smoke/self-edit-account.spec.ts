@@ -19,14 +19,15 @@ import {
 } from "../utils/ux-general-utils";
 import {
   Account,
+  createEditableAccount,
   exportedAccount,
-  grantUsersPermission,
-  importLocalAccount,
-} from "../utils/local-account-utils";
+} from "../utils/self-edit-account-utils";
 
 /*
- * What the Password Management channel (fname passwordmgr, framework portlet
- * SelfEditAccount, the self-edit-account Web Flow) does for users. The
+ * What the Password Management channel (fname passwordmgr) does for users. It
+ * was the SelfEditAccount portlet (the self-edit-account Web Flow) and is now
+ * the <up-self-edit-account> web component (MOD-D46); these tests describe
+ * both, and self-edit-account-component.spec.ts what the component adds. The
  * quickstart data places it in no layout, so the tests open it at
  * /p/passwordmgr.
  *
@@ -42,24 +43,23 @@ import {
  * Guests opening the channel get the login form instead, as for any channel
  * they may not see.
  *
- * Known defects (uPortal 5.17), recorded as they are:
- * - The form's "Add Preference" link adds an input for any attribute name,
- *   but saving ignores attributes the user may not edit, so nothing it adds
- *   is stored. The tests leave the link alone.
+ * The portlet's "Add Preference" link, which added inputs that saving
+ * ignored, is gone from the component. The form shows the user name,
+ * read-only, for password managers.
  *
- * Fixed (uPortal, MOD-D19 workstream, approved by the project owner):
+ * Fixed (uPortal, MOD-D45, approved by the project owner):
  * - A new password needs the current password: "Please enter your current
  *   password" when it is missing, "Provided password does not match the
  *   current account password" when it is wrong. uPortal 5.17 asked only for
  *   the new password and its confirmation (enterPassword.jsp had a Current
  *   Password field, but no flow state used it).
  *
- * Fixed (uPortal, MOD-D19 workstream): a confirmation that differs from the
- * password is refused with "Passwords must match", by the form's script and,
- * with scripts off, by PersonFormValidator. Before, the password field was
- * saved: the script compared the fields only when the password input's
- * textLength was above 0, and inputs have no textLength; the validator never
- * ran because Web Flow looks for a bean named after the model,
+ * Fixed (uPortal, MOD-D45): a confirmation that differs from the password is
+ * refused with "Passwords must match", by the form and by the API (see
+ * self-edit-account-component.spec.ts). uPortal 5.17 saved the password
+ * field: its script compared the fields only when the password input's
+ * textLength was above 0, and inputs have no textLength; PersonFormValidator
+ * never ran because Web Flow looks for a bean named after the model,
  * accountFormValidator, and the bean was only called personValidator.
  *
  * The locators use roles and names only, so the same tests describe the
@@ -76,37 +76,9 @@ const DETAIL_LABELS = [
   "Address",
 ];
 const EDITABLE_LABELS = ["Title", "Department", "Org", "Email", "Phone"];
-const EDITABLE_ATTRIBUTES = [
-  "title",
-  "department",
-  "organization",
-  "mail",
-  "telephoneNumber",
-];
 
 const UPDATED_MESSAGE =
   "Your account has been successfully updated. Your changes will be visible upon your next login.";
-
-/**
- * A new local account with the password "student", the permissions to edit
- * itself and its five attributes, and a department of "Playwright
- * Department".
- */
-async function createEditableAccount(
-  admin: APIRequestContext,
-): Promise<Account> {
-  const account = await importLocalAccount(admin, "selfedit", "Selma", {
-    department: "Playwright Department",
-  });
-  await grantUsersPermission(admin, account.username, "EDIT_USER", ["SELF"]);
-  await grantUsersPermission(
-    admin,
-    account.username,
-    "EDIT_USER_ATTRIBUTE",
-    EDITABLE_ATTRIBUTES,
-  );
-  return account;
-}
 
 async function openAccount(page: Page): Promise<void> {
   await waitForPortalRequestsToSettle(page);
@@ -222,6 +194,9 @@ test.describe("Self edit account", () => {
       );
       await expect(page.getByLabel("Confirm Password")).toHaveValue("");
       await expect(page.getByLabel("Current Password")).toHaveValue("");
+      await expect(
+        page.getByRole("textbox", { name: "Username", exact: true }),
+      ).toHaveValue(account.username);
     });
 
     test("cancel goes back to the details", async ({ page }) => {
@@ -344,54 +319,17 @@ test.describe("Self edit account", () => {
       await loginViaUrl(page, account);
     });
 
-    test("the form refuses a confirmation that differs", async ({ page }) => {
+    test("refuses a confirmation that differs", async ({ page }) => {
       const newPassword = `Pw-${Date.now()}`;
       await openEditForm(page);
+      await page.getByLabel("Current Password").fill(account.password);
       await page.getByLabel("Password", { exact: true }).fill(newPassword);
       await page.getByLabel("Confirm Password").fill(`${newPassword}-typo`);
-      const alerts: string[] = [];
-      page.once("dialog", (dialog) => {
-        alerts.push(dialog.message());
-        void dialog.dismiss();
-      });
-      await page.getByRole("button", { name: "Save", exact: true }).click();
-      await expect
-        .poll(() => alerts, { timeout: 10_000 })
-        .toEqual(["Passwords must match"]);
+      await save(page);
+      await expect(page.getByText("Passwords must match")).toBeVisible();
       await expect(
         page.getByRole("heading", { name: "Edit My Account" }),
       ).toBeVisible();
-
-      await logout(page);
-      await openLoginForm(page);
-      await submitLoginForm(page, account.username, newPassword);
-      await expectLoginRefused(page);
-    });
-
-    test("the portal refuses a confirmation that differs", async ({
-      browser,
-      page,
-    }) => {
-      // With scripts off the form's own check cannot run, so the portal's does
-      const context = await browser.newContext({ javaScriptEnabled: false });
-      const noScript = await context.newPage();
-      await noScript.goto(
-        `${config.url}Login?userName=${account.username}&password=${account.password}`,
-      );
-      await expect(noScript.locator("div.user-name")).toContainText(
-        account.displayName,
-      );
-      await noScript.goto(URL);
-      await noScript.getByRole("link", { name: "Edit", exact: true }).click();
-      const newPassword = `Pw-${Date.now()}`;
-      await noScript.getByLabel("Password", { exact: true }).fill(newPassword);
-      await noScript.getByLabel("Confirm Password").fill(`${newPassword}-typo`);
-      await noScript.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(noScript.getByText("Passwords must match")).toBeVisible();
-      await expect(
-        noScript.getByRole("heading", { name: "Edit My Account" }),
-      ).toBeVisible();
-      await context.close();
 
       await logout(page);
       await openLoginForm(page);

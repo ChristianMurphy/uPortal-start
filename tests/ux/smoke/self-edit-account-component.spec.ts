@@ -23,7 +23,12 @@ import {
  * portal. self-edit-account.spec.ts checks what users see; this checks what
  * the component adds: how the channel is rendered, the API's rules (the
  * session's user only, the CSRF token, the permissions, no password in any
- * answer) and keyboard focus.
+ * answer, the password checks) and keyboard focus.
+ *
+ * Password managers search the document, which does not include shadow
+ * roots, so the user name and password inputs are in a form in the element's
+ * light DOM with their autocomplete hints (MOD-D46); the test below looks for
+ * them the way a password manager does.
  */
 const URL = `${config.url}p/passwordmgr`;
 const API = `${config.url}api/v6-0/account`;
@@ -81,6 +86,36 @@ async function editorPage(
   const page = await context.newPage();
   await loginViaUrl(page, account);
   return { page, account };
+}
+
+interface CredentialField {
+  name: string;
+  type: string;
+  autocomplete: string;
+  value: string;
+  sameForm: boolean;
+}
+
+/**
+ * Run in the page: the user name and password inputs, found from the document
+ * as a password manager finds them, without piercing shadow roots. Password
+ * values are left out.
+ */
+function credentialFields(): CredentialField[] {
+  const usernameForm = document
+    .querySelector('input[autocomplete="username"]')
+    ?.closest("form");
+  return [
+    ...document.querySelectorAll<HTMLInputElement>(
+      'input[type="password"], input[autocomplete="username"]',
+    ),
+  ].map((input) => ({
+    name: input.name,
+    type: input.type,
+    autocomplete: input.autocomplete,
+    value: input.type === "password" ? "" : input.value,
+    sameForm: usernameForm !== undefined && input.form === usernameForm,
+  }));
 }
 
 test.describe("Self edit account component", () => {
@@ -214,6 +249,90 @@ test.describe("Self edit account component", () => {
       });
       expect(malformed.status()).toBe(400);
       expect(await malformed.text()).not.toContain(secret);
+      await page.context().close();
+    });
+
+    test("refuses a differing confirmation or a missing or wrong current password", async ({
+      browser,
+    }) => {
+      const { page, account } = await editorPage(browser, admin);
+      await openAccount(page);
+      const csrf = await csrfOf(page);
+      const password = `Pw-${Date.now()}`;
+      const cases = [
+        [
+          {
+            password,
+            confirmPassword: `${password}-typo`,
+            currentPassword: account.password,
+          },
+          "passwords.must.match",
+        ],
+        [
+          { password, confirmPassword: password },
+          "please.enter.current.password",
+        ],
+        [
+          { password, confirmPassword: password, currentPassword: "wrong" },
+          "current.password.doesnt.match",
+        ],
+      ] as const;
+      for (const [change, code] of cases) {
+        const response = await put(page, change, csrf);
+        expect(response.status(), code).toBe(400);
+        const text = await response.text();
+        expect(JSON.parse(text)).toMatchObject({ code });
+        expect(text).not.toContain(password);
+      }
+      await page.context().close();
+
+      // The password is as it was
+      const fresh = await browser.newContext();
+      const again = await fresh.newPage();
+      await loginViaUrl(again, account);
+      await fresh.close();
+    });
+
+    test("puts the credentials where a password manager can find them", async ({
+      browser,
+    }) => {
+      const { page, account } = await editorPage(browser, admin);
+      await openAccount(page);
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      await expect(page.getByLabel("Current Password")).toBeVisible();
+
+      // As a password manager does: from the document, without piercing shadow roots
+      const found = await page.evaluate(credentialFields);
+      expect(found).toEqual([
+        {
+          name: "username",
+          type: "text",
+          autocomplete: "username",
+          value: account.username,
+          sameForm: true,
+        },
+        {
+          name: "currentPassword",
+          type: "password",
+          autocomplete: "current-password",
+          value: "",
+          sameForm: true,
+        },
+        {
+          name: "password",
+          type: "password",
+          autocomplete: "new-password",
+          value: "",
+          sameForm: true,
+        },
+        {
+          name: "confirmPassword",
+          type: "password",
+          autocomplete: "new-password",
+          value: "",
+          sameForm: true,
+        },
+      ]);
       await page.context().close();
     });
 
