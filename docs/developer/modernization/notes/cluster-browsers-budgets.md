@@ -195,6 +195,29 @@ traffic caused before the split. `MigrationFreezeRulesTest`, `noNewEhcache2` inc
   retries, and a11y, Playwright postgres-18 and the DB harness passed. Firefox had one flaky
   test, `tests/ux/admin/import-export.spec.ts:117` (the re-imported title was not in the title
   bar yet), reported to the coordinator.
+* Integration 38160754871 (head `446beee17`, uPortal `e24ab4002` with option A): every job
+  passed. The main leg passed 11 of 11 (job 114546311840), with `cluster-join` at 5 013 ms and
+  `split-heal` 138 ms after the merge. Each seeded fault failed the check it targets, for the
+  expected reason:
+  * `replication-off` (job 114546311776): `invalidation-portlet`, node B still showed the old title
+    30 s after the import.
+  * `lock-ignored` (114546311824): `failover-takeover`.
+  * `event-flush-delayed` (114546311809): `events-aggregated`.
+  * `join-gives-up` (114546311875): `cluster-join`, "node B gave up after 1 JOIN timeout(s) and
+    formed its own cluster".
+  * `merge-clear-off` (114546311863): `split-heal`, "30 s after the merge node B showed 'Welcome to
+    uPortal' (database: 'Welcome to uPortal (split 479)') and the student session got HTTP 403".
+  * The overlap fixture check passed with the committed fixtures, the first CI run in which it
+    checked anything.
+  * a11y, visual, phone, query budgets, the load baseline, the Playwright jobs, the DB harness and
+    G-migrate passed. The uPortal push runs for `e24ab4002` passed too (CI 38160749796, DB
+    integration 38160749807, DB copy tool 38160749851).
+* In the same run every cluster leg warned "no view of two members logged on both nodes within
+  60 s", although both nodes had logged that view 13 s before the wait. `two_member_view` and
+  `new_view_matches` piped the logs into `grep -q` under `pipefail`. `grep -q` stops at the first
+  match, and the `grep` still reading the logs died of SIGPIPE at its next line, so the check
+  failed. `2160b4c3b` lets grep read everything. The same fault could have made `split-heal` miss a
+  MergeView.
 
 ## Findings
 
