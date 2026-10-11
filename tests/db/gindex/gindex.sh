@@ -173,14 +173,26 @@ EOF
 customize_template() {
     # A real layout customization by the quickstart student (a tab with two columns, a favorite),
     # made through the layout API so DLM writes the rows; the generator clones them
-    local jar="$OUT/template.cookies" home tok cal
+    local jar="$OUT/template.cookies" home tok hdr cal
     home=$(curl -s -c "$jar" -b "$jar" -L "${URL}Login?userName=student&password=student")
-    tok=$(grep -o '_csrf=[0-9a-f-]*' <<< "$home" | head -1 | cut -d= -f2)
+    # The session's CSRF token (MOD-I130): the page's _csrf and _csrf_header meta tags, as the
+    # portal's own scripts read it; a portal without them (5.17) has it in its forms
+    tok=$(grep -o '<meta name="_csrf" content="[^"]*"' <<< "$home" | head -1 | sed 's/.*content="//; s/"$//')
+    hdr=$(grep -o '<meta name="_csrf_header" content="[^"]*"' <<< "$home" | head -1 | sed 's/.*content="//; s/"$//')
+    if [ -z "$tok" ]; then tok=$(grep -o '_csrf=[0-9a-f-]*' <<< "$home" | head -1 | cut -d= -f2); fi
+    local csrf=()
+    if [ -n "$hdr" ] && [ -n "$tok" ]; then csrf=(-H "$hdr: $tok"); fi
     cal=$(echo "SELECT portlet_def_id FROM up_portlet_def WHERE portlet_fname = 'calendar';" | dbsql | tr -d '[:space:]')
-    curl -sf -b "$jar" -c "$jar" -X POST "${URL}api/layout" \
-        --data "_csrf=$tok&action=addTab&widths%5B%5D=50&widths%5B%5D=50&tabName=My%20Stuff" > /dev/null || return 1
-    curl -sf -b "$jar" -c "$jar" -X POST "${URL}api/layout" \
-        --data "_csrf=$tok&action=addFavorite&channelId=$cal" > /dev/null || return 1
+    local data status
+    for data in "action=addTab&widths%5B%5D=50&widths%5B%5D=50&tabName=My%20Stuff" "action=addFavorite&channelId=$cal"; do
+        status=$(curl -s -o "$OUT/template-response.txt" -w '%{http_code}' -b "$jar" -c "$jar" "${csrf[@]+"${csrf[@]}"}" \
+            -X POST "${URL}api/layout" --data "_csrf=$tok&$data")
+        if [ "$status" != 200 ]; then
+            echo "POST api/layout ${data%%&*}: HTTP $status (CSRF token $([ -n "$tok" ] && echo found || echo missing)," \
+                "header ${hdr:-none}): $(head -c 300 "$OUT/template-response.txt")" >&2
+            return 1
+        fi
+    done
     curl -s -b "$jar" "${URL}Logout" > /dev/null
 }
 
