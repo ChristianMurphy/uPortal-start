@@ -348,8 +348,10 @@ subprojects {
  * -PsourceDbVendor / -PtargetDbVendor name tests/db/vendors/<name>.properties; -P<side>DbHost,
  * -P<side>DbPort, -P<side>DbUrl, -P<side>DbUser and -P<side>DbPassword override their settings.
  * Options: -PskipRawEvents, -PdbMigrateClearTarget (delete the target rows first, e.g. after
- * dataInit), -PdbMigrateDryRun, -PdbMigrateVerifyOnly, -PdbMigrateArgs='<more tool options>',
- * -PdbMigrateVersion (default uPortalVersion). The report goes to build/db-migrate/.
+ * dataInit), -PdbMigrateDryRun, -PdbMigrateVerifyOnly, -PdbMigrateTargetProfile=<5.17|6.0>,
+ * -PdbMigrateSourceZone=<IANA zone of the source portal's JVM> (MOD-I141),
+ * -PdbMigrateArgs='<more tool options>', -PdbMigrateVersion (default uPortalVersion). The report
+ * goes to build/db-migrate/.
  */
 configurations {
     // The tool's executable jar (Spring Boot, Java 21); it brings its own dependencies
@@ -388,6 +390,8 @@ task dbMigrate(type: JavaExec) {
     boolean clearTarget = project.hasProperty('dbMigrateClearTarget')
     boolean dryRun = project.hasProperty('dbMigrateDryRun')
     boolean verifyOnly = project.hasProperty('dbMigrateVerifyOnly')
+    String targetProfile = findProperty('dbMigrateTargetProfile')
+    String sourceZone = findProperty('dbMigrateSourceZone')
     String extraArgs = findProperty('dbMigrateArgs') ?: ''
     jvmArgs = ['-Xmx' + (findProperty('dbMigrateHeap') ?: '512m')]
 
@@ -419,6 +423,8 @@ task dbMigrate(type: JavaExec) {
         if (clearTarget) a << '--clear-target'
         if (dryRun) a << '--dry-run'
         if (verifyOnly) a << '--verify-only'
+        if (targetProfile) a.addAll(['--target-profile', targetProfile])
+        if (sourceZone) a.addAll(['--source-zone', sourceZone])
         a.addAll(extraArgs.tokenize())
         args(a)
         logger.lifecycle("dbMigrate: ${dbMigrateSource.vendor} ${dbMigrateSource.url} -> ${dbMigrateTarget.vendor} ${dbMigrateTarget.url}")

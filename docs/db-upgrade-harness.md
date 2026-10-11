@@ -301,7 +301,11 @@ results").
 uPortal 6.0 upgrades by copying (MOD-D11, MOD-D25): uPortal's copy tool reads a whole uPortal
 database, typically on an old server, and writes it into an empty uPortal schema on a current
 server of the same or another vendor, positions every ID generator and verifies every table. The
-source is only read. Version 0 copies 5.17 to 5.17. The 6.0 schema changes plug in as mapping rules.
+source is only read. The 6.0 schema changes plug in as mapping rules. The first one: 5.17 stored
+seven timestamp columns as the clock time of the portal JVM's zone, and 6.0 stores them in UTC, so a
+copy into 6.0 (`--target-profile 6.0`, the tool's default) converts them from the zone that
+`--source-zone` names (MOD-I141). Without it, a copy whose source holds such a value stops before it
+writes anything. A copy between two 5.17 databases passes `--target-profile 5.17`.
 
 The tool is a standalone Spring Boot 4 / Spring Batch 6 command-line application built by uPortal
 (`org.jasig.portal:uPortal-db-migrate:<version>:exec`, Java 21). `dbMigrate` runs that executable
@@ -314,8 +318,10 @@ jar on the JDK 21 that Gradle itself uses, with the two vendors' JDBC drivers on
 # Bookmarks, Feedback and Notification create their tables on first start, not in dataInit
 ./gradlew -PdbVendor=mariadb-12.3 tomcatInstall tomcatDeploy dbWait dataInit tomcatStart
 ./gradlew -PdbVendor=mariadb-12.3 tomcatStop
-# Copy (dataInit's rows are deleted first), then verify; the report is in build/db-migrate/
-./gradlew dbMigrate -PsourceDbVendor=postgres-16 -PtargetDbVendor=mariadb-12.3 -PdbMigrateClearTarget
+# Copy (dataInit's rows are deleted first), then verify; the report is in build/db-migrate/.
+# The zone is the one the 5.17 portal's JVM ran in.
+./gradlew dbMigrate -PsourceDbVendor=postgres-16 -PtargetDbVendor=mariadb-12.3 -PdbMigrateClearTarget \
+    -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone=America/New_York
 ```
 
 `-PsourceDbVendor` and `-PtargetDbVendor` name files in `tests/db/vendors`, and `-PsourceDbHost`,
@@ -329,6 +335,8 @@ the credentials to the tool in files under `build/db-migrate/`, never on the com
 | `-PskipRawEvents` | `--skip-raw-events` | Do not copy `UP_RAW_EVENTS` (raw event history) |
 | `-PdbMigrateDryRun` | `--dry-run` | Plan, check and count rows only; don't write anything |
 | `-PdbMigrateVerifyOnly` | `--verify-only` | Compare a copied target with its source again |
+| `-PdbMigrateTargetProfile=6.0` | `--target-profile` | The target's schema version: `6.0` (the tool's default) or `5.17` |
+| `-PdbMigrateSourceZone=<zone>` | `--source-zone` | The IANA zone of the 5.17 portal's JVM, which a copy into 6.0 converts timestamps from (MOD-I141) |
 | `-PdbMigrateArgs='...'` | anything | e.g. `--include`, `--exclude`, `--batch-size`, `--threads`, `--missing-lob skip-row` |
 | `-PdbMigrateHeap`, `-PdbMigrateVersion` | | JVM heap (default `512m`); tool version (default `uPortalVersion`) |
 
@@ -379,8 +387,10 @@ upgrades:
    specs. That leaves events, portlet lists and the tables that Bookmarks, Feedback and
    Notification create on their first start.
 3. It prepares the target: deploy, `dataInit`, and one portal start (MOD-I92).
-4. `./gradlew dbMigrate -PsourceDbVendor=<source> -PtargetDbVendor=<target> -PdbMigrateClearTarget`
-   must exit with 0: every table copied and verified, every generator positioned.
+4. `./gradlew dbMigrate -PsourceDbVendor=<source> -PtargetDbVendor=<target> -PdbMigrateClearTarget
+   -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone=UTC` must exit with 0: every table copied
+   and verified, every generator positioned. The zone is UTC because the build under test filled
+   the source, and it stores the converted timestamps in UTC already (MOD-I141).
 5. With `--playwright`, the whole Playwright suite then runs on the migrated portal.
 
 The script prints how long each step took and, on GitHub Actions, annotates the first failure.
@@ -417,7 +427,8 @@ port and in its own directory. An adopter serves an existing 2.5.1 database the 
 
 ```bash
 ./gradlew -PhsqldbVersion=2.5.1 -PhsqlPort=15925 -PhsqlDatabaseDir=<directory> hsqlStart
-./gradlew dbMigrate -PsourceDbVendor=hsqldb-2.5.1 -PtargetDbVendor=postgres-18 -PdbMigrateClearTarget
+./gradlew dbMigrate -PsourceDbVendor=hsqldb-2.5.1 -PtargetDbVendor=postgres-18 -PdbMigrateClearTarget \
+    -PdbMigrateTargetProfile=6.0 -PdbMigrateSourceZone=<the 5.17 portal's zone>
 ```
 
 ## 5.17 reference results
