@@ -13,8 +13,10 @@ import {
  *
  * The channel lists the portal's locales (portal.properties
  * org.apereo.portal.i18n.LocaleManager.portal_locales, eight in the
- * quickstart) as a radio group, each labelled with its language in the
- * user's current language, and an Update button. Update switches the page to
+ * quickstart) as a radio group, each label naming its language in the
+ * user's current language, and an Update button. Since uPortal 6.0 the label
+ * starts with the language's own name ("Français (French)"), so the tests
+ * find a radio button by the part of its name in the user's language. Update switches the page to
  * the chosen language at once. For a signed-in user the choice is saved, so
  * it is still in effect at the next login; for a guest it lasts the session.
  *
@@ -39,13 +41,13 @@ async function openSelector(page: Page): Promise<void> {
   await waitForPortalRequestsToSettle(page);
 }
 
-/** Choose a language by its label and press the Update button. */
+/** Choose a language by its name in the user's language and press Update. */
 async function chooseLanguage(
   page: Page,
   label: string,
   update: string,
 ): Promise<void> {
-  await page.getByRole("radio", { name: label, exact: true }).check();
+  await page.getByRole("radio", { name: label }).check();
   await page.getByRole("button", { name: update, exact: true }).click();
   await waitForPortalRequestsToSettle(page);
 }
@@ -87,13 +89,9 @@ test.describe("User locale selector", () => {
       const radios = page.getByRole("radio");
       await expect(radios).toHaveCount(ENGLISH_LABELS.length);
       for (const label of ENGLISH_LABELS) {
-        await expect(
-          page.getByRole("radio", { name: label, exact: true }),
-        ).toBeVisible();
+        await expect(page.getByRole("radio", { name: label })).toBeVisible();
       }
-      await expect(
-        page.getByRole("radio", { name: "English", exact: true }),
-      ).toBeChecked();
+      await expect(page.getByRole("radio", { name: "English" })).toBeChecked();
       await expect(
         page.getByRole("button", { name: "Update", exact: true }),
       ).toBeVisible();
@@ -108,11 +106,9 @@ test.describe("User locale selector", () => {
         page.getByRole("heading", { name: "Modifier le choix de la langue" }),
       ).toBeVisible();
       // The labels are now in French, and French is the chosen one
+      await expect(page.getByRole("radio", { name: "français" })).toBeChecked();
       await expect(
-        page.getByRole("radio", { name: "français", exact: true }),
-      ).toBeChecked();
-      await expect(
-        page.getByRole("radio", { name: "anglais", exact: true }),
+        page.getByRole("radio", { name: "anglais" }),
       ).not.toBeChecked();
       await expect(
         page.getByRole("button", { name: "Mise à jour", exact: true }),
@@ -128,9 +124,7 @@ test.describe("User locale selector", () => {
       await loginViaUrl(page, config.users.student);
       await openSelector(page);
       await expect(page.locator("html")).toHaveAttribute("lang", /^fr/);
-      await expect(
-        page.getByRole("radio", { name: "français", exact: true }),
-      ).toBeChecked();
+      await expect(page.getByRole("radio", { name: "français" })).toBeChecked();
     });
   });
 
