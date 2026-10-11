@@ -1,0 +1,265 @@
+{
+    "$comment": [
+        "Reviewed differences between uPortal 5.17 (tests/replay/fixtures/5.17) and the current build that are intended (docs/http-replay.md, 'Intended differences' and 'Rules').",
+        "An entry matches an exchange by 'path' (glob, * matches anything), and optionally 'roles', 'method' and 'set' (crawl or suite), and one difference by 'field' (status, location, header:<name>, cookie:<name>, body, or a glob) and optionally its exact 'from' and 'to' values, regular expressions 'fromMatch' and 'toMatch' for them, or 'detail', a regular expression that every changed line of a JSON or HTML body must match.",
+        "An entry with 'security' instead matches a change in the security checks by its path (e.g. logins.admin.cas.password or csrf).",
+        "Every entry has a 'reason', a 'log' reference and 'visible' (does a user, admin or API client see the change). A visible entry, a lost-access entry and a CSRF entry name their section of uPortal's docs/UPGRADING-6.0.md in 'upgrading'. CSRF changes from protecting every unsafe /api request cite MOD-I130.",
+        "No entry can excuse a request that 5.17 refused and that is served now (rule 1).",
+        "An entry that matches nothing fails the run, unless 'where' and 'whereReason' say where it applies."
+    ],
+    "differences": [
+        {
+            "id": "tomcat-9-error-page-version",
+            "path": "*",
+            "field": "body",
+            "detail": "^[+-] +h3 \"Apache Tomcat/[0-9.]+\"$",
+            "reason": "Tomcat's default error page names the Tomcat version; uPortal-start runs Tomcat 9.0.122 instead of 8.5.100 (uPortal-start 2df5751). The rest of the error page must stay the same. 5.17 shows the version too (see the http-replay notes).",
+            "log": "MOD-D17",
+            "visible": true,
+            "upgrading": "uPortal-start runs Tomcat 9"
+        },
+        {
+            "id": "tomcat-9-json-charset",
+            "path": "*",
+            "field": "header:content-type",
+            "from": "application/json;charset=ISO-8859-1",
+            "to": "application/json;charset=UTF-8",
+            "reason": "Error responses that uPortal writes as JSON (401, 403, 404 from the /api controllers) now say UTF-8. The same uPortal webapp on Tomcat 8.5 still says ISO-8859-1, so the change comes with Tomcat 9 (uPortal-start 2df5751); UTF-8 is what the bodies are.",
+            "log": "MOD-D17",
+            "visible": true,
+            "upgrading": "uPortal-start runs Tomcat 9"
+        },
+        {
+            "id": "portal-version",
+            "path": "*session.json*",
+            "field": "body",
+            "detail": "^\\$\\.person\\.version: \"5\\.17\\.9\" -> \"[^\"]+\"$",
+            "reason": "/api/session.json reports the uPortal version, which is the built version instead of 5.17.9. Every release reports its own version, so this is not listed as a change for adopters.",
+            "log": "MOD-D29",
+            "visible": false
+        },
+        {
+            "id": "portal-analytics-dropdown-fix",
+            "path": "/uPortal/scripts/portal-analytics.js",
+            "field": "body",
+            "reason": "uPortal f301239691 (on master after 5.17.9) removes a capture-phase click handler that blocked Bootstrap dropdowns.",
+            "log": "uPortal f301239691",
+            "visible": true,
+            "upgrading": "Fixes made after uPortal 5.17.9"
+        },
+        {
+            "id": "vendored-portlet-mvc-exception",
+            "path": "/uPortal/p/*/action.uP",
+            "method": "POST",
+            "field": "location",
+            "fromMatch": "pP_actionException=org\\.springframework\\.web\\.portlet\\.NoHandlerFoundException",
+            "toMatch": "pP_actionException=org\\.apereo\\.portal\\.spring\\.web\\.portlet\\.NoHandlerFoundException",
+            "reason": "A portlet action without a handler reports the exception in the redirect; its class is now the vendored Portlet MVC's (uPortal 272a417fb3). The redirect is otherwise the same. That the portal puts an exception message into a URL is 5.17 behaviour (see the http-replay notes).",
+            "log": "MOD-D26",
+            "visible": true,
+            "upgrading": "Spring Portlet MVC is now part of uPortal"
+        },
+        {
+            "id": "api-unmapped-404-status",
+            "path": "/uPortal/api/*",
+            "field": "status",
+            "from": 405,
+            "to": 404,
+            "reason": "An unmapped GET under /api answered 405 with Allow: POST on 5.17, because the /api dispatcher also loads renderingServletContext.xml and its legacy handler mapping matched PortalController's /** for POST. uPortal 3127a82ab9 maps the servlet controllers with RequestMappingHandlerMapping, and the same requests now answer 404. To review with WS6.",
+            "log": "uPortal 3127a82ab9",
+            "visible": true,
+            "upgrading": "Servlet controllers are mapped by RequestMappingHandlerMapping"
+        },
+        {
+            "id": "api-unmapped-404-allow",
+            "path": "/uPortal/api/*",
+            "field": "header:allow",
+            "from": "POST",
+            "to": null,
+            "reason": "An unmapped GET under /api answered 405 with Allow: POST on 5.17, because the /api dispatcher also loads renderingServletContext.xml and its legacy handler mapping matched PortalController's /** for POST. uPortal 3127a82ab9 maps the servlet controllers with RequestMappingHandlerMapping, and the same requests now answer 404. To review with WS6.",
+            "log": "uPortal 3127a82ab9",
+            "visible": true,
+            "upgrading": "Servlet controllers are mapped by RequestMappingHandlerMapping"
+        },
+        {
+            "id": "api-unmapped-404-page",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "^[+-] +((title|h1) \"HTTP Status 40[45] – (Not Found|Method Not Allowed)\"|h3 \"Apache Tomcat/[0-9.]+\")$",
+            "reason": "The error page that goes with the 405 to 404 change above.",
+            "log": "uPortal 3127a82ab9",
+            "visible": true,
+            "upgrading": "Servlet controllers are mapped by RequestMappingHandlerMapping"
+        },
+        {
+            "id": "spring-js-resource-servlet-removed",
+            "path": "/uPortal/resources/*",
+            "field": "*",
+            "reason": "uPortal bcc1d9139d removes the spring-js ResourceServlet, which served /resources/* from jars; nothing in the portal or the Playwright suite requested it. Its URLs answer 404 now. To review with WS6.",
+            "log": "uPortal bcc1d9139d",
+            "visible": true,
+            "upgrading": "The /resources/* servlet is gone"
+        },
+        {
+            "id": "csrf-api-unsafe-requests",
+            "path": "/uPortal/api/*",
+            "methods": [
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE"
+            ],
+            "status": 403,
+            "field": "*",
+            "reason": "Unsafe requests under /api now need Spring Security's CSRF token (uPortal dc9f4c90fb). The probes send none, so each answers 403 with Tomcat's error page, whatever 5.17 answered: 200 for a removeFavorite of an unknown channel and 204 for an admin's DELETE of an unknown portlet definition (lost access, rule 2), 401 for guests, and 400, 404 or 500 for requests 5.17 refused later.",
+            "log": "MOD-I130",
+            "visible": true,
+            "upgrading": "Unsafe requests to /api need the CSRF token"
+        },
+        {
+            "id": "csrf-api-probes",
+            "security": "csrf.* /uPortal/api/*",
+            "to": "403 forbidden",
+            "reason": "The CSRF table's view of the change above: every unsafe /api probe without a token answers 403.",
+            "log": "MOD-I130",
+            "visible": true,
+            "upgrading": "Unsafe requests to /api need the CSRF token"
+        },
+        {
+            "id": "csrf-update-permission-post-only",
+            "path": "/uPortal/api/updatePermission",
+            "method": "GET",
+            "status": 404,
+            "field": "*",
+            "reason": "/api/updatePermission changed permissions on a GET, which no CSRF check covers; it now accepts POST only (uPortal dc9f4c90fb). A GET answered 400 for missing parameters on 5.17 and answers 404 now, as other unmapped GETs under /api do.",
+            "log": "MOD-I130",
+            "visible": true,
+            "upgrading": "Unsafe requests to /api need the CSRF token"
+        },
+        {
+            "id": "csrf-update-permission-probes",
+            "security": "csrf.* GET /uPortal/api/updatePermission",
+            "to": "404 not-found",
+            "reason": "The CSRF table's view of the change above: a GET of /api/updatePermission answers 404.",
+            "log": "MOD-I130",
+            "visible": true,
+            "upgrading": "Unsafe requests to /api need the CSRF token"
+        },
+        {
+            "id": "csrf-meta-tags",
+            "path": "/uPortal/*",
+            "field": "body",
+            "detail": "^[+] +meta\\[name=_csrf(_header)?\\]\\[meta=_csrf(_header)?\\]$",
+            "reason": "Every Respondr page carries the session's CSRF token and header name in <meta name=\"_csrf\"> and <meta name=\"_csrf_header\">, for scripts that call /api.",
+            "log": "MOD-I130",
+            "visible": true,
+            "upgrading": "Unsafe requests to /api need the CSRF token"
+        },
+        {
+            "id": "local-login-link",
+            "path": "/uPortal/*",
+            "field": "body",
+            "detail": "^[+-] +a#portalCASLoginLink\\.btn\\.btn-primary\\[href=(/uPortal/p/login|/cas/login\\?service)\\]$",
+            "reason": "uPortal-start no longer deploys CAS; the Sign In button on guest pages opens the portal's own login form (/uPortal/p/login) instead of /cas/login.",
+            "log": "uPortal-start 0efe5a1",
+            "visible": true,
+            "upgrading": "uPortal-start signs users in locally; CAS is opt-in"
+        },
+        {
+            "id": "local-login-cas-logins",
+            "security": "logins.*.cas.password",
+            "to": "refused",
+            "reason": "There is no CAS server in uPortal-start any more, so signing in through /cas/login fails for every account. The portal's own login still accepts the right password and refuses a wrong one.",
+            "log": "uPortal-start 0efe5a1",
+            "visible": true,
+            "upgrading": "uPortal-start signs users in locally; CAS is opt-in"
+        },
+        {
+            "id": "local-login-deep-links",
+            "path": "/uPortal/*",
+            "field": "location",
+            "fromMatch": "^/cas/login\\?service=\\{origin\\}/uPortal/Login%3FrefUrl%3D",
+            "toMatch": "^/uPortal/p/login\\?refUrl=%2FuPortal%2F",
+            "reason": "A guest who opens a page that needs a login goes to the local login form with the page in refUrl, instead of to CAS with the page encoded in the service URL.",
+            "log": "MOD-I180",
+            "visible": true,
+            "upgrading": "Deep links and failed logins with local login"
+        },
+        {
+            "id": "local-login-refused-to-form",
+            "path": "/uPortal/Login*",
+            "roles": [
+                "guest"
+            ],
+            "field": "location",
+            "from": "/uPortal/f/welcome/normal/render.uP",
+            "to": "/uPortal/p/login",
+            "reason": "/Login without a user name and password, or with a wrong password, goes back to the login form instead of to the guest page.",
+            "log": "MOD-I181",
+            "visible": true,
+            "upgrading": "Deep links and failed logins with local login"
+        },
+        {
+            "id": "favorites-web-component-page",
+            "path": "/uPortal/p/favorites/*",
+            "field": "body",
+            "detail": "^(- |\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-favorites-[^\\]]+\\.js\\]$)",
+            "reason": "The Favorites channel renders <up-favorites>: the portlet's list markup and edit link are gone from the page outline (the outline keeps no custom elements), and the page loads the component's module.",
+            "log": "uPortal-start 8b44d0a",
+            "visible": true,
+            "upgrading": "Favorites is a web component"
+        },
+        {
+            "id": "favorites-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "(\\.editable: removed|webComponent\\.(moduleUrl|tagName|preferenceAttributes)\\b.*up-favorites|webComponent\\.preferenceAttributes: added .*max-height|\\.type: \"Portlet\" -> \"Web Component\")",
+            "reason": "The portlet registry and marketplace APIs describe Favorites as a Web Component channel: the type changes, the webComponent parameters are added and the portlet's editable parameter is gone. The type line also covers Popular Portlets.",
+            "log": "uPortal-start 8b44d0a",
+            "visible": true,
+            "upgrading": "Favorites is a web component"
+        },
+        {
+            "id": "popular-portlets-web-component",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "webComponent\\.(moduleUrl|tagName): added .*up-popular-portlets",
+            "reason": "The portlet registry and marketplace APIs list Popular Portlets' webComponent parameters.",
+            "log": "uPortal-start d34ce71",
+            "visible": true,
+            "upgrading": "Popular Portlets is a web component"
+        },
+        {
+            "id": "popular-portlets-web-component-page",
+            "path": "/uPortal/p/popular-portlets/*",
+            "field": "body",
+            "detail": "^(- |\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-popular-portlets-[^\\]]+\\.js\\]$)",
+            "reason": "Popular Portlets renders <up-popular-portlets>: the portlet's form and DataTables markup are gone from the page outline, and the page loads the component's module.",
+            "log": "uPortal-start d34ce71",
+            "visible": true,
+            "upgrading": "Popular Portlets is a web component"
+        },
+        {
+            "id": "web-components-admin-marketplace",
+            "path": "/uPortal/api/marketplace/entries.json",
+            "roles": [
+                "admin"
+            ],
+            "field": "body",
+            "reason": "The admin's marketplace list is larger than the replay keeps whole, so it is compared by shape and hash. The shape is the same and the hash changes; the other roles' lists show the cause, the Favorites and Popular Portlets entries above.",
+            "log": "uPortal-start 8b44d0a, d34ce71",
+            "visible": true,
+            "upgrading": "Favorites is a web component"
+        },
+        {
+            "id": "skin-css-pinned-compilers",
+            "path": "/uPortal/media/skins/respondr/*.css",
+            "field": "body",
+            "reason": "uPortal-start compiles the Respondr skins. master installs less ^3.13 and sass ^1.77 without a lockfile, so its CSS depends on the versions current on the day it is built. This branch installs the versions package-lock.json pins. The pages that use the CSS are compared on their own.",
+            "log": "MOD-I106",
+            "visible": false,
+            "where": "local",
+            "whereReason": "CI's runners resolve the same less and sass versions as the recording from master, so the CSS matches there. A machine whose npm resolves other versions sees a different CSS."
+        }
+    ]
+}
