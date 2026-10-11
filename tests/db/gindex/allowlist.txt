@@ -1,13 +1,14 @@
 # G-index allowlist (MOD-D12): reviewed findings that do not fail the audit.
 #
-#   <check> <subject> [vendor=<postgres|mariadb>] -- <reason>
+#   <check> <subject> [vendor=<postgres|mariadb>] [required] -- <reason>
 #
 # <subject> is a glob over what the audit reports: <table>.<constraint or index> for fk-no-index,
 # duplicate-index and redundant-index, and <table>@<statement> for seq-scan (the 8 hex digits
 # identify one SQL statement; the summary shows its text). Every entry needs a reason. Entries
 # marked "6.0:" are 5.17 gaps that the 6.0 index set fixes (docs/developer/modernization/notes/
 # g-index.md in uPortal-start, "Recommended 6.0 index changes", R1 to R9); drop the entry when the
-# change lands. An entry that no longer matches anything is listed under the audit summary.
+# change lands. An entry that no longer matches anything is listed under the audit summary; a
+# `required` entry that matches nothing fails the audit, so it is removed when its fix lands.
 
 # --- Sequential scans ---------------------------------------------------------------------
 
@@ -56,6 +57,11 @@ seq-scan up_portlet_ent@a092d7b5 vendor=postgres -- 6.0: R2, as up_portlet_ent@2
 seq-scan up_portlet_ent@1ace011b vendor=postgres -- 6.0: R2, the foreign-key check when a portlet definition is deleted
 seq-scan up_portlet_ent@5efe71e5 vendor=postgres -- 6.0: R2, the foreign-key check when portlet preferences are deleted
 seq-scan up_portal_cookies@fe357bf9 vendor=postgres -- the hourly expired-cookie purge, DELETE ... WHERE EXPIRES <= ? AND NOT EXISTS (portlet cookies); not re-planned (a DELETE); re-check at full scale, partition or batch the purge (R3)
+
+# Closing a login or concurrent-user interval deletes its UP_UNIQUE_STR row; PostgreSQL checks the
+# foreign keys that point at it (found on the integration branch, run 38116216723)
+seq-scan up_login_event_aggr@402e1298 vendor=postgres required -- 6.0: R4, the foreign-key check on UNIQUE_STRINGS_ID when a closed interval's unique strings are deleted
+seq-scan up_concurrent_user_aggr@1f19ee55 vendor=postgres required -- 6.0: R4, as up_login_event_aggr@402e1298
 
 # --- Foreign keys without an index --------------------------------------------------------
 

@@ -12,7 +12,8 @@
 # masked, must equal tests/db/equivalence/reference, apart from exactly the recorded difference
 # tests/db/equivalence/vendors/<vendor>.diff, or <family>.diff (mysql, mariadb, ...), if there is
 # one. A second export (the first one writes to the database, MOD-I154) is what the build under
-# test must reproduce:
+# test must reproduce. On SQL Server, where 5.17 keeps only windows-1252 text (MOD-I196), the
+# fixture and the reference are first converted to that code page (tests/db/equivalence/code_page.py).
 #
 #   in-place  The build under test (NEW_UPORTAL_VERSION) is deployed on the same database, starts
 #             once and exports everything; that export must be identical to 5.17's, unmasked.
@@ -29,6 +30,8 @@
 # Environment:
 #   OLD_UPORTAL_VERSION   the 5.17 release that writes the data (default 5.17.9)
 #   NEW_UPORTAL_VERSION   the build under test (default: uPortalVersion in gradle.properties)
+#   EQUIVALENCE_CODE_PAGE the code page to convert the fixture to (default: cp1252 when the 5.17
+#                         side is SQL Server, else none); e.g. cp1252 to try SQL Server's on hsqldb
 #
 # Needs Docker for every vendor but hsqldb, and the build under test's uPortal-db-migrate for copy.
 # Everything a run produces is in build/db-equivalence/<in-place-vendor|source-to-target>/. On GitHub
@@ -49,7 +52,7 @@ while [ $# -gt 0 ]; do
         --record) RECORD=true ;;
         --keep) KEEP=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,37p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
         *) ARGS+=("$1") ;;
     esac
@@ -130,6 +133,30 @@ vendor_diff() {  # vendor_diff <vendor>: the recorded difference of 5.17's expor
     fi
 }
 
+code_page() {  # code_page <vendor>: the code page 5.17's text columns keep on the vendor, if not Unicode
+    case "$(family "$1")" in
+        sqlserver) echo cp1252 ;;  # varchar on the default collation (MOD-I196)
+    esac
+}
+
+# The fixture and the reference this run uses: converted to the source's code page, if it has one
+FIXTURE="$EQ/fixture"
+REFERENCE="$EQ/reference"
+CODE_PAGE=${EQUIVALENCE_CODE_PAGE-$(code_page "$SOURCE")}
+if [ -n "$CODE_PAGE" ]; then
+    if [ "$RECORD" = true ]; then
+        echo "Record the reference on a Unicode database (hsqldb), not on $SOURCE ($CODE_PAGE)" >&2
+        exit 2
+    fi
+    FIXTURE="$OUT/fixture-$CODE_PAGE"
+    REFERENCE="$OUT/reference-$CODE_PAGE"
+fi
+
+convert_to_code_page() {  # the fixture and the reference as a 5.17 database on $SOURCE can hold them
+    python3 -B tests/db/equivalence/code_page.py "$CODE_PAGE" "$EQ/fixture" "$FIXTURE" &&
+        python3 -B tests/db/equivalence/code_page.py "$CODE_PAGE" "$EQ/reference" "$REFERENCE"
+}
+
 # The bundled portlets other than News Reader keep no data that dataExport covers, so only uPortal
 # and News Reader are deployed
 deploy() {  # deploy <vendor> <version> [extra tasks]: deploy for the vendor, then the extra tasks
@@ -144,10 +171,27 @@ create_database() {  # create_database <vendor> <version>: an empty uPortal data
     deploy "$1" "$2" dbWait dbSetup :overlays:uPortal:dataInit :overlays:NewsReaderPortlet:dataInit
 }
 
+# Why an entity failed to import or export is only in the reports of dataImport and dataExport:
+# keep them with the logs, and show their start in the job log
+show_reports() {  # show_reports <import|export>
+    local report
+    while IFS= read -r report; do
+        mkdir -p "$OUT/$(dirname "$report")"
+        cp "$report" "$OUT/$report"
+        echo "==== $report"
+        head -n 40 "$report"
+    done < <(find overlays/*/build/data-"$1"-reports -type f 2>/dev/null | sort)
+}
+
 import_fixture() {  # import_fixture <vendor> <version>
     use_vendor "$1"
-    gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:uPortal:dataImport -Ddir="$ROOT/$EQ/fixture/uportal" &&
-        gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:NewsReaderPortlet:dataImport -Ddir="$ROOT/$EQ/fixture/news-reader"
+    rm -rf overlays/*/build/data-import-reports
+    if gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:uPortal:dataImport -Ddir="$ROOT/$FIXTURE/uportal" &&
+        gradle -PdbVendor="$1" -PuPortalVersion="$2" :overlays:NewsReaderPortlet:dataImport -Ddir="$ROOT/$FIXTURE/news-reader"; then
+        return 0
+    fi
+    show_reports import
+    return 1
 }
 
 start_once() {  # start_once <vendor>: start the deployed portal, wait for it, stop it
@@ -160,8 +204,13 @@ export_all() {  # export_all <vendor> <version> <dir>
     rm -rf "$dir"
     mkdir -p "$dir/uportal" "$dir/news-reader"
     use_vendor "$vendor"
-    gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:uPortal:dataExport -Ddir="$dir/uportal" &&
-        gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:NewsReaderPortlet:dataExport -Ddir="$dir/news-reader"
+    rm -rf overlays/*/build/data-export-reports
+    if gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:uPortal:dataExport -Ddir="$dir/uportal" &&
+        gradle -PdbVendor="$vendor" -PuPortalVersion="$version" :overlays:NewsReaderPortlet:dataExport -Ddir="$dir/news-reader"; then
+        return 0
+    fi
+    show_reports export
+    return 1
 }
 
 normalize() {  # normalize <export dir> <normalised dir> [Gradle options]
@@ -259,7 +308,8 @@ if ! start_database "$SOURCE" || { [ "$TARGET" != "$SOURCE" ] && ! start_databas
 fi
 
 # 1. uPortal 5.17 writes the data, runs once, and exports it
-if step "5.17 on $SOURCE: deploy, dataInit" old-init.log create_database "$SOURCE" "$OLD" &&
+if { [ -z "$CODE_PAGE" ] || step "convert the fixture and the reference to $CODE_PAGE" code-page.log convert_to_code_page; } &&
+    step "5.17 on $SOURCE: deploy, dataInit" old-init.log create_database "$SOURCE" "$OLD" &&
     step "5.17 on $SOURCE: import the fixture" old-import.log import_fixture "$SOURCE" "$OLD" &&
     step "5.17 on $SOURCE: start once" old-start.log start_once "$SOURCE" &&
     step "5.17 on $SOURCE: dataExport" old-export.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17-first" &&
@@ -273,7 +323,7 @@ if step "5.17 on $SOURCE: deploy, dataInit" old-init.log create_database "$SOURC
         use_vendor ''
         step "record the reference" record.log gradle dataExportRecord -PnormalizedDir="$ROOT/$OUT/normalized-5.17-masked"
     else
-        compare "5.17 on $SOURCE = reference" "$EQ/reference" "$OUT/normalized-5.17-masked" reference,export \
+        compare "5.17 on $SOURCE = reference" "$REFERENCE" "$OUT/normalized-5.17-masked" reference,export \
             "$OUT/reference-report.txt" "$(vendor_diff "$SOURCE")"
     fi
     OLD_OK=true
