@@ -1,7 +1,6 @@
 package org.apereo.portal.start.removedapi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -120,7 +119,11 @@ class RemovedApiScannerTest {
             RemovedApiAllowlist.read(list);
             throw new AssertionError("an entry without a reason was accepted");
         } catch (IOException expected) {
-            assertNotNull(expected.getMessage());
+            // The reason for the refusal, not any IOException (a missing file is one too)
+            assertTrue(
+                    String.valueOf(expected.getMessage())
+                            .endsWith(":1: expected 'webapp | location | source | api | reason' with a reason"),
+                    expected.toString());
         }
     }
 

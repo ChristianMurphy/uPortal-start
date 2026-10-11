@@ -108,6 +108,7 @@ test('rule 4: an unused entry that says where it applies, with a reason, passes'
     assert.equal(result.unusedElsewhere.length, 1);
     const noReason = run(recorded, recorded, [entry({ id: 'local-no-reason', path: '/uPortal/media/*', field: 'body', where: 'local' })]);
     assert.equal(noReason.failed, true);
+    assert.deepEqual(noReason.problems, ['local-no-reason: "where" needs a "whereReason"']);
 });
 
 test('rule 4 does not apply to the reference replayed against itself', () => {
@@ -124,7 +125,10 @@ test('a CSRF change needs an entry with an UPGRADING-6.0.md section (MOD-I130)',
     assert.deepEqual(run(recorded, recorded, [], options).securityChanges, [
         { path: 'csrf.guest POST /uPortal/api/layout', from: '401 unauthorized', to: '403 forbidden' },
     ]);
-    assert.equal(run(recorded, recorded, [entry({ id: 'csrf-no-section', security: 'csrf.*' })], options).failed, true);
+    // An entry without an UPGRADING-6.0.md section doesn't register a security change
+    const noSection = run(recorded, recorded, [entry({ id: 'csrf-no-section', security: 'csrf.*' })], options);
+    assert.equal(noSection.failed, true);
+    assert.deepEqual(noSection.securityFailures.map((f) => f.path), ['csrf.guest POST /uPortal/api/layout']);
     const cited = entry({
         id: 'csrf',
         security: 'csrf.* /uPortal/api/*',
@@ -150,7 +154,10 @@ test('a body that changed for two registered reasons needs an entry for every ch
     const actual = [{ ...exchange('guest', '/uPortal/f/welcome/normal/render.uP', 200), response: page(['a#login[href=/uPortal/p/login]', 'meta[name=_csrf]']) }];
     const login = entry({ id: 'login', path: '/uPortal/*', field: 'body', detail: 'a#login' });
     const csrf = entry({ id: 'csrf-meta', path: '/uPortal/*', field: 'body', detail: 'meta\\[name=_csrf' });
-    assert.equal(run(recorded, actual, [login]).failed, true, 'one entry explains only some lines');
+    const loginOnly = run(recorded, actual, [login]);
+    assert.equal(loginOnly.failed, true, 'one entry explains only some lines');
+    assert.deepEqual(loginOnly.failures.map((f) => f.exchange.path), ['/uPortal/f/welcome/normal/render.uP']);
+    assert.ok(loginOnly.failures[0].differences[0].detail.includes('+ meta[name=_csrf]'), 'the line no entry explains');
     const both = run(recorded, actual, [login, csrf]);
     assert.equal(both.failed, false);
     assert.deepEqual(
