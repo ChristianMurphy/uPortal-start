@@ -358,7 +358,11 @@ function visit(node, keys, action) {
 const sortArray = (array) => (Array.isArray(array) ? array.toSorted((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) : array);
 
 export function unorder(value, path) {
-    const replace = (v) => (Array.isArray(v) ? `{unstable:${v.length} items}` : '{unstable}');
+    // Idempotent, because the recording, already masked, goes through this again when compared
+    const replace = (v) => {
+        if (typeof v === 'string' && v.startsWith('{unstable')) return v;
+        return Array.isArray(v) ? `{unstable:${v.length} items}` : '{unstable}';
+    };
     for (const [pattern, keys] of UNSTABLE) if (pattern.test(path)) visit(value, keys, replace);
     let result = value;
     for (const [pattern, keys] of UNORDERED) {
