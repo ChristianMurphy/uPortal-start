@@ -1,0 +1,47 @@
+<permission-owner version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/permission-owner https://source.jasig.org/schemas/uportal/io/permission-owner/permission-owner-4.0.xsd">
+  <name>uPortal System</name>
+  <fname>UP_SYSTEM</fname>
+  <desc>Permissions controlling the base uPortal system</desc>
+  <activity>
+    <name>Add Tab</name>
+    <fname>ADD_TAB</fname>
+    <desc>Allow the user to add a layout tab</desc>
+    <targetProvider>portalSystemTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>Customize</name>
+    <fname>CUSTOMIZE</fname>
+    <desc>Allows access to the Customize menu in the UI</desc>
+    <targetProvider>portalSystemTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>Delete Entity</name>
+    <fname>DELETE_ENTITY</fname>
+    <desc>Allow the user to delete a portal entity within the ImportExportPortlet</desc>
+    <targetProvider>portalDataTypeTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>Export Entity</name>
+    <fname>EXPORT_ENTITY</fname>
+    <desc>Allow the user to export entity XML from the ImportExportPortlet</desc>
+    <targetProvider>portalDataTypeTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>Favorite</name>
+    <fname>FAVORITE</fname>
+    <desc>Allow the user to add a portlet to his or her favorites</desc>
+    <targetProvider>channelsAndCategoriesTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>Import Entity</name>
+    <fname>IMPORT_ENTITY</fname>
+    <desc>Allow the user to import entity XML using the ImportExportPortlet</desc>
+    <targetProvider>portalDataTypeTargetProvider</targetProvider>
+  </activity>
+  <activity>
+    <name>Superuser</name>
+    <fname>ALL_PERMISSIONS</fname>
+    <desc>Receive *any* portal permission.  This permission covers all \n        permissions for all systems, is not blockable, and is only intended\n        to be granted to superusers.</desc>
+    <targetProvider>portalSystemTargetProvider</targetProvider>
+  </activity>
+</permission-owner>

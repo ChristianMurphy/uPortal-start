@@ -1,0 +1,32 @@
+<layout script="classpath://org/jasig/portal/io/import-layout_v3-2.crn" username="welcome-lo">
+  <folder ID="s1" hidden="false" immutable="false" name="Root folder" type="root" unremovable="true">
+    <folder ID="s2" hidden="true" immutable="true" name="Page Top folder" type="page-top" unremovable="true">
+      <channel ID="n3" fname="dynamic-respondr-skin" hidden="false" immutable="false" unremovable="false"/>
+      <channel ID="n4" fname="fragment-admin-exit" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s5" hidden="true" immutable="true" name="Customize folder" type="customize" unremovable="true">
+      <channel ID="n6" fname="personalization-gallery" hidden="false" immutable="false" unremovable="false"/>
+    </folder>
+    <folder ID="s7" dlm:deleteAllowed="false" dlm:editAllowed="false" dlm:moveAllowed="false" hidden="false" immutable="false" name="Welcome" type="regular" unremovable="false">
+      <structure-attribute>
+        <name>externalId</name>
+        <value>welcome</value>
+      </structure-attribute>
+      <folder ID="s8" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>60%</value>
+        </structure-attribute>
+        <channel ID="n11" dlm:deleteAllowed="false" dlm:moveAllowed="false" fname="bookmarks" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+      <folder ID="s12" hidden="false" immutable="false" name="Column" type="regular" unremovable="false">
+        <structure-attribute>
+          <name>width</name>
+          <value>40%</value>
+        </structure-attribute>
+        <channel ID="n13" fname="calendar" hidden="false" immutable="false" unremovable="false"/>
+        <channel ID="n14" fname="esup-filemanager-demo" hidden="false" immutable="false" unremovable="false"/>
+      </folder>
+    </folder>
+  </folder>
+</layout>

@@ -1,0 +1,76 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Announcements</title>
+  <name>Announcements</name>
+  <fname>announcements</fname>
+  <desc>Announcements for students, staff, and faculty</desc>
+  <type>Portlet</type>
+  <timeout>5000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/Announcements</up:webAppName>
+    <up:portletName>AnnouncementsDisplay</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>News</category>
+  <group>Authenticated Users</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Authenticated Users</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/announcements.png</value>
+  </parameter>
+  <parameter>
+    <name>printable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>true</value>
+  </parameter>
+  <portlet-preference>
+    <name>AnnouncementPreferences.filterItems</name>
+    <readOnly>false</readOnly>
+    <value/>
+  </portlet-preference>
+  <portlet-preference>
+    <name>AnnouncementPreferences.filterType</name>
+    <readOnly>false</readOnly>
+    <value>BLACKLIST</value>
+  </portlet-preference>
+</portlet-definition>

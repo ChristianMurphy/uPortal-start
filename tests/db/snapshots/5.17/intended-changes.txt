@@ -2,9 +2,9 @@
 # delta to every vendor's baseline before comparing; see "Intended data changes" in
 # docs/db-upgrade-harness.md. One line per table: <TABLE> rows <+n|-n> <MOD reference>
 #
-# Favorites as a Web Component channel: the Web Component portlet type, and the favorites
-# definition's webComponent.tagName and webComponent.moduleUrl parameters (+2)
-# Session Timeout as a Web Component channel: the session-timeout definition's
-# webComponent.tagName, webComponent.moduleUrl and webComponent.preferenceAttributes (+3)
+# Favorites, Popular Portlets and Session Timeout as Web Component channels: the Web Component
+# portlet type; the webComponent.tagName and webComponent.moduleUrl parameters of the favorites
+# and the popular-portlets definitions (two each); and the session-timeout definition's
+# webComponent.tagName, webComponent.moduleUrl and webComponent.preferenceAttributes (three)
 UP_PORTLET_TYPE rows +1 MOD-I134
-UP_PORTLET_DEF_PARAM rows +5 MOD-I134
+UP_PORTLET_DEF_PARAM rows +7 MOD-I134

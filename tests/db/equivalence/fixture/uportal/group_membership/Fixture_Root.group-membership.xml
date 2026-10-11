@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: the top of three nested local groups with Unicode names
+ | (Fixture Root ✨ > Équipe Ünïcödé > 研究グループ). It also holds a PAGS group and a user.
+ +-->
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Fixture Root ✨</name>
+  <entity-type>org.apereo.portal.security.IPerson</entity-type>
+  <creator>system</creator>
+  <description>Top of the fixture's nested groups: «quoted» &amp; &lt;escaped&gt; — ünïcödé ✨</description>
+  <children>
+    <group>Équipe Ünïcödé</group>
+    <group>PAGS Fixture Ünïcødé</group>
+    <literal>fixture-lo</literal>
+  </children>
+</group>

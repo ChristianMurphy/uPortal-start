@@ -1,0 +1,11 @@
+<permission-set script="classpath://org/apereo/portal/io/import-permission_set_v5-0.crn">
+  <owner>UP_SYSTEM</owner>
+  <principal-type>org.apereo.portal.groups.IEntityGroup</principal-type>
+  <principal>
+    <group>Authenticated Users</group>
+  </principal>
+  <activity>ADD_TAB</activity>
+  <target permission-type="GRANT">
+    <literal>ALL</literal>
+  </target>
+</permission-set>

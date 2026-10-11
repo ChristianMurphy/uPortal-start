@@ -1,0 +1,37 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Logging in</title>
+  <name>Logging in</name>
+  <fname>logging-in</fname>
+  <desc>Summary of default user accounts.</desc>
+  <type>CMS</type>
+  <timeout>10000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Everyone</group>
+  <parameter>
+    <name>configurable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/actions/system-log-out.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/password.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>\n            \n                &lt;h2&gt;How and why to log in&lt;/h2&gt;\n                \n                &lt;p&gt;As you can see, uPortal can aggregate and present content generically for \n                unauthenticated users. When users log in, uPortal can do much more, with personalized \n                content, customized layouts, group membership, and access control. Use the\n                "Sign in" button at the top of the page with these example username and password pairs for the\n                example users included with uPortal.&lt;/p&gt;\n                \n                &lt;table&gt;\n                    &lt;tr&gt;\n                        &lt;th&gt;Username&lt;/th&gt;&lt;th&gt;Password&lt;/th&gt;&lt;th&gt;Comments&lt;/th&gt;\n                    &lt;/tr&gt;\n                    &lt;tr&gt;\n                        &lt;td&gt;student&lt;/td&gt;&lt;td&gt;student&lt;/td&gt;&lt;td&gt;Mocked up student content&lt;/td&gt;\n                    &lt;/tr&gt;\n                    &lt;tr&gt;\n                        &lt;td&gt;admin&lt;/td&gt;&lt;td&gt;admin&lt;/td&gt;\n                        &lt;td&gt;Be sure to change this password! The admin user can administer many \n                        aspects of the portal, including publishing new content and editing access control.&lt;/td&gt;\n                    &lt;/tr&gt;\n                    &lt;tr&gt;\n                        &lt;td&gt;developer&lt;/td&gt;&lt;td&gt;developer&lt;/td&gt;\n                        &lt;td&gt;Be sure to change this password! The developer user can administer many \n                        aspects of the portal, including publishing new content and editing access control.&lt;/td&gt;\n                    &lt;/tr&gt;\n                    &lt;tr&gt;\n                        &lt;td&gt;faculty&lt;/td&gt;&lt;td&gt;faculty&lt;/td&gt;&lt;td&gt;Mocked up faculty content&lt;/td&gt;\n                    &lt;/tr&gt;\n                    &lt;tr&gt;\n                        &lt;td&gt;staff&lt;/td&gt;&lt;td&gt;staff&lt;/td&gt;&lt;td&gt;Mocked up staff content&lt;/td&gt;\n                    &lt;/tr&gt;\n                &lt;/table&gt;\n            \n        </value>
+  </portlet-preference>
+</portlet-definition>

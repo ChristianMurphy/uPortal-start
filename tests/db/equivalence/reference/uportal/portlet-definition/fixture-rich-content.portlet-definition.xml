@@ -1,0 +1,70 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Ünïcødé Ŧitle ✨ 内容</title>
+  <name>Fixture Rich Content — 名前</name>
+  <fname>fixture-rich-content</fname>
+  <desc>Description ünïcødé — 説明 — описание — Description ünïcødé — 説明 — описание — Description ünïcødé — 説明 — описание — Description ünïcødé — 説明 — описание — Description ünïcødé — 説明 — описание — Description ünïcødé — 説明 — описание — Description ünïcødé —  ✓end</desc>
+  <type>Advanced CMS</type>
+  <timeout>30000</timeout>
+  <actionTimeout>15000</actionTimeout>
+  <eventTimeout>5000</eventTimeout>
+  <renderTimeout>20000</renderTimeout>
+  <resourceTimeout>25000</resourceTimeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="CREATED" user="fixture-lo">2023-01-15T08:30:00Z</entry>
+    <entry name="APPROVED" user="admin">2023-01-16T09:45:30.250Z</entry>
+    <entry name="PUBLISHED" user="admin">2023-02-01T00:00:00Z</entry>
+    <entry name="EXPIRED" user="fixture-lo">2099-12-31T23:59:59Z</entry>
+  </lifecycle>
+  <category>Fixture Category ✨</category>
+  <category>Testing</category>
+  <group>Everyone</group>
+  <group>Équipe Ünïcödé</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Fixture Root ✨</group>
+      <group>Students</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>configuration-json</name>
+    <value>{"items":[{"n":0,"t":"élément-0"},{"n":1,"t":"élément-1"},{"n":2,"t":"élément-2"},{"n":3,"t":"élément-3"},{"n":4,"t":"élément-4"},{"n":5,"t":"élément-5"},{"n":6,"t":"élément-6"},{"n":7,"t":"élément-7"},{"n":8,"t":"élément-8"},{"n":9,"t":"élément-9"},{"n":10,"t":"élément-10"},{"n":11,"t":"élément-11"},{"n":12,"t":"élément-12"},{"n":13,"t":"élément-13"},{"n":14,"t":"élément-14"},{"n":15,"t":"élément-15"},{"n":16,"t":"élément-16"},{"n":17,"t":"élément-17"},{"n":18,"t":"élément-18"},{"n":19,"t":"élément-19"},{"n":20,"t":"élément-20"},{"n":21,"t":"élément-21"},{"n":22,"t":"élément-22"},{"n":23,"t":"élément-23"},{"n":24,"t":"élément-24"},{"n":25,"t":"élément-25"},{"n":26,"t":"élément-26"},{"n":27,"t":"élément-27"},{"n":28,"t":"élément-28"},{"n":29,"t":"élément-29"},{"n":30,"t":"élément-30"},{"n":31,"t":"élément-31"},{"n":32,"t":"élément-32"},{"n":33,"t":"élément-33"},{"n":34,"t":"élément-34"},{"n":35,"t":"élément-35"},{"n":36,"t":"élément-36"},{"n":37,"t":"élément-37"},{"n":38,"t":"élément-38"},{"n":39,"t":"élément-39"},{"n":40,"t":"élément-40"},{"n":41,"t":"élément-41"},{"n":42,"t":"élément-42"},{"n":43,"t":"élément-43"},{"n":44,"t":"élément-44"},{"n":45,"t":"élément-45"},{"n":46,"t":"élément-46"},{"n":47,"t":"élément-47"},{"n":48,"t":"élément-48"},{"n":49,"t":"élément-49"},{"n":50,"t":"élément-50"},{"n":51,"t":"élément-51"},{"n":52,"t":"élément-52"},{"n":53,"t":"élément-53"},{"n":54,"t":"élément-54"},{"n":55,"t":"élément-55"},{"n":56,"t":"élément-56"},{"n":57,"t":"élément-57"},{"n":58,"t":"élément-58"},{"n":59,"t":"élément-59"},{"n":60,"t":"élément-60"},{"n":61,"t":"élément-61"},{"n":62,"t":"élément-62"},{"n":63,"t":"élément-63"},{"n":64,"t":"élément-64"},{"n":65,"t":"élément-65"},{"n":66,"t":"élément-66"},{"n":67,"t":"élément-67"},{"n":68,"t":"élément-68"},{"n":69,"t":"élément-69"},{"n":70,"t":"élément-70"},{"n":71,"t":"élément-71"},{"n":72,"t":"élément-72"},{"n":73,"t":"élément-73"},{"n":74,"t":"élément-74"},{"n":75,"t":"élément-75"},{"n":76,"t":"élément-76"},{"n"]}]}</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/apps/accessories-text-editor.png</value>
+  </parameter>
+  <parameter>
+    <name>parameter-without-value</name>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>&lt;p&gt;Ünïcødé paragraph № 0: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 1: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 2: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 3: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 4: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 5: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 6: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 7: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 8: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 9: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 10: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 11: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 12: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 13: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 14: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 15: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 16: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 17: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 18: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 19: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 20: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 21: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 22: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 23: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 24: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 25: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 26: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 27: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 28: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 29: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 30: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 31: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 32: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 33: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 34: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 35: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 36: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 37: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 38: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 39: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 40: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 41: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 42: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 43: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 44: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 45: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 46: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 47: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 48: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 49: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 50: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 51: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 52: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 53: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 54: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 55: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 56: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 57: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 58: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 59: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 60: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 61: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 62: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 63: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 64: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 65: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 66: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 67: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 68: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 69: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 70: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 71: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 72: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünïcødé paragraph № 73: 中文段落 🎉 «guillemets» &amp;amp; &lt;em&gt;markup&lt;/em&gt; — line\n&lt;/p&gt;\n&lt;p&gt;Ünï\n&lt;!--end--</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>preference-without-value</name>
+    <readOnly>false</readOnly>
+  </portlet-preference>
+  <portlet-preference>
+    <name>préférence-ünïcødé 🔧</name>
+    <readOnly>false</readOnly>
+    <value>première</value>
+    <value/>
+    <value>二番目</value>
+    <value>première</value>
+    <value>last ✓</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>read-only-preference</name>
+    <readOnly>true</readOnly>
+    <value>  locked value with spaces  </value>
+  </portlet-preference>
+</portlet-definition>

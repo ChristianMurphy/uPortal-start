@@ -1,0 +1,111 @@
+import org.apereo.portal.start.db.DataExportComparison
+import org.apereo.portal.start.db.DataExportNormalizer
+
+/*
+ * Migration equivalence (see docs/migration-equivalence.md and tests/db/equivalence.sh): does
+ * the current build read back exactly the data that uPortal 5.17 wrote? Both export everything
+ * with dataExport; these tasks normalise the exports and compare them, with each other and with
+ * the reference that 5.17 recorded in tests/db/equivalence/reference.
+ *
+ *   ./gradlew dataExportNormalize -PexportDir=<dataExport -Ddir> -PnormalizedDir=<dir>
+ *       [-PmaskVolatile] [-PwholeSeconds]
+ *   ./gradlew dataExportCompare -Pexpected=<dir> -Pactual=<dir> [-PexpectedDiff=<file>]
+ *       [-PcompareReport=<file>] [-PcompareLabels=<expected label>,<actual label>]
+ *   ./gradlew dataExportRecord -PnormalizedDir=<dir>   (writes tests/db/equivalence/reference)
+ *
+ * Properties are read when the build is configured, so the task actions use no Project.
+ */
+
+File equivalenceReference = file('tests/db/equivalence/reference')
+
+Closure<File> optionalFile = { String name ->
+    String value = findProperty(name)
+    return value ? file(value) : null
+}
+
+tasks.register('dataExportNormalize') {
+    group = 'Database'
+    description = 'Normalises a dataExport directory for comparison (-PexportDir, -PnormalizedDir, ' +
+            '-PmaskVolatile to mask values that change from one import to the next, -PwholeSeconds)'
+    File exportDir = optionalFile('exportDir')
+    File normalizedDir = optionalFile('normalizedDir')
+    boolean mask = findProperty('maskVolatile') != null && findProperty('maskVolatile') != 'false'
+    boolean wholeSeconds = findProperty('wholeSeconds') != null && findProperty('wholeSeconds') != 'false'
+    doLast {
+        if (exportDir == null || normalizedDir == null) {
+            throw new GradleException('dataExportNormalize needs -PexportDir=<dir> and -PnormalizedDir=<dir>')
+        }
+        int count = new DataExportNormalizer(mask, wholeSeconds).normalizeDirectory(exportDir, normalizedDir)
+        if (count == 0) {
+            throw new GradleException("No exported .xml files below ${exportDir}")
+        }
+        logger.lifecycle("Normalised ${count} files from ${exportDir} into ${normalizedDir}" +
+                (mask ? ' (volatile values masked)' : '') + (wholeSeconds ? ' (whole seconds)' : ''))
+    }
+}
+
+tasks.register('dataExportCompare') {
+    group = 'Database'
+    description = 'Compares two normalised exports (-Pexpected, -Pactual) and fails on any ' +
+            'difference, or on any difference other than -PexpectedDiff'
+    File expected = optionalFile('expected')
+    File actual = optionalFile('actual')
+    File expectedDiff = optionalFile('expectedDiff')
+    File report = optionalFile('compareReport') ?: new File(layout.buildDirectory.get().asFile, "db-equivalence/compare-report.txt")
+    List<String> labels = (findProperty('compareLabels') ?: 'expected,actual').split(',') as List<String>
+    doLast {
+        if (expected == null || actual == null) {
+            throw new GradleException('dataExportCompare needs -Pexpected=<dir> and -Pactual=<dir>')
+        }
+        if (!expected.directory || !actual.directory) {
+            throw new GradleException("Not a directory: ${expected.directory ? actual : expected}")
+        }
+        DataExportComparison.Result result =
+                new DataExportComparison(labels[0], labels.size() > 1 ? labels[1] : 'actual').compare(expected, actual)
+        String allowed = (expectedDiff != null && expectedDiff.file) ? DataExportNormalizer.readUtf8(expectedDiff) : ''
+        boolean pass = result.diff == allowed
+        StringBuilder text = new StringBuilder()
+        text.append("RESULT: ${pass ? 'EQUIVALENT' : 'DIFFERENT'}\n")
+        text.append("${labels[0]}: ${expected}\n${labels.size() > 1 ? labels[1] : 'actual'}: ${actual}\n")
+        text.append("Compared: ${result.summary()}\n")
+        if (allowed) {
+            text.append("Expected difference: ${expectedDiff} (${allowed.readLines().size()} lines); " +
+                    "the difference ${pass ? 'is exactly that' : 'is not exactly that'}\n")
+        }
+        result.missing.each { text.append("MISSING ${it}\n") }
+        result.extra.each { text.append("EXTRA ${it}\n") }
+        result.changed.each { text.append("CHANGED ${it}\n") }
+        text.append('\n').append(result.diff)
+        report.parentFile.mkdirs()
+        report.setText(text.toString(), 'UTF-8')
+        if (!pass) {
+            List<String> lines = text.readLines()
+            String shown = lines.take(80).join('\n') + (lines.size() > 80 ? "\n... (${lines.size() - 80} more lines in ${report})" : '')
+            throw new GradleException("The exports differ (${result.summary()}); full report: ${report}\n${shown}")
+        }
+        logger.lifecycle("${labels.join(' = ')}: ${result.summary()}" + (allowed ? ' apart from the expected difference' : ''))
+    }
+}
+
+tasks.register('dataExportRecord') {
+    group = 'Database'
+    description = 'Records a normalised, masked 5.17 export (-PnormalizedDir) as tests/db/equivalence/reference'
+    File normalizedDir = optionalFile('normalizedDir')
+    doLast {
+        if (normalizedDir == null || !normalizedDir.directory) {
+            throw new GradleException('dataExportRecord needs -PnormalizedDir=<normalised, masked export>')
+        }
+        equivalenceReference.deleteDir()
+        equivalenceReference.mkdirs()
+        int count = 0
+        normalizedDir.eachFileRecurse { File f ->
+            if (f.file) {
+                File target = new File(equivalenceReference, normalizedDir.toPath().relativize(f.toPath()).toString())
+                target.parentFile.mkdirs()
+                target.bytes = f.bytes
+                count++
+            }
+        }
+        logger.lifecycle("Recorded ${count} files as ${equivalenceReference}")
+    }
+}

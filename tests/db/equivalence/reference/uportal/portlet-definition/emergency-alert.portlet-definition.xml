@@ -1,0 +1,66 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Emergency Alert</title>
+  <name>Emergency Alert</name>
+  <fname>emergency-alert</fname>
+  <desc>Apereo Emergency Alert portlet</desc>
+  <type>Portlet</type>
+  <timeout>20000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/NotificationPortlet</up:webAppName>
+    <up:portletName>EmergencyAlert</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Everyone</group>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/emergency.png</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>true</value>
+  </parameter>
+  <portlet-preference>
+    <name>DemoNotificationService.locations</name>
+    <readOnly>false</readOnly>
+    <value>demo/emergencyAlertDemoNoticationResponse.json</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>EmergencyAlertController.usePortalJsLibs</name>
+    <readOnly>false</readOnly>
+    <value>false</value>
+  </portlet-preference>
+</portlet-definition>
