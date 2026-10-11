@@ -14,6 +14,8 @@
 # one. A second export (the first one writes to the database, MOD-I154) is what the build under
 # test must reproduce. On SQL Server, where 5.17 keeps only windows-1252 text (MOD-I196), the
 # fixture and the reference are first converted to that code page (tests/db/equivalence/code_page.py).
+# On Oracle, where 5.17 can't export layout profiles (MOD-I200), 5.17 doesn't export: the build
+# under test's export, masked, must equal the reference apart from the vendor's recorded diff.
 #
 #   in-place  The build under test (NEW_UPORTAL_VERSION) is deployed on the same database, starts
 #             once and exports everything; that export must be identical to 5.17's, unmasked.
@@ -52,7 +54,7 @@ while [ $# -gt 0 ]; do
         --record) RECORD=true ;;
         --keep) KEEP=true ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,42p' "$0"; exit 0 ;;
         -*) echo "Unknown option: $1" >&2; exit 2 ;;
         *) ARGS+=("$1") ;;
     esac
@@ -309,24 +311,42 @@ if ! start_database "$SOURCE" || { [ "$TARGET" != "$SOURCE" ] && ! start_databas
     exit 1
 fi
 
+# 5.17's dataExport fails for every layout profile on Oracle (MOD-I200), so its export can't be
+# compared there: the build under test's export is compared with the reference instead
+OLD_EXPORTS=true
+if [ "$(family "$SOURCE")" = oracle ]; then
+    if [ "$RECORD" = true ]; then
+        echo "Record the reference on hsqldb: 5.17 can't export on $SOURCE (MOD-I200)" >&2
+        exit 2
+    fi
+    OLD_EXPORTS=false
+fi
+
+old_exports() {  # 5.17 exports twice, where it can
+    [ "$OLD_EXPORTS" = false ] && return 0
+    step "5.17 on $SOURCE: dataExport" old-export.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17-first" &&
+        step "normalise the 5.17 export, masked" old-normalize-masked.log normalize "$OUT/export-5.17-first" "$OUT/normalized-5.17-masked" -PmaskVolatile &&
+        # Exporting layouts writes a default profile for every user without one (MOD-I154), so the
+        # first export changed the database. The build under test is compared with a second export,
+        # of the database it will read; the reference with the first, of the database 5.17 left.
+        step "5.17 on $SOURCE: dataExport again" old-export-again.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17" &&
+        step "normalise the second 5.17 export" old-normalize.log normalize "$OUT/export-5.17" "$OUT/normalized-5.17" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"
+}
+
 # 1. uPortal 5.17 writes the data, runs once, and exports it
 if { [ -z "$CODE_PAGE" ] || step "convert the fixture and the reference to $CODE_PAGE" code-page.log convert_to_code_page; } &&
     step "5.17 on $SOURCE: deploy, dataInit" old-init.log create_database "$SOURCE" "$OLD" &&
     step "5.17 on $SOURCE: import the fixture" old-import.log import_fixture "$SOURCE" "$OLD" &&
     step "5.17 on $SOURCE: start once" old-start.log start_once "$SOURCE" &&
-    step "5.17 on $SOURCE: dataExport" old-export.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17-first" &&
-    step "normalise the 5.17 export, masked" old-normalize-masked.log normalize "$OUT/export-5.17-first" "$OUT/normalized-5.17-masked" -PmaskVolatile &&
-    # Exporting layouts writes a default profile for every user without one (MOD-I154), so the
-    # first export changed the database. The build under test is compared with a second export,
-    # of the database it will read; the reference with the first, of the database 5.17 left.
-    step "5.17 on $SOURCE: dataExport again" old-export-again.log export_all "$SOURCE" "$OLD" "$OUT/export-5.17" &&
-    step "normalise the second 5.17 export" old-normalize.log normalize "$OUT/export-5.17" "$OUT/normalized-5.17" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; then
+    old_exports; then
     if [ "$RECORD" = true ]; then
         use_vendor ''
         step "record the reference" record.log gradle dataExportRecord -PnormalizedDir="$ROOT/$OUT/normalized-5.17-masked"
-    else
+    elif [ "$OLD_EXPORTS" = true ]; then
         compare "5.17 on $SOURCE = reference" "$REFERENCE" "$OUT/normalized-5.17-masked" reference,export \
             "$OUT/reference-report.txt" "$(vendor_diff "$SOURCE")"
+    else
+        RESULTS+=("| 5.17 on $SOURCE = reference | not exported (MOD-I200) | |")
     fi
     OLD_OK=true
 else
@@ -347,12 +367,23 @@ if [ "$RECORD" = false ] && [ "$OLD_OK" = true ]; then
                 step "dbMigrate $SOURCE to $TARGET (copy, verify)" db-migrate.log migrate
         }
     fi
+    if [ "$OLD_EXPORTS" = true ]; then
+        normalize_current() { normalize "$OUT/export-current" "$OUT/normalized-current" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; }
+    else
+        # Compared with the reference, so masked the same way
+        normalize_current() { normalize "$OUT/export-current" "$OUT/normalized-current" -PmaskVolatile "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; }
+    fi
     if prepare &&
         step "$NEW on $TARGET: start once" new-start.log start_once "$TARGET" &&
         step "$NEW on $TARGET: dataExport" new-export.log export_all "$TARGET" "$NEW" "$OUT/export-current" &&
-        step "normalise the export of the build under test" new-normalize.log normalize "$OUT/export-current" "$OUT/normalized-current" "${WHOLE_SECONDS[@]+"${WHOLE_SECONDS[@]}"}"; then
-        compare "$NEW on $TARGET = 5.17 on $SOURCE" "$OUT/normalized-5.17" "$OUT/normalized-current" 5.17,current \
-            "$OUT/equivalence-report.txt"
+        step "normalise the export of the build under test" new-normalize.log normalize_current; then
+        if [ "$OLD_EXPORTS" = true ]; then
+            compare "$NEW on $TARGET = 5.17 on $SOURCE" "$OUT/normalized-5.17" "$OUT/normalized-current" 5.17,current \
+                "$OUT/equivalence-report.txt"
+        else
+            compare "$NEW on $TARGET = reference" "$REFERENCE" "$OUT/normalized-current" reference,current \
+                "$OUT/equivalence-report.txt" "$(vendor_diff "$SOURCE")"
+        fi
     fi
 fi
 
