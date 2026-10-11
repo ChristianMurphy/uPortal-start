@@ -106,6 +106,31 @@ subprojects {
     apply plugin: org.apereo.portal.start.gradle.plugins.RemovedApiScanPlugin
 
     /*
+     * The uPortal overlay first (MOD-I343).  Its chain (war, plutoAssemble, removedApiScan,
+     * tomcatDeploy, dataInit) is the longest, and Gradle reached it near the end, in the order of
+     * the project names:  in portalInit it started at 86 s and ended the build at 175 s.  The other
+     * overlays' WARs, scans and data tasks now wait for the uPortal overlay's, so its chain runs
+     * while they fill the other workers.  Only the order changes, and only when the uPortal
+     * overlay's task is part of the build.  The portlets' dataInit after uPortal's is the order
+     * that tests/db/harness.sh --full-suite already uses.
+     */
+    if (project.name != 'uPortal') {
+        tasks.named('war') { mustRunAfter ':overlays:uPortal:war' }
+        tasks.named('removedApiScan') { mustRunAfter ':overlays:uPortal:removedApiScan' }
+        tasks.matching { it.name == 'dataInit' }.configureEach { mustRunAfter ':overlays:uPortal:dataInit' }
+    }
+    /*
+     * portalInit asks for each overlay's clean together with its deploy, with no order between
+     * them.  The project order used to put clean first;  now that the uPortal overlay starts at
+     * once, say so, or Gradle runs the clean after the tasks that use the outputs it deletes.
+     */
+    tasks.configureEach { Task task ->
+        if (task.name != 'clean') {
+            task.mustRunAfter 'clean'
+        }
+    }
+
+    /*
      * Gradle 9 builds the jar of every project that applies 'java' as part of 'assemble';  the
      * overlays only produce WARs.
      */
