@@ -70,7 +70,7 @@ const INFO =
 async function addToLayout(
   page: Page,
   fname: string,
-  tabName: string,
+  tabName: string
 ): Promise<void> {
   const response = await page.request.post<unknown>(LAYOUT_API, {
     form: { action: "addPortlet", fname, tabName },
@@ -94,7 +94,7 @@ async function removeFromLayout(page: Page, fname: string): Promise<void> {
 async function asUser(
   browser: Browser,
   user: Record<string, string>,
-  action: (page: Page) => Promise<void>,
+  action: (page: Page) => Promise<void>
 ): Promise<void> {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -127,7 +127,7 @@ function info(page: Page): Locator {
 }
 
 async function infoNumbers(
-  page: Page,
+  page: Page
 ): Promise<{ page: number; from: number; to: number; total: number }> {
   await expect(info(page)).toHaveText(INFO);
   const match = INFO.exec((await info(page).textContent()) ?? "");
@@ -224,10 +224,10 @@ test.describe("Popular Portlets", () => {
     await openPopularPortlets(page);
 
     await expect(
-      page.locator(".up-portlet-titlebar .portlet-title"),
+      page.locator(".up-portlet-titlebar .portlet-title")
     ).toContainText("Most Popular Apps");
     await expect(
-      page.getByRole("heading", { name: "Most Frequently Added" }),
+      page.getByRole("heading", { name: "Most Frequently Added" })
     ).toBeVisible();
 
     const days = daysChoice(page);
@@ -243,7 +243,7 @@ test.describe("Popular Portlets", () => {
     await expect(page.getByRole("columnheader")).toHaveCount(2);
     await expect(page.getByRole("columnheader").nth(0)).toContainText("Title");
     await expect(page.getByRole("columnheader").nth(1)).toContainText(
-      "# Times",
+      "# Times"
     );
 
     await expect(page.getByText("Filters", { exact: true })).toBeVisible();
@@ -253,8 +253,8 @@ test.describe("Popular Portlets", () => {
 
     await expect(
       page.getByText(
-        "* These values are provided by daily statistics aggregation",
-      ),
+        "* These values are provided by daily statistics aggregation"
+      )
     ).toBeVisible();
   });
 
@@ -335,7 +335,7 @@ test.describe("Popular Portlets", () => {
     await pageSize(page).selectOption("5");
     await expect(dataRows(table)).toHaveCount(5);
     await expect(info(page)).toHaveText(
-      `Viewing page 1. Showing records 1 to 5 of ${total} items.`,
+      `Viewing page 1. Showing records 1 to 5 of ${total} items.`
     );
     const firstPage = await listedFnames(table);
 
@@ -349,7 +349,7 @@ test.describe("Popular Portlets", () => {
     await next.click();
     const to = Math.min(10, total);
     await expect(info(page)).toHaveText(
-      `Viewing page 2. Showing records 6 to ${to} of ${total} items.`,
+      `Viewing page 2. Showing records 6 to ${to} of ${total} items.`
     );
     await expect(dataRows(table)).toHaveCount(to - 5);
     const secondPage = await listedFnames(table);
@@ -357,7 +357,7 @@ test.describe("Popular Portlets", () => {
 
     await previous.click();
     await expect(info(page)).toHaveText(
-      `Viewing page 1. Showing records 1 to 5 of ${total} items.`,
+      `Viewing page 1. Showing records 1 to 5 of ${total} items.`
     );
     expect(await listedFnames(table)).toEqual(firstPage);
 
@@ -396,7 +396,7 @@ test.describe("Popular Portlets", () => {
     await expect(courses).toBeVisible();
     await expect(dataRows(table)).toHaveCount(1);
     await expect(info(page)).toHaveText(
-      "Viewing page 1. Showing records 1 to 1 of 1 items.",
+      "Viewing page 1. Showing records 1 to 1 of 1 items."
     );
 
     // A second value widens the filter
@@ -404,7 +404,7 @@ test.describe("Popular Portlets", () => {
     await expect(page.locator(".filter-term")).toHaveCount(2);
     await expect(dataRows(table)).toHaveCount(2);
     await expect(info(page)).toHaveText(
-      "Viewing page 1. Showing records 1 to 2 of 2 items.",
+      "Viewing page 1. Showing records 1 to 2 of 2 items."
     );
 
     // Clicking a term removes it
@@ -414,7 +414,7 @@ test.describe("Popular Portlets", () => {
     await page.locator(".filter-term", { hasText: "logging-in" }).click();
     await expect(page.locator(".filter-term")).toHaveCount(0);
     await expect(info(page)).toHaveText(
-      `Viewing page 1. Showing records 1 to ${Math.min(50, total)} of ${total} items.`,
+      `Viewing page 1. Showing records 1 to ${Math.min(50, total)} of ${total} items.`
     );
 
     // The # Times filter lists the distinct counts; disabled when there is one
@@ -425,14 +425,14 @@ test.describe("Popular Portlets", () => {
     const timesOptions = await timesFilter.locator("option").allTextContents();
     const counts = timesOptions.slice(1).map((count) => count.trim());
     expect(counts).toEqual(
-      [...new Set(allCounts.map(String))].sort(byCodeUnits),
+      [...new Set(allCounts.map(String))].sort(byCodeUnits)
     );
     if (counts.length === 1) {
       await expect(timesFilter).toBeDisabled();
     } else {
       await timesFilter.selectOption(counts[0]);
       await expect(dataRows(table)).toHaveCount(
-        allCounts.filter((count) => String(count) === counts[0]).length,
+        allCounts.filter((count) => String(count) === counts[0]).length
       );
     }
   });
@@ -451,7 +451,7 @@ test.describe("Popular Portlets", () => {
     expect(total).toBeGreaterThanOrEqual(SEEDED.length);
     const oneDay = await listedCounts(table);
     expect(oneDay.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(
-      thirtyDays.reduce((a, b) => a + b, 0),
+      thirtyDays.reduce((a, b) => a + b, 0)
     );
 
     await days.selectOption("365");
@@ -467,7 +467,7 @@ test.describe("Popular Portlets", () => {
     await linkTo(table, "Courses").click();
     await expect(page).toHaveURL(/\/p\/courses/);
     await expect(
-      page.locator(".up-portlet-titlebar .portlet-title"),
+      page.locator(".up-portlet-titlebar .portlet-title")
     ).toContainText("Courses");
   });
 });
