@@ -48,10 +48,6 @@ def statement_id(text):
     return hashlib.md5(s.encode()).hexdigest()[:16]
 
 
-def legacy_statement_id(text):
-    """The PostgreSQL statement id before statement_id (MOD-I240): kept for one run to re-record the allowlist."""
-    return hashlib.md5(re.sub(r"\s+", " ", text).strip().encode()).hexdigest()[:16]
-
 GATE_CHECKS = ("seq-scan", "fk-no-index", "duplicate-index", "redundant-index")
 REPORT_CHECKS = ("unused-index", "top-total", "top-mean")
 
@@ -292,7 +288,6 @@ def seq_scans(plans, tables, min_rows):
                 g = grouped[key] = {
                     # table@statement: an allowlist entry covers one statement, not every scan
                     "check": "seq-scan", "subject": f"{table}@{qid[:8]}", "table": table, "rows": info["rows"],
-                    "legacy_subject": f"{table}@{legacy_statement_id(plan.get('Query Text', ''))[:8]}",
                     "queryid": qid, "query": re.sub(r"\s+", " ", plan.get("Query Text", ""))[:600],
                     "sql": plan.get("Query Text", ""),
                     "parameters": (plan.get("Query Parameters") or "")[:300],
@@ -483,8 +478,7 @@ def audit_mariadb(db, args):
             info = tables.get(table)
             if info is None or info["rows"] < args.min_rows:
                 continue
-            findings.append({"check": "seq-scan", "subject": f"{table}@{statement_id(r['full_text'])[:8]}",
-                             "legacy_subject": f"{table}@{str(r['queryid'])[:8]}", "table": table,
+            findings.append({"check": "seq-scan", "subject": f"{table}@{statement_id(r['full_text'])[:8]}", "table": table,
                              "rows": info["rows"], "queryid": r["queryid"], "query": re.sub(r"\s+", " ", r["query"]),
                              "executions": int(r["no_index_used"]), "rows_examined": int(r["rows_examined"]),
                              "index_exists": None if scanned is None else False,
@@ -582,17 +576,9 @@ def apply_allowlist(findings, entries):
         if f["check"] not in GATE_CHECKS:
             continue
         for e in entries:
-            if e["check"] != f["check"]:
-                continue
             # Case-insensitive: MariaDB reports index names upper case
-            if fnmatch.fnmatchcase(f["subject"].lower(), e["subject"].lower()):
+            if e["check"] == f["check"] and fnmatch.fnmatchcase(f["subject"].lower(), e["subject"].lower()):
                 f["allowed"] = e["reason"]
-                e["used"] = True
-                break
-            # For one run (MOD-I240): an entry still written with the old statement id
-            if f.get("legacy_subject") and fnmatch.fnmatchcase(f["legacy_subject"].lower(), e["subject"].lower()):
-                f["allowed"] = e["reason"]
-                f["allowed_by_legacy_id"] = e["line"]
                 e["used"] = True
                 break
 
@@ -648,14 +634,6 @@ def report(findings, stats, args, entries):
         for f in allowed:
             lines.append(f"| {f['check']} | `{f['subject']}` | {describe(f)} | {md_escape(f['allowed'])} |")
         lines += ["", "</details>", ""]
-    moved = [f for f in allowed if f.get("allowed_by_legacy_id")]
-    if moved:
-        lines += ["### Statement ids to re-record", "",
-                  "Allowlist entries that matched by the old statement id; write them with the new one.", "",
-                  "| Allowlist line | Old subject | New subject |", "| ---: | --- | --- |"]
-        lines += [f"| {f['allowed_by_legacy_id']} | `{f['legacy_subject']}` | `{f['subject']}` |"
-                  for f in sorted(moved, key=lambda f: f["allowed_by_legacy_id"])]
-        lines.append("")
     missing = [e for e in entries if e["required"] and not e["used"]]
     if missing:
         lines += ["### Stale required allowlist entries", "",

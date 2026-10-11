@@ -13,57 +13,56 @@
 
 # --- Sequential scans ---------------------------------------------------------------------
 
-# Login and person lookups join UP_PERSON_ATTR on USER_DIR_ID, which has no index (R1). The statement
-# ids are those of Hibernate 5.2 (P2), whose column aliases differ from Hibernate 4's
-seq-scan up_person_attr@894770f1 vendor=postgres -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); login loads the local account with its attributes
-seq-scan up_person_attr@bee7a8c0 vendor=postgres -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); local account lookup by user name
-seq-scan up_person_dir@894770f1 vendor=postgres -- 6.0: R1; with tens of thousands of accounts and no index on UP_PERSON_ATTR (USER_DIR_ID) the planner hashes both tables for the login lookup
-seq-scan up_person_attr@d57b24fc vendor=postgres -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); lazy load of a local account's attributes
+# Login and person lookups join UP_PERSON_ATTR on USER_DIR_ID, which has no index (R1)
+seq-scan up_person_attr@33ca0212 vendor=postgres -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); login loads the local account with its attributes
+seq-scan up_person_attr@ad50b761 vendor=postgres -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); local account lookup by user name
+seq-scan up_person_dir@33ca0212 vendor=postgres -- 6.0: R1; with tens of thousands of accounts and no index on UP_PERSON_ATTR (USER_DIR_ID) the planner hashes both tables for the login lookup
+seq-scan up_person_attr@8c02b7fa vendor=postgres -- 6.0: R1 adds an index on UP_PERSON_ATTR (USER_DIR_ID); lazy load of a local account's attributes
 # People search (search portlet, /api/v5-0/portal/search?type=people) matches lower(value) LIKE '%term%'
-seq-scan up_person_attr@ca83943e vendor=postgres -- 6.0: R6, the same people search; with hundreds of thousands of attribute rows the planner scans UP_PERSON_ATTR for the ATTR_NAME condition as well
-seq-scan up_person_attr_values@ca83943e vendor=postgres -- 6.0: R6, a leading-wildcard LIKE cannot use a btree; PostgreSQL gets a pg_trgm GIN index on lower(ATTR_VALUE), the other vendors keep the scan (search over local accounts only)
+seq-scan up_person_attr@382d803f vendor=postgres -- 6.0: R6, the same people search; with hundreds of thousands of attribute rows the planner scans UP_PERSON_ATTR for the ATTR_NAME condition as well
+seq-scan up_person_attr_values@382d803f vendor=postgres -- 6.0: R6, a leading-wildcard LIKE cannot use a btree; PostgreSQL gets a pg_trgm GIN index on lower(ATTR_VALUE), the other vendors keep the scan (search over local accounts only)
 # The admin attribute list: select distinct ATTR_NAME from UP_PERSON_ATTR (whole table by design)
-seq-scan up_person_attr@a8aaea90 vendor=postgres -- 6.0: R1's index has USER_DIR_ID first; a second index on (ATTR_NAME) turns this into an index-only scan (R6); rare (person directory administration)
+seq-scan up_person_attr@c0f6f6c3 vendor=postgres -- 6.0: R1's index has USER_DIR_ID first; a second index on (ATTR_NAME) turns this into an index-only scan (R6); rare (person directory administration)
 
 # Dimensions: 1,440 time rows and one row per day, read whole by the dimension populator (daily)
 seq-scan up_time_dimension@* -- 1,440 fixed rows (one per minute of the day): the populator reads them all once a day and the aggregation lookups hash them whole; an index would not help
 seq-scan up_date_dimension@* -- the populator reads the date dimensions of a range of years (one row per day) once a day
-# MariaDB digests have their own statement ids (performance_schema digests)
-seq-scan up_person_attr@e0834b70 vendor=mariadb -- as up_person_attr@a8aaea90 on PostgreSQL: the attribute-name list (R6)
-seq-scan up_person_*@34d14bc3 vendor=mariadb -- as up_person_attr_values@ca83943e on PostgreSQL: the people search, leading-wildcard LIKE (R6)
-seq-scan up_event_session@638d496c vendor=mariadb -- the event-session purge reads sessions by LAST_ACCESSED (idx_up_event_session_date); MariaDB scans the small 1/100 table instead; re-check at scale (nightly)
+# MariaDB
+seq-scan up_person_attr@9fb5b3c0 vendor=mariadb -- as up_person_attr@c0f6f6c3 on PostgreSQL: the attribute-name list (R6)
+seq-scan up_person_*@e24b1f4d vendor=mariadb -- as up_person_attr_values@382d803f on PostgreSQL: the people search, leading-wildcard LIKE (R6)
+seq-scan up_event_session@4dc8a109 vendor=mariadb -- the event-session purge reads sessions by LAST_ACCESSED (idx_up_event_session_date); MariaDB scans the small 1/100 table instead; re-check at scale (nightly)
+seq-scan up_event_session@904ee510 vendor=postgres -- as up_event_session@4dc8a109 on MariaDB: the event-session purge reads sessions by LAST_ACCESSED; idx_up_event_session_date exists and the planner prefers a scan of the 1/20 table (run 38136856147); re-check at scale
 
 # Found by the nightly set (MariaDB 12.3 at 1/20 with the whole Playwright suite)
-seq-scan up_group@9f205cea vendor=mariadb -- 6.0: R12, the groups of a member: UP_GROUP_MEMBERSHIP has no index on MEMBER_KEY, so MariaDB reads all of UP_GROUP and probes the primary key
-seq-scan up_group@6f4332ac vendor=mariadb -- 6.0: R12, as up_group@9f205cea (with MEMBER_SERVICE)
-seq-scan up_group@0c04aebc vendor=mariadb -- 6.0: R13, group search by UPPER(GROUP_NAME) = UPPER(?) (groups manager); MariaDB's case-insensitive collation makes UPPER unnecessary there, a code change
-seq-scan up_group@a10b44a4 vendor=mariadb -- 6.0: R13, group search by UPPER(GROUP_NAME) LIKE UPPER(?) (groups manager)
-seq-scan up_user_layout@dbd6f3d8 vendor=mariadb -- 6.0: R14, a user's layouts by USER_ID; the primary key is (LAYOUT_ID, USER_ID)
-seq-scan up_person_attr_values@b50d83df vendor=mariadb -- as up_person_attr_values@ca83943e on PostgreSQL: a people-search variant, leading-wildcard LIKE (R6)
-seq-scan up_user@d57a845f vendor=mariadb -- SELECT COUNT(USER_ID) FROM UP_USER counts every user by design (portal statistics); one index pass per call, rare
-seq-scan up_portal_cookies@b27bca69 vendor=mariadb -- the hourly expired-cookie purge, DELETE ... WHERE EXPIRES <= ? AND NOT EXISTS (portlet cookies); MariaDB does not use idx_up_prtl_ck_exp for this delete; re-check at full scale, partition or batch the purge (R3)
-seq-scan up_unique_str_segment__uids@616b1c4e vendor=mariadb -- loading the user names of an open login interval; the primary key leads with UNIQUE_STR_SEGMENT_ID; the digest was too long to EXPLAIN; re-check
+seq-scan up_group@caba2338 vendor=mariadb -- 6.0: R12, the groups of a member: UP_GROUP_MEMBERSHIP has no index on MEMBER_KEY, so MariaDB reads all of UP_GROUP and probes the primary key
+seq-scan up_group@d4dc897a vendor=mariadb -- 6.0: R12, as up_group@caba2338 (with MEMBER_SERVICE)
+seq-scan up_group@ad0b3bcf vendor=mariadb -- 6.0: R13, group search by UPPER(GROUP_NAME) = UPPER(?) (groups manager); MariaDB's case-insensitive collation makes UPPER unnecessary there, a code change
+seq-scan up_group@8d7abba3 vendor=mariadb -- 6.0: R13, group search by UPPER(GROUP_NAME) LIKE UPPER(?) (groups manager)
+seq-scan up_user_layout@3c7b211d vendor=mariadb -- 6.0: R14, a user's layouts by USER_ID; the primary key is (LAYOUT_ID, USER_ID)
+seq-scan up_person_*@74f3e592 vendor=mariadb -- as up_person_attr_values@382d803f on PostgreSQL: a people-search variant, leading-wildcard LIKE (R6)
+seq-scan up_user@c5a1238d vendor=mariadb -- SELECT COUNT(USER_ID) FROM UP_USER counts every user by design (portal statistics); one index pass per call, rare
+seq-scan up_portal_cookies@e2be25aa vendor=mariadb -- the hourly expired-cookie purge, DELETE ... WHERE EXPIRES <= ? AND NOT EXISTS (portlet cookies); MariaDB does not use idx_up_prtl_ck_exp for this delete; re-check at full scale, partition or batch the purge (R3)
+seq-scan up_portal_cookies@2d30de14 vendor=mariadb -- the expired-cookie purge without the portlet-cookie condition, DELETE ... WHERE EXPIRES <= ?; as up_portal_cookies@e2be25aa (run 38136856147)
 
 # Found by the first PostgreSQL CI runs with executed plans and the whole Playwright suite
 # (run 38100597244, PostgreSQL 18 at 1/100 and 1/20)
-seq-scan up_person_*@c5556ec5 vendor=postgres -- a people-search variant (several attribute conditions), leading-wildcard LIKE (R6)
-seq-scan up_person_attr@3aed9fa4 vendor=postgres -- 6.0: R1, the foreign-key check when an account is deleted (user administration)
-seq-scan up_group_membership@22e17151 vendor=postgres -- 6.0: R12, the groups of a member; PostgreSQL 18 prefers a scan to skip-scanning the (GROUP_ID, ...) primary key
-seq-scan up_group_membership@6955a858 vendor=postgres -- 6.0: R12, as up_group_membership@22e17151 (with MEMBER_SERVICE)
-seq-scan up_group@896e56e4 vendor=postgres -- 6.0: R13, group search by UPPER(GROUP_NAME) = UPPER(?) (groups manager)
-seq-scan up_group@2c7ea75b vendor=postgres -- 6.0: R13, group search by UPPER(GROUP_NAME) LIKE UPPER(?) (groups manager)
-seq-scan up_user@1863ef55 vendor=postgres -- SELECT COUNT(USER_ID) FROM UP_USER counts every user by design (portal statistics); rare
-seq-scan up_user@a7cd9de6 vendor=postgres -- 6.0: R15, user search USER_NAME LIKE ?; the unique index on USER_NAME cannot serve LIKE under a non-C collation, a text_pattern_ops index can (prefix patterns only)
-seq-scan up_portlet_ent@2f93cdee vendor=postgres -- 6.0: R2, a definition's portlet entities by PORTLET_DEF_ID (portlet manager)
-seq-scan up_portlet_ent@a092d7b5 vendor=postgres -- 6.0: R2, as up_portlet_ent@2f93cdee
-seq-scan up_portlet_ent@1ace011b vendor=postgres -- 6.0: R2, the foreign-key check when a portlet definition is deleted
-seq-scan up_portlet_ent@5efe71e5 vendor=postgres -- 6.0: R2, the foreign-key check when portlet preferences are deleted
-seq-scan up_portal_cookies@fe357bf9 vendor=postgres -- the hourly expired-cookie purge, DELETE ... WHERE EXPIRES <= ? AND NOT EXISTS (portlet cookies); not re-planned (a DELETE); re-check at full scale, partition or batch the purge (R3)
+seq-scan up_person_*@b0f4a96a vendor=postgres -- a people-search variant (several attribute conditions), leading-wildcard LIKE (R6)
+seq-scan up_person_attr@291d7321 vendor=postgres -- 6.0: R1, the foreign-key check when an account is deleted (user administration)
+seq-scan up_group_membership@172462ac vendor=postgres -- 6.0: R12, the groups of a member; PostgreSQL 18 prefers a scan to skip-scanning the (GROUP_ID, ...) primary key
+seq-scan up_group_membership@19a1b6c3 vendor=postgres -- 6.0: R12, as up_group_membership@172462ac (with MEMBER_SERVICE)
+seq-scan up_group@708395f6 vendor=postgres -- 6.0: R13, group search by UPPER(GROUP_NAME) = UPPER(?) (groups manager)
+seq-scan up_group@23b1b30c vendor=postgres -- 6.0: R13, group search by UPPER(GROUP_NAME) LIKE UPPER(?) (groups manager)
+seq-scan up_user@c5a1238d vendor=postgres -- SELECT COUNT(USER_ID) FROM UP_USER counts every user by design (portal statistics); rare
+seq-scan up_user@4610284d vendor=postgres -- 6.0: R15, user search USER_NAME LIKE ?; the unique index on USER_NAME cannot serve LIKE under a non-C collation, a text_pattern_ops index can (prefix patterns only)
+seq-scan up_portlet_ent@7bb32e56 vendor=postgres -- 6.0: R2, a definition's portlet entities by PORTLET_DEF_ID (portlet manager)
+seq-scan up_portlet_ent@984f6a91 vendor=postgres -- 6.0: R2, as up_portlet_ent@7bb32e56
+seq-scan up_portlet_ent@eb3fbf17 vendor=postgres -- 6.0: R2, the foreign-key check when a portlet definition is deleted
+seq-scan up_portlet_ent@5b351e59 vendor=postgres -- 6.0: R2, the foreign-key check when portlet preferences are deleted
 
 # Closing a login or concurrent-user interval deletes its UP_UNIQUE_STR row; PostgreSQL checks the
 # foreign keys that point at it (found on the integration branch, run 38116216723)
-seq-scan up_login_event_aggr@402e1298 vendor=postgres required -- 6.0: R4, the foreign-key check on UNIQUE_STRINGS_ID when a closed interval's unique strings are deleted
-seq-scan up_concurrent_user_aggr@1f19ee55 vendor=postgres required -- 6.0: R4, as up_login_event_aggr@402e1298
+seq-scan up_login_event_aggr@0e903d0f vendor=postgres required -- 6.0: R4, the foreign-key check on UNIQUE_STRINGS_ID when a closed interval's unique strings are deleted
+seq-scan up_concurrent_user_aggr@65e78d0a vendor=postgres required -- 6.0: R4, as up_login_event_aggr@0e903d0f
 
 # --- Foreign keys without an index --------------------------------------------------------
 
