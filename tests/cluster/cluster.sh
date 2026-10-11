@@ -888,6 +888,7 @@ if [ "$setup_ok" = true ] && [ "$JOIN_STARTS" -gt 0 ]; then
             out=$(join_outcome "$since")
             rc=$?
         done
+        [ "$rc" -eq 2 ] && out="FAIL: still undecided $(( JOIN_BOUND_S + 30 )) s after node B answered: ${out#UNDECIDED: }"
         echo "start $i: $out" | tee -a "$OUT/join-starts.txt"
         stop_node b
         sleep 5
