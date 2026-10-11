@@ -29,10 +29,11 @@ Nothing to set up. `portalInit` (or `tomcatInstall`, which runs `tomcatConfig`) 
 * turn off the CAS security context
   (`org.apereo.portal.security.provider.cas.CasAssertionSecurityContextFactory.enabled=false`);
 * point the Sign In button at the login portlet
-  (`org.apereo.portal.channels.CLogin.CasLoginUrl=${portal.context}/p/login?refUrl=`; the property
-  keeps its historical name). uPortal also sends a guest who opens a page that needs a login to this
-  URL, with the page appended in the encoded form CAS expects; the trailing `refUrl=` takes it in.
-  The local login form does not return the user to that page afterwards;
+  (`org.apereo.portal.channels.CLogin.CasLoginUrl=${portal.context}/p/login`; the property
+  keeps its historical name);
+* send a guest who opens a page that needs a login to that form, with the page in a `refUrl`
+  parameter, and open the page after signing in. A wrong password returns to the form, which says
+  so (`login.refUrlEncoder=local`);
 * send users back to the guest page when they sign out (`logout.redirect=`).
 
 The quickstart users sign in with their user name as password: `admin`, `faculty`, `staff` and
