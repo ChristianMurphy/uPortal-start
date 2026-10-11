@@ -2,6 +2,7 @@ import { test, expect, Locator, Page } from "@playwright/test";
 import { config } from "../../general-config";
 import { loginViaUrl } from "../utils/ux-general-utils";
 import { clickToNavigate, openPortlet } from "../utils/ux-admin-utils";
+import { importLocalAccount } from "../utils/local-account-utils";
 
 /*
  * User Administration (fname user-administration) is the user-manager Web
@@ -23,6 +24,12 @@ import { clickToNavigate, openPortlet } from "../utils/ux-admin-utils";
  * The spec checks what was saved through the export API, and empties that
  * cache with the Cache Manager portlet (the cache-manager Web Flow)
  * before it reads an account back through the UI.
+ *
+ * "Create a User" with the name of an existing local account is refused with
+ * "Username is already in use" (PersonFormValidator, MOD-I195). Before uPortal
+ * registered that validator under the name Web Flow looks for,
+ * accountFormValidator, the form saved over the existing account, password
+ * included.
  */
 
 const USERS_FNAME = "user-administration";
@@ -202,5 +209,37 @@ test.describe("User Administration", () => {
     // Delete it
     await deleteAccount(page, username);
     expect(await accountExists(page, username)).toBe(false);
+  });
+
+  test("refuses to create a user whose name is taken", async ({ page }) => {
+    await loginViaUrl(page, config.users.admin);
+    const existing = await importLocalAccount(page.request, "useradmin", "Uma", {
+      department: "Original Department",
+    });
+    const before = await exportedAccount(page, existing.username);
+
+    const content = await openPortlet(page, USERS_FNAME);
+    await clickToNavigate(
+      page,
+      content.getByRole("link", { name: "Create a User" })
+    );
+    const password = `Pw-${stamp}`;
+    await content.getByLabel("Username").fill(existing.username);
+    await content.getByLabel("Password", { exact: true }).fill(password);
+    await content.getByLabel("Confirm Password").fill(password);
+    await content
+      .getByRole("textbox", { name: "Department", exact: true })
+      .fill("Overwritten Department");
+    await clickToNavigate(
+      page,
+      content.getByRole("button", { name: "Save", exact: true })
+    );
+
+    await expect(content).toContainText("Username is already in use");
+    await expect(
+      content.getByRole("heading", { name: "Create a User" })
+    ).toBeVisible();
+    // The account, its password included, is as it was
+    expect(await exportedAccount(page, existing.username)).toEqual(before);
   });
 });
