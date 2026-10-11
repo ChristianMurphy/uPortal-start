@@ -73,21 +73,34 @@ uPortal-start with released uPortal 5.17.9 on Tomcat 8.5.100. The current build 
     recording showed 581 unexplained exchanges. Resolving layout node ids per run, masking the
     other generated ids and comparing id-ordered lists without their order brought that to 130.
     Of these, 8 come from the PAGS 500 page recorded as binary and 6 from suite requests that are
-    no longer replayed, and both go away with a new recording (normaliser version 2). The rest were ids inside class names, masked since.
+    no longer replayed, and both go away with a new recording (normaliser version 2). The rest
+    were ids inside class names, masked since.
   * Newer uPortal integration commits changed two behaviours (finding 13), now registered.
+* **Final reference** recorded from real `master` with normaliser version 2, committed as
+  7eb4311. It holds 2387 exchanges, of which 1386 come from the crawl, and its matrix has 277
+  routes. Its self-check passes with no differences.
+* **CI replay of the current build: green**, run 38109159151. 2387 exchanges compared, none
+  unexplained. 362 registered differences in 9 registry entries, and 35 matrix cells changed, all
+  of them the registered 405 to 404 change. 10 suite requests are not replayed because they write
+  or address something by a generated id. The `skin-css-pinned-compilers` entry matched nothing in CI. It matches
+  only on machines whose npm resolves other less and sass versions than master's CI runner.
 
 ### Seeded faults
 
 Each fault was applied to the deployed current build after `dataInit` and before Tomcat started.
-The replay then ran against the stand-in's recording. The faults stay out of the branch. Without
-a fault, the same procedure passes, with 253 registered differences.
+The replay then ran locally against the final reference recorded from `master` (7eb4311). The
+faults stay out of the branch. Without a fault, the same procedure passes, with 264 registered
+differences.
 
 | Fault | What it imitates | Result |
 | --- | --- | --- |
 | `<mvc:path-matching suffix-pattern="false" trailing-slash="false"/>` on `/api` | Spring 6 defaults | **fails**: 28 exchanges and 22 matrix cells. `GET /api/session.json/` and `/api/v4-3/dlm/layout.json/` change from 200 to 405 for every role. `/api/v5-0/people/me.json` and `/people/admin.smith` change from 200 to 404 |
 | `useHttpOnly="false"` in uPortal's `META-INF/context.xml` and `<http-only>false</http-only>` in its `web.xml` | the container no longer marking the session cookie HttpOnly | **fails**: 3 exchanges and 2 security checks. The login cookie and the header snapshot lose `httponly` on `JSESSIONID` |
 | `@JsonFormat` removed from `PortletList.updatedOn` (rebuilt jar) | a Jackson date default change | **fails**: 4 exchanges. `$[0].updatedOn` changes from `"9999-99-99 99:99:99 +0000"` to `{epoch-ms:number}` in both the crawl and the suite requests |
-| method security off on `/api` (`global-method-security` commented out) | an admin route opened to guests | **fails**: 36 exchanges, 35 matrix cells and the CSRF table. `GET /api/permissions/owners.json` changes from 403 to 200 for guest, student, staff and faculty |
+| method security off on `/api` (`global-method-security` commented out) | an admin route opened to guests | **fails**: 35 exchanges, 35 matrix cells and the CSRF table. `GET /api/permissions/owners.json` changes from 403 to 200 for guest, student, staff and faculty |
+
+The local uPortal build predates uPortal 3127a82ab9 and bcc1d9139d. These runs did not exercise
+their registry entries, and the CI replay did.
 
 ## Findings
 
@@ -168,22 +181,39 @@ a fault, the same procedure passes, with 253 registered differences.
   emergency alert for the whole run (finding 10). The Playwright jobs could probe
   `/uPortal/health-check` instead.
 
+## Decisions to confirm
+
+Every intended difference and every narrowing in this branch is a judgement made here, without
+the owner's approval. The registry is `tests/replay/intended-differences.json`. Counts are from
+CI run 38109159151.
+
+| Decision | Visible to | Where |
+| --- | --- | --- |
+| Tomcat 9 error pages name 9.0.122 (133 differences) | anyone who gets a 404 or 405 page | registry `tomcat-9-error-page-version` |
+| JSON error bodies say `charset=UTF-8`, not ISO-8859-1 (60) | API clients | registry `tomcat-9-json-charset` |
+| `/api/session.json` reports the built version (20) | API clients | registry `portal-version` |
+| `portal-analytics.js` has upstream fix f301239691 (6) | users, dropdowns work | registry `portal-analytics-dropdown-fix` |
+| A failed portlet action's redirect names the vendored Portlet MVC class (3) | anyone who reads the URL | registry `vendored-portlet-mvc-exception` |
+| Unmapped GETs under `/api` answer 404 instead of 405 with `Allow: POST` (90, and 35 matrix cells) | API clients | registry `api-unmapped-404-*`, needs WS6 |
+| `/uPortal/resources/*` answers 404 (50) | anything that linked spring-js resources | registry `spring-js-resource-servlet-removed`, needs WS6 |
+| Skin CSS from pinned less and sass (0 in CI) | nobody in CI | registry `skin-css-pinned-compilers` |
+| The reference is released 5.17.9 on uPortal-start `master`, not a 5.17.10 snapshot | | `replay.yml`, `docs/http-replay.md` |
+| Generated ids masked, and lists of objects and page outlines compared without order | the replay misses changes to generated ids and to the order of id-ordered lists | `lib.mjs`, finding 12 |
+| Values that 5.17 itself varies are masked, such as permission target names and the calendar's resource bodies (the full list is in the `lib.mjs` comments) | | `lib.mjs` comments |
+| Requests left out of the replay, such as the 428 state-changing suite requests and the 10 suite GETs that write or address generated ids (the full list is in `docs/http-replay.md`) | | `harvest.mjs`, `replay.mjs`, `routes.json` |
+| CSRF probes built to change nothing on 5.17; cache clearing probed only as guest and student | | `routes.json` |
+| The reset empties HSQLDB and waits 30 seconds for portlets after the health check | | `portal.sh`, findings 5 and 10 |
+| The record job may push fixtures to the branch it runs for (never the default branch), and a `[replay-record]` commit message triggers it | | `replay.yml` |
+| On workstream branches the replay runs only when `tests/replay` or the workflow changes | | `replay.yml`, MOD-D30 |
+| Node globals declared for `*.mjs` in `eslint.config.js` | | `eslint.config.js` |
+
 ## What's left
 
-State on 2026-10-11, for resuming from the branch alone:
-
-* **Running**: the HTTP replay run for the commit that adds this text re-records the reference
-  from `master` with normaliser version 2 and commits it to this branch
-  (`test(e2e): record the 5.17 http replay fixtures`). Run 38104156826 was replaced by it before it
-  started.
-  Until that commit is on the branch, the replay job refuses the version 1 fixtures, as designed.
-* **Next step**: after the fixture commit, push a commit that touches `tests/replay` (the
-  registry entries for finding 13 and the commit job's rebase are waiting locally for that). The
-  replay job then runs against the new recording. Register or mask what it shows, with reasons,
-  until it passes, and put its run ID here.
-* **Seeded faults** were run against the stand-in recording with the masks before finding 12.
-  After the replay passes in CI, rerun them locally against the real recording (the fault script
-  is described in "Seeded faults" above).
+* WS6 to confirm the two integration-branch changes (finding 13), or fix them and drop their
+  registry entries.
+* The coordinator to assign the proposed log entries.
 * Not covered yet: browsers other than Chromium, other databases (the replay runs on HSQLDB only),
   portlet resource URLs other than those the suite requests, and the 428 state-changing suite
   requests (only the CSRF probes replay state changes).
+* Re-record when the Playwright suite gains specs, when `routes.json` changes, or when a
+  normaliser changes (bump `NORMALISER_VERSION`), with a `[replay-record commit]` commit message.

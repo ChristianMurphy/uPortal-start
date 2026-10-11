@@ -418,7 +418,7 @@ async function replay() {
     if (intended.length > 0) {
         const byEntry = new Map();
         for (const i of intended) byEntry.set(i.entry.id, (byEntry.get(i.entry.id) ?? 0) + 1);
-        lines.push('', '### Intended differences applied', '', '| Registry entry | Exchanges | Reason | Log |', '| --- | --- | --- | --- |');
+        lines.push('', '### Intended differences applied', '', '| Registry entry | Differences | Reason | Log |', '| --- | --- | --- | --- |');
         for (const entry of registry.filter((r) => byEntry.has(r.id))) lines.push(`| ${entry.id} | ${byEntry.get(entry.id)} | ${escapeCell(entry.reason)} | ${entry.log ?? ''} |`);
     }
     const report = `${lines.join('\n')}\n`;
