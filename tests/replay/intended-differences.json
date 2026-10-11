@@ -9,14 +9,14 @@
     ],
     "differences": [
         {
-            "id": "tomcat-9-error-page-version",
+            "id": "tomcat-error-page-no-version",
             "path": "*",
             "field": "body",
-            "detail": "^[+-] +h3 \"Apache Tomcat/[0-9.]+\"$",
-            "reason": "Tomcat's default error page names the Tomcat version; uPortal-start runs Tomcat 9.0.122 instead of 8.5.100 (uPortal-start 2df5751). The rest of the error page must stay the same. 5.17 shows the version too (see the http-replay notes).",
-            "log": "MOD-D17",
+            "detail": "^- +h3 \"Apache Tomcat/[0-9.]+\"$",
+            "reason": "Tomcat's own error pages no longer end in the Tomcat version: uPortal-start's server.xml puts an ErrorReportValve with showReport=\"false\" and showServerInfo=\"false\" on the Host (uPortal-start \"fix(tomcat): leave the report and version off tomcat's error pages\"). 5.17 showed \"Apache Tomcat/8.5.100\". The valve also drops the Type, Message and Description paragraphs, which the outline doesn't keep. Only the removal is intended; a version line that comes back fails the replay. This entry replaces tomcat-9-error-page-version, which explained the 8.5 to 9.0 version change.",
+            "log": "MOD-I250",
             "visible": true,
-            "upgrading": "uPortal-start runs Tomcat 9"
+            "upgrading": "Tomcat's error pages no longer show the Tomcat version"
         },
         {
             "id": "tomcat-9-json-charset",
