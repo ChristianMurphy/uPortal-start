@@ -117,7 +117,9 @@ dbsql() {  # dbsql: run the SQL on stdin as the portal's database user, print th
 
 start_gindex_database() {
     # The vendor file's container, plus what the capture needs: pg_stat_statements and
-    # auto_explain (plans of executed statements, logged as JSON; off until the workload starts)
+    # auto_explain (plans of executed statements, logged as JSON; off until the workload starts).
+    # auto_explain.log_min_duration stays off the command line: a -c setting overrides the
+    # ALTER SYSTEM that turns it on for the workload
     # on PostgreSQL, performance_schema on MariaDB
     local image port env args hostport envargs=() kv
     image=$(prop "$VENDOR" container.image)
@@ -133,7 +135,7 @@ start_gindex_database() {
                -c pg_stat_statements.max=20000 -c pg_stat_statements.track=all -c track_io_timing=on
                -c logging_collector=on -c log_destination=jsonlog -c log_directory=gindex-log
                -c log_filename=postgresql -c log_rotation_size=0 -c log_rotation_age=0
-               -c auto_explain.log_min_duration=-1 -c auto_explain.log_analyze=on
+               -c auto_explain.log_analyze=on
                -c auto_explain.log_buffers=on -c auto_explain.log_timing=off -c auto_explain.log_format=json
                -c auto_explain.log_verbose=off -c auto_explain.log_nested_statements=on
                -c shared_buffers=512MB -c max_wal_size=4GB -c max_connections=300)

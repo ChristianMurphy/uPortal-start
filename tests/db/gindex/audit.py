@@ -318,6 +318,9 @@ def audit_postgres(db, args):
     findings = []
 
     plans = read_plans(args.plans)
+    if args.plans and not plans:
+        # Without executed plans the seq-scan check would pass without looking at anything
+        raise RuntimeError(f"no executed plans in {', '.join(args.plans)}: auto_explain did not log the workload")
     scans = []
     for f in seq_scans(plans, tables, args.min_rows):
         usable = explain_without_seqscan(db, f)
