@@ -26,6 +26,13 @@ import java.util.regex.Pattern
  * that serve the table, and compares those generators' values and max(id) only by the rule
  * value >= max(id). An intended change the run does not show is drift too, so the list can't go
  * stale.
+ *
+ * The same file can list a generator definition that uPortal removed from its mappings, as
+ * "generators declared -table(<TABLE>) <MOD reference>". The comparison drops the definitions
+ * that name that generator table from the baseline's "declared=" text and compares the rest of
+ * generators.txt (the backing object, increment, value, rows and max(id)) exactly. The entry is
+ * found only when the baseline declares such definitions and this run declares none, and it is
+ * drift if the baseline backs any ID with that table, because then IDs were allocated from it.
  */
 class SnapshotComparison {
 
@@ -72,6 +79,67 @@ class SnapshotComparison {
     }
 
     private static final Pattern INTENDED_LINE = ~/^(\S+)\s+rows\s+([+-]\d+)\s+(MOD-[A-Z]+\d+)$/
+    private static final Pattern DECLARATION_LINE = ~/^generators\s+declared\s+-table\((\S+)\)\s+(MOD-[A-Z]+\d+)$/
+
+    /**
+     * One "generators declared -table(<TABLE>) <MOD reference>" line of {@value #INTENDED_CHANGES}:
+     * the mappings no longer declare table generators in TABLE.
+     */
+    static class DeclarationChange {
+        String table
+        String reference
+        /** How many definitions in TABLE the baseline's and this run's [entities] lines declare. */
+        int baselineDeclared
+        int currentDeclared
+        /** The baseline's [entities] lines whose IDs TABLE backs. */
+        List<String> baselineBacked = []
+
+        boolean isFound() { return baselineDeclared > 0 && currentDeclared == 0 && baselineBacked.isEmpty() }
+
+        String describe() {
+            String what = "generators declared -table(${table}) (${reference})"
+            String result = found ? 'found' : 'NOT FOUND'
+            String backed = baselineBacked ? ", but the baseline backs ${baselineBacked.size()} IDs with ${table}" : ''
+            return "${what}: baseline ${baselineDeclared}, this run ${currentDeclared}${backed}: ${result}"
+        }
+
+        /** Removes the table(TABLE[...],alloc=n) parts of an [entities] line's declared= text. */
+        String strip(String line) {
+            return line.replaceAll(/ declared=(\S+)/) { all, String declared ->
+                ' declared=' + declared.split(/\+/).findAll { !declares(it) }.join('+')
+            }
+        }
+
+        int count(List<String> entityLines) {
+            return entityLines.sum(0) { String line ->
+                String declared = line.find(/ declared=(\S+)/) { all, d -> d }
+                declared ? declared.split(/\+/).count { declares(it) } : 0
+            } as int
+        }
+
+        private boolean declares(String part) {
+            return part.toLowerCase(Locale.ROOT).startsWith("table(${table.toLowerCase(Locale.ROOT)}[")
+        }
+
+        boolean backs(String line) {
+            String backing = line.find(/ backing=(.*?) rows=/) { all, b -> b }
+            return backing != null && backing.split(/[\s\[]+/).any { it.equalsIgnoreCase(table) }
+        }
+    }
+
+    /**
+     * Reads the "generators declared -table(<TABLE>) <MOD reference>" lines of
+     * {@value #INTENDED_CHANGES}. A missing file means none.
+     */
+    static List<DeclarationChange> readDeclarationChanges(File file) {
+        if (!file.file) return []
+        List<DeclarationChange> out = []
+        file.readLines('UTF-8').each { String raw ->
+            def m = raw.replaceFirst(/#.*$/, '').trim() =~ DECLARATION_LINE
+            if (m.matches()) out << new DeclarationChange(table: m.group(1), reference: m.group(2))
+        }
+        return out
+    }
 
     /**
      * Reads {@value #INTENDED_CHANGES}: "<TABLE> rows <+n|-n> <MOD reference>" per line; '#' starts
@@ -82,11 +150,12 @@ class SnapshotComparison {
         List<IntendedChange> out = []
         file.readLines('UTF-8').eachWithIndex { String raw, int i ->
             String l = raw.replaceFirst(/#.*$/, '').trim()
-            if (!l) return
+            if (!l || l ==~ DECLARATION_LINE) return
             def m = l =~ INTENDED_LINE
             if (!m.matches() || (m.group(2) as long) == 0) {
                 throw new IllegalArgumentException("${file}:${i + 1}: expected '<TABLE> rows <+n|-n> <MOD-ID>' " +
-                        "with n other than 0, e.g. 'UP_PORTLET_TYPE rows +1 MOD-I134'; found '${raw}'")
+                        "with n other than 0, e.g. 'UP_PORTLET_TYPE rows +1 MOD-I134', or " +
+                        "'generators declared -table(<TABLE>) <MOD-ID>'; found '${raw}'")
             }
             if (out.any { it.table.equalsIgnoreCase(m.group(1)) }) {
                 throw new IllegalArgumentException("${file}:${i + 1}: ${m.group(1)} is listed twice")
@@ -104,10 +173,12 @@ class SnapshotComparison {
     final List<String> invariantViolations = []
     SequenceValues sequenceValues = SequenceValues.EXACT
     List<IntendedChange> intendedChanges = []
+    List<DeclarationChange> declarationChanges = []
 
     static SnapshotComparison compare(File baselineDir, File currentDir, SequenceValues sequenceValues = SequenceValues.EXACT,
-                                      List<IntendedChange> intendedChanges = []) {
-        SnapshotComparison r = new SnapshotComparison(sequenceValues: sequenceValues, intendedChanges: intendedChanges)
+                                      List<IntendedChange> intendedChanges = [], List<DeclarationChange> declarationChanges = []) {
+        SnapshotComparison r = new SnapshotComparison(sequenceValues: sequenceValues, intendedChanges: intendedChanges,
+                declarationChanges: declarationChanges)
         Released released = intendedChanges ? Released.of(new File(baselineDir, GENERATORS), intendedChanges) : new Released()
         FILES.each { String name ->
             File b = new File(baselineDir, name)
@@ -120,6 +191,9 @@ class SnapshotComparison {
             }
             Map<String, List<String>> bs = sections(b.readLines('UTF-8'))
             Map<String, List<String>> cs = sections(c.readLines('UTF-8'))
+            if (name == GENERATORS && declarationChanges) {
+                bs = r.applyDeclarationChanges(bs, cs)
+            }
             if (sequenceValues == SequenceValues.INVARIANT) {
                 if (name == GENERATORS) {
                     r.invariantViolations.addAll(sequenceInvariantViolations(cs['[entities]'] ?: []))
@@ -176,7 +250,22 @@ class SnapshotComparison {
 
     boolean isZeroDrift() {
         return missing.isEmpty() && FILES.every { removed[it].isEmpty() && added[it].isEmpty() } && renames.isEmpty() &&
-                invariantViolations.isEmpty() && intendedChanges.every { it.found }
+                invariantViolations.isEmpty() && intendedChanges.every { it.found } && declarationChanges.every { it.found }
+    }
+
+    /** Counts each declaration change in both snapshots and removes it from the baseline's [entities] lines. */
+    private Map<String, List<String>> applyDeclarationChanges(Map<String, List<String>> baseline, Map<String, List<String>> current) {
+        List<String> baselineEntities = baseline['[entities]'] ?: []
+        List<String> currentEntities = current['[entities]'] ?: []
+        declarationChanges.each { DeclarationChange change ->
+            change.baselineDeclared = change.count(baselineEntities)
+            change.currentDeclared = change.count(currentEntities)
+            change.baselineBacked = baselineEntities.findAll { change.backs(it) }
+            baselineEntities = baselineEntities.collect { change.strip(it) }
+        }
+        Map<String, List<String>> m = new LinkedHashMap<>(baseline)
+        if (baseline.containsKey('[entities]')) m['[entities]'] = baselineEntities
+        return m
     }
 
     /** Reads each intended table's row count from schema-normalized.txt, before the deltas are applied. */
@@ -210,6 +299,12 @@ class SnapshotComparison {
             out << "INTENDED CHANGES (${INTENDED_CHANGES}, added to the baseline before comparing): ".toString() +
                     (notFound ? "${notFound} of ${intendedChanges.size()} NOT FOUND" : "${intendedChanges.size()} found")
             intendedChanges.each { out << "~ ${it.describe()}".toString() }
+        }
+        if (declarationChanges) {
+            int notFound = declarationChanges.count { !it.found } as int
+            out << "REMOVED GENERATOR DEFINITIONS (${INTENDED_CHANGES}, removed from the baseline before comparing): ".toString() +
+                    (notFound ? "${notFound} of ${declarationChanges.size()} NOT FOUND" : "${declarationChanges.size()} found")
+            declarationChanges.each { out << "~ ${it.describe()}".toString() }
         }
         out << "RESULT: ${zeroDrift ? 'ZERO DRIFT' : 'DRIFT'}".toString()
         if (invariantViolations) {
