@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: the middle nested group, with a non-ASCII member username.
+ +-->
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Équipe Ünïcödé</name>
+  <entity-type>org.apereo.portal.security.IPerson</entity-type>
+  <creator>system</creator>
+  <description>Groupe imbriqué de niveau 2</description>
+  <children>
+    <group>研究グループ</group>
+    <literal>josé.müller</literal>
+  </children>
+</group>

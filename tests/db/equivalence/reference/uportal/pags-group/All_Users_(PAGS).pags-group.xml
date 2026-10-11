@@ -1,0 +1,13 @@
+<pags-group script="classpath://org/jasig/portal/io/import-pags-group_v4-1.crn">
+  <name>All Users (PAGS)</name>
+  <description>All Portal Users</description>
+  <selection-test>
+    <test-group>
+      <test>
+        <attribute-name/>
+        <tester-class>org.apereo.portal.groups.pags.testers.AlwaysTrueTester</tester-class>
+        <test-value/>
+      </test>
+    </test-group>
+  </selection-test>
+</pags-group>

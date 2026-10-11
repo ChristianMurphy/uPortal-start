@@ -1,0 +1,5 @@
+<portlet-type version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-type https://source.jasig.org/schemas/uportal/io/portlet-type/portlet-type-4.0.xsd">
+  <name>Inline Frame</name>
+  <description>Renders an HTML page within a frame. Not supported in browsers older than Internet Explorer 5 and Netscape 6.</description>
+  <uri>/org/apereo/portal/portlets/iframe/IFrame.cpd.xml</uri>
+</portlet-type>

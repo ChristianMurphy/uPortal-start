@@ -1,7 +1,26 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 dependencies {
     runtimeOnly "org.apache.portals.pluto:pluto-testsuite:${plutoVersion}@war"
 }
 
+// The versions the suite's MiscTest expects the portal to report (expectedResults.properties)
+Map<String, String> expectedVersions = [uPortalVersion: uPortalVersion, plutoVersion: plutoVersion]
+
+processResources {
+    inputs.properties(expectedVersions)
+    filesMatching('expectedResults.properties') {
+        filter(ReplaceTokens, tokens: expectedVersions)
+    }
+}
+
 war {
     archiveFileName = 'pluto-testsuite.war'
+    // Also served as /pluto-testsuite/expectedResults.properties: tests/ux/portlets/
+    // pluto-testsuite.spec.ts reads there which uPortal version it is testing
+    inputs.properties(expectedVersions)
+    from('src/main/resources') {
+        include 'expectedResults.properties'
+        filter(ReplaceTokens, tokens: expectedVersions)
+    }
 }
