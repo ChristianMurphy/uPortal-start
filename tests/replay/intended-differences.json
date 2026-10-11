@@ -260,6 +260,26 @@
             "upgrading": "Background Preference is a web component"
         },
         {
+            "id": "user-locale-web-component-page",
+            "path": "/uPortal/p/user-locales-selector/*",
+            "field": "body",
+            "detail": "^(- |\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-user-locale-[^\\]]+\\.js\\]$)",
+            "reason": "The User Locales Selector channel renders <up-user-locale>: the portlet's form with one radio button per locale and its Update button are gone from the page outline, and the page loads the component's module.",
+            "log": "uPortal-start 24fbb0b",
+            "visible": true,
+            "upgrading": "The user locale selector is a web component"
+        },
+        {
+            "id": "user-locale-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "webComponent\\.(moduleUrl|tagName): added .*up-user-locale",
+            "reason": "The portlet registry and marketplace APIs list the User Locales Selector's webComponent parameters. Its type change is the Favorites registry entry's type line.",
+            "log": "uPortal-start 24fbb0b",
+            "visible": true,
+            "upgrading": "The user locale selector is a web component"
+        },
+        {
             "id": "web-components-admin-marketplace",
             "path": "/uPortal/api/marketplace/entries.json",
             "roles": [
