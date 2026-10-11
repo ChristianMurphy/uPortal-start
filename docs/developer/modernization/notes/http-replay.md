@@ -67,6 +67,14 @@ uPortal-start with released uPortal 5.17.9 on Tomcat 8.5.100. The current build 
   with uPortal 5.17.9 on Tomcat 8.5, Gradle 6.9.4 and Java 11. The run committed the fixtures as
   6532d3e: 2393 exchanges (1386 crawl, 1007 suite requests) and 277 matrix routes. Its self-check
   (the reference replayed against its own recording after a reset) passes.
+* **First CI replay against that recording** (run 38100658549) failed, for two reasons:
+  * Generated ids differ between machines (finding 12). The stand-in and the current build had
+    run on the same machine, which hid this. Locally, the current build against the real
+    recording showed 581 unexplained exchanges. Resolving layout node ids per run, masking the
+    other generated ids and comparing id-ordered lists without their order brought that to 130.
+    Of these, 8 come from the PAGS 500 page recorded as binary and 6 from suite requests that are
+    no longer replayed, and both go away with a new recording (normaliser version 2). The rest were ids inside class names, masked since.
+  * Newer uPortal integration commits changed two behaviours (finding 13), now registered.
 
 ### Seeded faults
 
@@ -119,6 +127,21 @@ a fault, the same procedure passes, with 253 registered differences.
 11. **Some responses vary by design.** The marketplace's related portlets are a random sample,
     and several `/api` lists come from hash sets. The replay sorts or masks them, and the comments
     in `lib.mjs` say which.
+12. **5.17 assigns generated ids differently on every machine.** `JaxbPortalDataHandlerService`
+    imports the files of one entity type in parallel, in the order `ConcurrentDirectoryScanner`
+    lists them from the file system. User, group, portlet, portlet type and entity type ids, the
+    user part of layout node ids (`u26l1n210` on one machine, `u22l1n210` on another), and every
+    list that 5.17 orders by them (fragments in the page, categories, portlet lists) differ between
+    two fresh installs with the same data. An id in a bookmarked URL or an external integration is
+    not portable between installs. For the replay, generated ids are masked, layout node ids in
+    recorded URLs are resolved per run from the role's `layout.json` and welcome page, and lists of
+    objects are compared without their order. The replay does not detect changes to how ids are
+    generated, and it compares fewer orderings.
+13. **The replay caught two changes on the uPortal integration branch.** uPortal 3127a82ab9 maps
+    servlet controllers with `RequestMappingHandlerMapping`, so an unmapped GET under `/api` answers
+    404 where 5.17 answered 405 with `Allow: POST` (from `PortalController`'s `/**` mapping that the
+    `/api` dispatcher also loads). uPortal bcc1d9139d removes the spring-js `ResourceServlet`, so
+    `/uPortal/resources/*` answers 404. Both are registered as intended and need a WS6 review.
 
 ## Proposed LOG entries
 
@@ -136,15 +159,31 @@ a fault, the same procedure passes, with 253 registered differences.
   and the path-matching fault) change at least 22 matrix cells. WS6 should decide per route
   whether to keep the old URLs.
 * `MOD-I?` (API): a portlet-list POST without a name answers 500 (finding 9).
+* `MOD-I?` (Persistence): generated ids depend on the machine because the data import runs in
+  parallel over an unsorted directory listing (finding 12). Upstream candidate (sort the listing,
+  or import one type in one thread).
+* `MOD-I?` (Web): unmapped `/api` GETs answer 404 instead of 405, and `/resources/*` is gone
+  (finding 13). WS6 to confirm both are intended.
 * `MOD-I?` (Tests): readiness probes that render `/uPortal/` can break NotificationPortlet's
   emergency alert for the whole run (finding 10). The Playwright jobs could probe
   `/uPortal/health-check` instead.
 
 ## What's left
 
-* The first CI replay of the current build against the recording from real `master`. Its run
-  ID and result go here. Differences between real `master` and the local stand-in (Gradle 6
-  overlays, HSQLDB 2.5.1) would show up there first.
-* Not covered yet: browsers other than Chromium, other databases (the replay runs on HSQLDB only), portlet
-  resource URLs other than those the suite requests, and the 428 state-changing suite requests
-  (only the CSRF probes replay state changes).
+State on 2026-10-11, for resuming from the branch alone:
+
+* **Running**: the HTTP replay run for the commit that adds this text re-records the reference
+  from `master` with normaliser version 2 and commits it to this branch
+  (`test(e2e): record the 5.17 http replay fixtures`). Run 38104156826 was replaced by it before it
+  started.
+  Until that commit is on the branch, the replay job refuses the version 1 fixtures, as designed.
+* **Next step**: after the fixture commit, push a commit that touches `tests/replay` (the
+  registry entries for finding 13 and the commit job's rebase are waiting locally for that). The
+  replay job then runs against the new recording. Register or mask what it shows, with reasons,
+  until it passes, and put its run ID here.
+* **Seeded faults** were run against the stand-in recording with the masks before finding 12.
+  After the replay passes in CI, rerun them locally against the real recording (the fault script
+  is described in "Seeded faults" above).
+* Not covered yet: browsers other than Chromium, other databases (the replay runs on HSQLDB only),
+  portlet resource URLs other than those the suite requests, and the 428 state-changing suite
+  requests (only the CSRF probes replay state changes).

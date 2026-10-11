@@ -54,6 +54,39 @@
             "field": "body",
             "reason": "uPortal-start compiles the Respondr skins. master installs less ^3.13 and sass ^1.77 without a lockfile, so its CSS depends on the versions current on the day it is built. This branch installs the versions package-lock.json pins. The pages that use the CSS are compared on their own.",
             "log": "MOD-I106"
+        },
+        {
+            "id": "api-unmapped-404-status",
+            "path": "/uPortal/api/*",
+            "field": "status",
+            "from": 405,
+            "to": 404,
+            "reason": "An unmapped GET under /api answered 405 with Allow: POST on 5.17, because the /api dispatcher also loads renderingServletContext.xml and its legacy handler mapping matched PortalController's /** for POST. uPortal 3127a82ab9 maps the servlet controllers with RequestMappingHandlerMapping, and the same requests now answer 404. To review with WS6.",
+            "log": "uPortal 3127a82ab9"
+        },
+        {
+            "id": "api-unmapped-404-allow",
+            "path": "/uPortal/api/*",
+            "field": "header:allow",
+            "from": "POST",
+            "to": null,
+            "reason": "An unmapped GET under /api answered 405 with Allow: POST on 5.17, because the /api dispatcher also loads renderingServletContext.xml and its legacy handler mapping matched PortalController's /** for POST. uPortal 3127a82ab9 maps the servlet controllers with RequestMappingHandlerMapping, and the same requests now answer 404. To review with WS6.",
+            "log": "uPortal 3127a82ab9"
+        },
+        {
+            "id": "api-unmapped-404-page",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "^[+-] +((title|h1) \"HTTP Status 40[45] – (Not Found|Method Not Allowed)\"|h3 \"Apache Tomcat/[0-9.]+\")$",
+            "reason": "The error page that goes with the 405 to 404 change above.",
+            "log": "uPortal 3127a82ab9"
+        },
+        {
+            "id": "spring-js-resource-servlet-removed",
+            "path": "/uPortal/resources/*",
+            "field": "*",
+            "reason": "uPortal bcc1d9139d removes the spring-js ResourceServlet, which served /resources/* from jars; nothing in the portal or the Playwright suite requested it. Its URLs answer 404 now. To review with WS6.",
+            "log": "uPortal bcc1d9139d"
         }
     ]
 }
