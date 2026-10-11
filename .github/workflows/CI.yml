@@ -185,6 +185,19 @@ jobs:
           RANGE: ${{ steps.range.outputs.range }}
         run: .github/scripts/vale.sh commits "$RANGE"
 
+  prose:
+    name: Prose (Vale)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the 6.0 docs for AI writing tells (Vale, MOD-D35)
+        # Lints every doc in scope, so a docs-only [skip ci] push is checked by the next run.
+        run: .github/scripts/vale.sh docs
+
   dependency-submission:
     name: Submit dependency graph
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
