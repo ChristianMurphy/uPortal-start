@@ -22,8 +22,9 @@ The workflows that build uPortal from source (`Integration`, `G-index`, `Migrati
 `HTTP replay`) run `.github/scripts/choose-uportal.sh`. It takes the `uportal-ref` of a manual run,
 else uPortal's branch with the name of this branch, else uPortal's `ccr-43ba0785-hzlrj5`, else
 `master`. It doesn't try shorter versions of the branch name. The job summary and a notice
-annotation give the repository, ref and commit that were chosen, and the checkout uses that
-commit. `.github/scripts/choose-uportal.test.sh` checks the order with a table of examples.
+annotation give the repository, ref and commit that were chosen, and the last step of the
+`Build uPortal` job prints them again, so the last lines of its log show which uPortal ran. The
+checkout uses that commit. `.github/scripts/choose-uportal.test.sh` checks the order with a table of examples.
 
 ## G-index on a workstream push
 
@@ -34,8 +35,9 @@ script, the Gradle tasks and build files that `gindex.sh` uses, and the settings
 Tomcat; in uPortal SQL, Hibernate and JPA mappings and configuration, the DAOs, the RDBM stores,
 the aggregation of events, import and export, and the data source and cache contexts.
 
-The job summary lists the files that matched, or says `no matching changes, G-index skipped`. Then
-the uPortal build and the G-index job are skipped. When the script can't fetch a branch or tell,
+The job summary and a notice annotation list the files that matched, or say
+`no matching changes, G-index skipped`, and the last step of the first job prints a one-line report.
+Then the uPortal build and the G-index job are skipped. When the script can't fetch a branch or tell,
 G-index runs. `.github/scripts/gindex-changes.test.sh` checks the rule with a table of example
 pushes, and the workflow lint job runs it.
 

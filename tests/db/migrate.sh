@@ -170,4 +170,5 @@ if [ -n "$FAILED_STEP" ] || [ "$status" -ne 0 ]; then
     exit 1
 fi
 echo "OK: $SOURCE copied to $TARGET and verified$([ "$PLAYWRIGHT" = true ] && echo ', Playwright suite passed on the target')"
-github_annotation notice "G-migrate $PAIR: OK" "$(copy_summary)"$'\n'"$(printf '%s\n' "${TIMINGS[@]}")"
+text=$(copy_summary)
+github_annotation notice "G-migrate $PAIR: OK" "${text:-$SOURCE copied to $TARGET and verified}"

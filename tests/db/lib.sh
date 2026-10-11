@@ -139,8 +139,9 @@ failed_specs() {  # the failure summary at the end of a Playwright log (list, do
 
 # Phase times. These scripts run as one workflow step, so the step list shows only their total.
 # A phase is a log group (GitHub Actions folds it) that ends with a line giving the seconds it
-# took; phase_summary lists every phase at the end, in the log and in the job summary. Locally a
-# phase is a "====" heading. The scripts' behaviour does not depend on any of it.
+# took; phase_summary lists every phase at the end, in the log, in the job summary and as a notice
+# annotation. Locally a phase is a "====" heading. The scripts' behaviour does not depend on any of
+# it.
 TIMINGS=()
 PHASE_TITLE=
 PHASE_STARTED=0
@@ -178,11 +179,13 @@ timed() {  # timed <title> <command...>: run a command as one phase and return i
     return "$status"
 }
 
-phase_summary() {  # phase_summary <title>: every phase's time, in the log and the GitHub job summary
+phase_summary() {  # phase_summary <title>: every phase's time, in the log, the GitHub job summary and a notice
     [ ${#TIMINGS[@]} -gt 0 ] || return 0
     echo "==== $1"
     printf '%s\n' "${TIMINGS[@]}"
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
         { echo "### $1"; echo; echo '```'; printf '%s\n' "${TIMINGS[@]}"; echo '```'; echo; } >> "$GITHUB_STEP_SUMMARY"
     fi
+    # Agents can't read the job summary; the annotations of a job come back through the API
+    github_annotation notice "$1" "$(printf '%s\n' "${TIMINGS[@]}")"
 }

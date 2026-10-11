@@ -85,12 +85,16 @@ must_say() {  # must_say <text>: the last row's output has the text
 
 row "web component only (uPortal), no start change"       false push "$TOPIC" -  "uPortal-webcomponents/src/search/search.ts uPortal-webcomponents/package.json"
 must_say "no matching changes, G-index skipped"
+must_say "::notice title=G-index change check::"
+must_say "report=skipped: no matching changes, G-index skipped"
 row "docs only in both"                                    false push "$TOPIC" "docs/developer/x.md" "docs/developer/y.md"
 row "i18n messages only (uPortal)"                         false push "$TOPIC" -  "uPortal-webapp/src/main/resources/properties/i18n/Messages_es.properties"
 row "Playwright spec only (start)"                         false push "$TOPIC" "tests/ux/search.spec.ts" none
 row "no uPortal branch of that name, no start change"      false push "$TOPIC" -  none
 row "uPortal DAO change"                                   true  push "$TOPIC" -  "uPortal-layout/uPortal-layout-core/src/main/java/org/apereo/portal/layout/dao/jpa/JpaFoo.java"
 must_say "uPortal-layout/uPortal-layout-core/src/main/java/org/apereo/portal/layout/dao/jpa/JpaFoo.java"
+must_say "::notice title=G-index change check::"
+must_say "report=run: 0 matching files in uPortal-start, 1 in uPortal (first: uPortal-layout/"
 row "uPortal JPA entity mapping file"                      true  push "$TOPIC" -  "uPortal-webapp/src/main/resources/META-INF/orm.xml"
 row "uPortal SQL file anywhere"                            true  push "$TOPIC" -  "uPortal-portlets/src/main/resources/db/fix.sql"
 row "uPortal RDBM store"                                   true  push "$TOPIC" -  "uPortal-layout/uPortal-layout-core/src/main/java/org/apereo/portal/layout/RDBMUserLayoutStore.java"

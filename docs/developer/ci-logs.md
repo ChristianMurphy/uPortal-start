@@ -53,8 +53,8 @@ so the step list shows only their total time. Each script prints its phases (sta
 deploy and load the data, start the portal, the Playwright run, stop the portal) as a log group,
 and ends each one with a line such as `---- start the portal: 41s, ok`. A phase that failed ends
 with `FAILED`, and its output is inside the group above that line. At the end the script prints the
-table of all its phases and adds it to the run's job summary. Locally the groups are `====`
-headings.
+table of all its phases, adds it to the run's job summary and writes it as a notice annotation,
+which the annotations API of the job returns. Locally the groups are `====` headings.
 
 ## Output that stays
 

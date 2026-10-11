@@ -118,6 +118,7 @@ jobs:
           fi
           echo "runs=$runs" >> "$GITHUB_OUTPUT"
           echo "G-index runs: $runs" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=G-index runs::$runs"
       - name: Choose the uPortal repository and ref
         id: source
         if: ${{ steps.runs.outputs.runs != '[]' }}
@@ -190,6 +191,20 @@ jobs:
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 7
+      # The last lines of the job's log say which uPortal was built, because agents can't read the
+      # job summary (MOD-I307)
+      - name: Say which uPortal was built
+        if: ${{ !cancelled() }}
+        env:
+          UPORTAL: ${{ steps.source.outputs.description }}
+          VERSION: ${{ steps.uportal.outputs.version }}
+          RUNS: ${{ steps.runs.outputs.runs }}
+          CHANGES: ${{ steps.changes.outputs.report }}
+        run: |
+          echo "uPortal under test: ${UPORTAL:-none chosen}"
+          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "G-index change check: $CHANGES"
+          echo "G-index runs: $RUNS"
 
   g-index:
     name: "G-index: ${{ matrix.vendor }} at ${{ matrix.scale }}"
