@@ -153,6 +153,10 @@ run_vendor() {
     if [ "$RECORD" = true ] || grep -qs 'no baseline: ' "$out/drift-report.txt"; then
         annotate_snapshot "$vendor"
     fi
+    # The intended data changes (tests/db/snapshots/<baseline>/intended-changes.txt) this run showed
+    if grep -qs '^~ .*: found$' "$out/drift-report.txt"; then
+        github_annotation notice "$vendor: intended data changes found" "$(grep '^~ .*: found$' "$out/drift-report.txt")"
+    fi
     # What Hibernate itself reported during dataInit (HHH000400), next to the snapshot's own answer
     grep -ho "HHH000400: Using dialect: .*" "$out/harness.log" | sort -u > "$out/dialect.txt" || true
 

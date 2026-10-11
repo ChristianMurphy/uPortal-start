@@ -78,9 +78,11 @@ jobs:
 
   playwright:
     name: "Playwright E2E tests"
-    # Prototype only (MOD-D30): on a workstream branch the Integration workflow runs Playwright
-    # against uPortal built from source, so this released-uPortal run is skipped there.
-    if: ${{ !startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+    # Prototype only (MOD-D30, MOD-I74): the ccr-* branches carry data and specs that need
+    # unreleased uPortal (MOD-I135), and the Integration workflow runs Playwright there against
+    # uPortal built from source, so this released-uPortal run is skipped on every ccr-* branch.
+    # It still runs on master and pull requests.
+    if: ${{ !startsWith(github.ref_name, 'ccr-') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -184,6 +186,19 @@ jobs:
         env:
           RANGE: ${{ steps.range.outputs.range }}
         run: .github/scripts/vale.sh commits "$RANGE"
+
+  prose:
+    name: Prose (Vale)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the 6.0 docs for AI writing tells (Vale, MOD-D35)
+        # Lints every doc in scope, so a docs-only [skip ci] push is checked by the next run.
+        run: .github/scripts/vale.sh docs
 
   dependency-submission:
     name: Submit dependency graph
