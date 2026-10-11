@@ -503,6 +503,11 @@ test.describe("Popular Portlets", () => {
     expect(query.get("locale")).toMatch(/^[a-z]{2,3}(-[\dA-Za-z]+)*$/);
   });
 
+  /*
+   * This test fails on the 5.17 portlet: after a sort, its filters keep the
+   * right number of rows but the wrong ones (choosing "courses" showed "Who's
+   * Online"). The conversion fixes that bug rather than matching it.
+   */
   test("a filter keeps the rows it names, also after sorting", async ({
     page,
   }) => {
