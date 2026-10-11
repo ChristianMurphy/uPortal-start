@@ -1,5 +1,6 @@
 import { expect, APIRequestContext } from "@playwright/test";
 import { config } from "../../general-config";
+import { sessionCsrfHeaders } from "./ux-general-utils";
 
 /*
  * Local accounts for the account and password specs. Each test imports its
@@ -24,13 +25,17 @@ export type Account = {
 
 let accountCount = 0;
 
-/** Import one entity file as admin; /api/import answers 200 when it worked. */
+/**
+ * Import one entity file as admin, with the session's CSRF token (MOD-I130);
+ * /api/import answers 200 when it worked.
+ */
 export async function importXml(
   admin: APIRequestContext,
   name: string,
   xml: string,
 ): Promise<void> {
   const response = await admin.post<unknown>(`${config.url}api/import`, {
+    headers: await sessionCsrfHeaders(admin),
     multipart: {
       file: { name, mimeType: "text/xml", buffer: Buffer.from(xml) },
     },
