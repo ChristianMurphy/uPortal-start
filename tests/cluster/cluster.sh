@@ -202,8 +202,17 @@ deploy() {
         grep -q 'serverName=node-b' "$B_HOME/portal/uPortal.properties"
 }
 
+show_nodes() {  # each node's JVM portal.home and configured server name
+    local n pid
+    for n in a b; do
+        pid=$(node_pid "$n")
+        log "node $n: pid ${pid:-none}, $(ps -o args= -p "${pid:-0}" 2> /dev/null | tr ' ' '\n' | grep -E '^-D(portal.home|catalina.base)=' | tr '\n' ' ')$(grep -h '^org.apereo.portal.PortalInfoProvider.serverName=' "$(node_home "$n")/portal/uPortal.properties")"
+    done
+}
+
 wait_for_cluster() {  # both nodes registered in JGroups' JDBC_PING table
     local n
+    show_nodes
     for _ in $(seq 1 60); do
         n=$(sql "select count(*) from jgroupsping" 2> /dev/null)
         if [ "${n:-0}" -ge 2 ]; then
@@ -225,6 +234,7 @@ login() {  # login <node> <user> <jar>: a new session; the login page lands on t
     local body
     rm -f "$3"
     body=$(curl -sS -L -c "$3" -b "$3" "$(node_url "$1")/Login?userName=$2&password=$2") || return 1
+    printf '%s' "$body" > "$OUT/landing.html"
     if ! grep -qF "${DISPLAY_NAMES[$2]}" <<< "$body"; then
         echo "Login of $2 on node $1 failed" >&2
         return 1
@@ -249,6 +259,16 @@ poll() {  # poll <seconds> <command...>: run the command every second until it s
         [ "$(date +%s)" -lt "$deadline" ] || return 1
         sleep 1
     done
+}
+
+late_by() {  # late_by <seconds> <command...>: after a failed bound, how much longer until it succeeds
+    local started
+    started=$(date +%s)
+    if poll "$@"; then
+        echo "; it did $(( $(date +%s) - started )) s after the bound"
+    else
+        echo "; not within a further $1 s either"
+    fi
 }
 
 # ---- Cache invalidation ------------------------------------------------------------------------
@@ -285,45 +305,41 @@ check_portlet_invalidation() {
         elapsed=$(( $(now_ms) - started ))
         record invalidation-portlet PASS "node B showed the new title ${elapsed} ms after the import on node A"
     else
-        record invalidation-portlet FAIL "node B still showed '$(portlet_title_on b "$b")' 30 s after node A imported '$changed'"
+        record invalidation-portlet FAIL "node B still showed '$(portlet_title_on b "$b")' 30 s after node A imported '$changed' (database: '$(sql "select portlet_title from up_portlet_def where portlet_fname = '$PORTLET_FNAME'")')$(late_by 270 title_is b "$b" "$changed")"
     fi
     curl -sS -b "$a" -o /dev/null -F "file=@$OUT/portlet-original.xml;type=text/xml" "$(node_url a)/api/import"
 }
 
-layout_on() {  # layout_on <node> <jar>: the user's layout as JSON (tab names appear in it)
-    get "$1" "$2" /api/v4-3/dlm/layout.json
-}
-
-has_tab_after_login() {  # has_tab_after_login <node> <jar> <tab>: a new session sees the tab
+has_tab_after_login() {  # has_tab_after_login <node> <jar> <tab>: a new session renders the tab
     login "$1" student "$2" || return 1
-    layout_on "$1" "$2" > "$OUT/layout.json"
     logout "$1" "$2"
-    grep -qF "\"$3\"" "$OUT/layout.json"
+    grep -qF ">$3<" "$OUT/landing.html"
 }
 
 check_layout_invalidation() {
-    local a=$JARS/layout-a b=$JARS/layout-b tab started elapsed
+    local a=$JARS/layout-a b=$JARS/layout-b tab started elapsed stored
     tab="Cluster $RANDOM"
     # Node B loads (and caches) the student's layout
-    login b student "$b" && layout_on b "$b" > "$OUT/layout-before.json" && logout b "$b"
-    if ! grep -q '"layout"' "$OUT/layout-before.json"; then
-        record invalidation-layout FAIL "could not read the student's layout on node B (HTTP $(status_of))"
+    if ! login b student "$b"; then
+        record invalidation-layout FAIL "student login on node B failed"
         return
     fi
+    logout b "$b"
     login a student "$a" || { record invalidation-layout FAIL "student login on node A failed"; return; }
     started=$(now_ms)
-    curl -sS -b "$a" -o /dev/null -w '%{http_code}' --data-urlencode "tabName=$tab" --data-urlencode 'widths[]=100' \
-        "$(node_url a)/api/layout?action=addTab" > "$OUT/status"
-    if [ "$(status_of)" != 200 ] || ! layout_on a "$a" | grep -qF "\"$tab\""; then
-        record invalidation-layout FAIL "adding the tab on node A failed (HTTP $(status_of))"
+    curl -sS -b "$a" -o "$OUT/add-tab.json" -w '%{http_code}' --data-urlencode "tabName=$tab" \
+        --data-urlencode 'widths%5B%5D=100' "$(node_url a)/api/layout?action=addTab" > "$OUT/status"
+    stored=$(sql "select count(*) from up_layout_struct where name = '$tab'")
+    if [ "$(status_of)" != 200 ] || [ "$stored" != 1 ]; then
+        record invalidation-layout FAIL "adding the tab on node A failed (HTTP $(status_of), $stored rows in UP_LAYOUT_STRUCT; $(head -c 300 "$OUT/add-tab.json"))"
         return
     fi
     logout a "$a"
     if poll 30 has_tab_after_login b "$b" "$tab"; then
         elapsed=$(( $(now_ms) - started ))
-        record invalidation-layout PASS "a new session on node B had the tab ${elapsed} ms after node A added it"
+        record invalidation-layout PASS "a new session on node B rendered the tab ${elapsed} ms after node A added it"
     else
-        record invalidation-layout FAIL "30 s after node A added the tab '$tab', a new student session on node B does not have it"
+        record invalidation-layout FAIL "30 s after node A added the tab '$tab' (stored in UP_LAYOUT_STRUCT), a new student session on node B does not render it$(late_by 270 has_tab_after_login b "$b" "$tab")"
     fi
 }
 
@@ -338,7 +354,7 @@ update_permission() {  # update_permission <jar> <GRANT|INHERIT>: student, SUBSC
     local principal
     principal="$PERSON_TYPE.student"
     curl -sS -b "$1" -o /dev/null -w '%{http_code}' -G "$(node_url a)/api/updatePermission" \
-        --data-urlencode "principal=$principal" --data-urlencode "principals[]=$principal" \
+        --data-urlencode "principal=$principal" --data-urlencode "principals%5B%5D=$principal" \
         --data-urlencode "assignment=$2" --data-urlencode owner=UP_PORTLET_SUBSCRIBE \
         --data-urlencode activity=SUBSCRIBE --data-urlencode "target=PORTLET_ID.$PORTLET_ID" > "$OUT/status"
     [ "$(status_of)" = 200 ]
@@ -466,6 +482,9 @@ compare_counts() {  # compare_counts <check> <before aggregates file> <since tim
         if ! grep -q "^$kind|" "$OUT/$check-aggregates-after.txt"; then problems+=("no $kind aggregates"); fi
     done < "$OUT/$check-raw.txt"
     cat "$OUT/$check-raw-by-node.txt"
+    if [ -z "$KILLED_NODE" ] && ! cut -d'|' -f1 "$OUT/$check-raw-by-node.txt" | sort -u | tr '\n' ' ' | grep -q 'node-a node-b'; then
+        problems+=("the raw events do not carry both server names node-a and node-b: $(cut -d'|' -f1 "$OUT/$check-raw-by-node.txt" | sort -u | tr '\n' ' ')")
+    fi
     if [ ${#problems[@]} -eq 0 ]; then
         record "$check" PASS "$(IFS=';'; echo "${summary[*]}"), each interval's aggregates grew by exactly that"
     else
@@ -490,7 +509,8 @@ check_jobs_once() {
 }
 
 mutex_row() {  # server_id|locked|lock_start|lock_update of the aggregation lock
-    sql "select server_id, locked, lock_start, lock_update from up_mutex where mutex_name = '$AGGREGATION_MUTEX'"
+    sql "select server_id, locked, (extract(epoch from lock_start) * 1000)::bigint,
+             (extract(epoch from lock_update) * 1000)::bigint from up_mutex where mutex_name = '$AGGREGATION_MUTEX'"
 }
 
 check_failover() {
