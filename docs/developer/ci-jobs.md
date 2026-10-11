@@ -16,6 +16,15 @@ workstream set. The nightly run is the schedule or a manual run with `nightly` t
 
 The `CI` workflow's `commits` and `prose` jobs run on every push.
 
+## Which uPortal a run tests
+
+The workflows that build uPortal from source (`Integration`, `G-index`, `Migration equivalence` and
+`HTTP replay`) run `.github/scripts/choose-uportal.sh`. It takes the `uportal-ref` of a manual run,
+else uPortal's branch with the name of this branch, else uPortal's `ccr-43ba0785-hzlrj5`, else
+`master`. It doesn't try shorter versions of the branch name. The job summary and a notice
+annotation give the repository, ref and commit that were chosen, and the checkout uses that
+commit. `.github/scripts/choose-uportal.test.sh` checks the order with a table of examples.
+
 ## G-index on a workstream push
 
 The first job of `g-index.yml` compares the branch with `origin/ccr-43ba0785-hzlrj5` in
