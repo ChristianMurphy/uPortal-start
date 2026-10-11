@@ -405,6 +405,8 @@ export const BUNDLED_PORTLETS: BundledPortlet[] = [
   {
     fname: "reset-my-layout",
     webapp: "/uPortal",
+    // A Web Component channel since e3c7803: uPortal's WebComponent
+    // portlet, which declares VIEW only
     modes: ["view"],
     groups: ["Authenticated Users"],
   },
