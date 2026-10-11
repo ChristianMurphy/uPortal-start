@@ -269,3 +269,88 @@ test.describe("Reset My Layout as a guest", () => {
     );
   });
 });
+
+/*
+ * The channel is the <up-reset-my-layout> web component (a "Web Component"
+ * channel, uPortal MOD-D18) backed by /api/v6-0/layout/reset. These tests
+ * cover what the component adds to the portlet's behaviour.
+ */
+test.describe("Reset My Layout web component", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, config.users.student);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await logout(page);
+  });
+
+  test("is the up-reset-my-layout element, with the portal's context", async ({
+    page,
+  }) => {
+    const content = await openChannel(page);
+
+    const element = content.locator("up-reset-my-layout");
+    await expect(element).toHaveAttribute("fname", "reset-my-layout");
+    await expect(element).toHaveAttribute("locale", /^en/);
+    await expect(element).toHaveAttribute(
+      "context-path",
+      config.url.replace(/^https?:\/\/[^/]+/, "").replace(/\/$/, ""),
+    );
+    await expect(element).toHaveAttribute("csrf-header", /.+/);
+    await expect(element).toHaveAttribute("csrf-token", /.+/);
+    await expect(
+      page.locator('script[type="module"][src*="/up-reset-my-layout-"]'),
+    ).toHaveCount(1);
+  });
+
+  test("moves focus through the steps from the keyboard", async ({ page }) => {
+    const content = await openChannel(page);
+
+    await content.getByRole("button", { name: "Reset Now" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      content.getByRole("heading", { name: "Reset User Layout", exact: true }),
+    ).toBeFocused();
+
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    await expect(content.getByRole("button", { name: "Cancel" })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(
+      content.getByRole("button", { name: "Reset Now" }),
+    ).toBeFocused();
+  });
+
+  test("keeps the confirmation when the reset fails", async ({ page }) => {
+    await page.route("**/api/v6-0/layout/reset", (route) =>
+      route.request().method() === "POST"
+        ? route.fulfill({ status: 500, body: "boom" })
+        : route.fallback(),
+    );
+    const content = await startReset(page);
+
+    await content.getByRole("button", { name: "Reset Layout" }).click();
+
+    await expect(content.getByRole("alert")).toHaveText(
+      "Your layout could not be reset. Try again later.",
+    );
+    await expect(
+      content.getByRole("button", { name: "Reset Layout" }),
+    ).toBeEnabled();
+    await expect(content).not.toContainText("Success");
+  });
+
+  test("asks the user to sign in again when the session has ended", async ({
+    page,
+  }) => {
+    const content = await startReset(page);
+    // The session ends while the confirmation is open
+    await page.context().clearCookies();
+
+    await content.getByRole("button", { name: "Reset Layout" }).click();
+
+    await expect(content.getByRole("alert")).toHaveText(
+      "Your session has expired. Sign in again to reset your layout.",
+    );
+  });
+});

@@ -13,9 +13,9 @@ import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
 const RESET_API = `${config.url}api/v6-0/layout/reset`;
 const LAYOUT_API = `${config.url}api/layout`;
 const WELCOME_URL = `${config.url}f/welcome/normal/render.uP`;
-// A page with a web-component element, which carries the CSRF header and token
-const ELEMENT_PAGE = `${config.url}p/favorites`;
-const ELEMENT = "up-favorites";
+// The channel's element carries the CSRF header and token
+const ELEMENT_PAGE = `${config.url}p/reset-my-layout`;
+const ELEMENT = "up-reset-my-layout";
 
 /** The CSRF header and token on the page's web-component element. */
 async function csrfHeaders(
@@ -66,8 +66,13 @@ test.describe("Reset My Layout API as a guest", () => {
   });
 
   test("refuses a guest's reset, CSRF token and all", async ({ request }) => {
-    // The guest page gives the guest a session and a CSRF token
-    const headers = await csrfHeaders(request);
+    // Guests do not get the channel, but up-favorites on /p/favorites gives
+    // them a session and a CSRF token
+    const page = await request.get<unknown>(`${config.url}p/favorites`);
+    const element = /<up-favorites\b[^>]*>/.exec(await page.text())?.[0] ?? "";
+    const token = /\scsrf-token="([^"]+)"/.exec(element)?.[1] ?? "";
+    expect(token, "csrf-token on up-favorites").not.toBe("");
+    const headers = { "X-CSRF-TOKEN": token };
 
     const response = await request.post<unknown>(RESET_API, { headers });
 
