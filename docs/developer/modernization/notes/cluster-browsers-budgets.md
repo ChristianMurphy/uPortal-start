@@ -6,7 +6,7 @@ browsers, accessibility, visual snapshots, query-count budgets, load baseline).
 
 ## What was built
 
-| Slice | Files | Runs |
+| Part | Files | Runs |
 | --- | --- | --- |
 | 1. Two-node cluster | `tests/cluster/cluster.sh`, `cluster.properties`, `lock-overlap.mjs`, `docs/cluster-tests.md` | Integration job `cluster`: every push; seeded faults nightly |
 | 2. Browsers, a11y, visual | `tests/browsers-pw.config.ts`, `tests/a11y/`, `tests/a11y-pw.config.ts`, `tests/visual/`, `tests/visual-pw.config.ts`, `docs/browser-a11y-tests.md` | Integration job matrix `browsers`: nightly |
