@@ -30,6 +30,17 @@ seq-scan up_person_attr@e0834b70 vendor=mariadb -- as up_person_attr@a8aaea90 on
 seq-scan up_person_*@34d14bc3 vendor=mariadb -- as up_person_attr_values@ca83943e on PostgreSQL: the people search, leading-wildcard LIKE (R6)
 seq-scan up_event_session@638d496c vendor=mariadb -- the event-session purge reads sessions by LAST_ACCESSED (idx_up_event_session_date); MariaDB scans the small 1/100 table instead; re-check at scale (nightly)
 
+# Found by the nightly set (MariaDB 12.3 at 1/20 with the whole Playwright suite)
+seq-scan up_group@9f205cea vendor=mariadb -- 6.0: R12, the groups of a member: UP_GROUP_MEMBERSHIP has no index on MEMBER_KEY, so MariaDB reads all of UP_GROUP and probes the primary key
+seq-scan up_group@6f4332ac vendor=mariadb -- 6.0: R12, as up_group@9f205cea (with MEMBER_SERVICE)
+seq-scan up_group@0c04aebc vendor=mariadb -- 6.0: R13, group search by UPPER(GROUP_NAME) = UPPER(?) (groups manager); MariaDB's case-insensitive collation makes UPPER unnecessary there, a code change
+seq-scan up_group@a10b44a4 vendor=mariadb -- 6.0: R13, group search by UPPER(GROUP_NAME) LIKE UPPER(?) (groups manager)
+seq-scan up_user_layout@dbd6f3d8 vendor=mariadb -- 6.0: R14, a user's layouts by USER_ID; the primary key is (LAYOUT_ID, USER_ID)
+seq-scan up_person_attr_values@b50d83df vendor=mariadb -- as up_person_attr_values@ca83943e on PostgreSQL: a people-search variant, leading-wildcard LIKE (R6)
+seq-scan up_user@d57a845f vendor=mariadb -- SELECT COUNT(USER_ID) FROM UP_USER counts every user by design (portal statistics); one index pass per call, rare
+seq-scan up_portal_cookies@b27bca69 vendor=mariadb -- the hourly expired-cookie purge, DELETE ... WHERE EXPIRES <= ? AND NOT EXISTS (portlet cookies); MariaDB does not use idx_up_prtl_ck_exp for this delete; re-check at full scale, partition or batch the purge (R3)
+seq-scan up_unique_str_segment__uids@616b1c4e vendor=mariadb -- loading the user names of an open login interval; the primary key leads with UNIQUE_STR_SEGMENT_ID; the digest was too long to EXPLAIN; re-check
+
 # --- Foreign keys without an index --------------------------------------------------------
 
 # 6.0 adds these: the parent rows are deleted in normal operation, or the column is a join key

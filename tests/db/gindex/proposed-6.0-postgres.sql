@@ -41,3 +41,14 @@ DROP INDEX idx_up_raw_events_server_id;
 DROP INDEX idx_up_raw_events_user_name;
 DROP INDEX idx_up_raw_events_err_aggr;
 DROP INDEX idx_up_raw_events_aggregated;
+
+-- R12: "the groups of this member" (every login, every permission check) filters
+-- UP_GROUP_MEMBERSHIP by MEMBER_KEY; its primary key leads with GROUP_ID, so MariaDB scans
+-- UP_GROUP and PostgreSQL scans the membership table (or skip-scans the key)
+CREATE INDEX up_group_membership_member_idx ON up_group_membership (member_key, member_service, member_is_group);
+
+-- R13: the groups manager searches group names with UPPER(GROUP_NAME) = / LIKE UPPER(?)
+CREATE INDEX up_group_upper_name_idx ON up_group (upper(group_name) text_pattern_ops);
+
+-- R14: a user's layouts are read by USER_ID; the primary key is (LAYOUT_ID, USER_ID)
+CREATE INDEX up_user_layout_user_idx ON up_user_layout (user_id);
