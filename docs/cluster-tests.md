@@ -29,8 +29,9 @@ it in `.gradle/tomcat-b` on port 8180 (shutdown port 8105), without CAS. The tes
 to both nodes' `uPortal.properties`, shortens the clustered jobs' periods to about 7 s and the
 aggregation delay to 5 s, so the test does not wait minutes for each run. The lock-abandonment age
 stays at the default 60 s. The harness also logs `ClusterLockServiceImpl` at `TRACE` and each
-JGroups view to the portal log on both nodes, and starts the checks once both
-nodes have logged a view of two members.
+JGroups view on both nodes, and starts the checks once both nodes have logged a view of two
+members. JGroups writes through java.util.logging, and the harness reads its lines from
+Tomcat's `catalina.*` logs and the portal log.
 
 ## The checks
 
