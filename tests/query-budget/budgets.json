@@ -1,1 +1,58 @@
-{}
+{
+  "guest-welcome": {
+    "first": 6,
+    "warm": 4
+  },
+  "guest-search": {
+    "first": 5,
+    "warm": 0
+  },
+  "student-login": {
+    "first": 100,
+    "warm": 15
+  },
+  "student-home": {
+    "first": 1,
+    "warm": 0
+  },
+  "student-layout-json": {
+    "first": 6,
+    "warm": 0
+  },
+  "student-portlet-registry": {
+    "first": 139,
+    "warm": 0
+  },
+  "student-portlet-list": {
+    "first": 1,
+    "warm": 0
+  },
+  "student-maximized-portlet": {
+    "first": 0,
+    "warm": 1
+  },
+  "admin-login": {
+    "first": 62,
+    "warm": 16
+  },
+  "admin-home": {
+    "first": 1,
+    "warm": 0
+  },
+  "admin-portlet-manager": {
+    "first": 1,
+    "warm": 0
+  },
+  "admin-groups-manager": {
+    "first": 0,
+    "warm": 0
+  },
+  "admin-permission-assignments": {
+    "first": 4,
+    "warm": 1
+  },
+  "admin-people-search": {
+    "first": 1,
+    "warm": 0
+  }
+}
