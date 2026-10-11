@@ -24,11 +24,11 @@
     <name>background-preference</name>
     <fname>background-preference</fname>
     <desc>Display user selected background images on main page.</desc>
-    <type>Portlet</type>
+    <type>Web Component</type>
     <timeout>30000</timeout>
     <portlet-descriptor>
         <ns2:isFramework>true</ns2:isFramework>
-        <ns2:portletName>backgroundPreference</ns2:portletName>
+        <ns2:portletName>WebComponent</ns2:portletName>
     </portlet-descriptor>
     <group>Authenticated Users</group>
     <parameter>
@@ -66,6 +66,14 @@
     <parameter>
         <name>showChrome</name>
         <value>false</value>
+    </parameter>
+    <parameter>
+        <name>webComponent.moduleUrl</name>
+        <value>up-background-preference</value>
+    </parameter>
+    <parameter>
+        <name>webComponent.tagName</name>
+        <value>up-background-preference</value>
     </parameter>
     <portlet-preference>
         <name>backgroundImageCaptions</name>
