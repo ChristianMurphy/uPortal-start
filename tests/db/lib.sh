@@ -24,6 +24,14 @@ gradle() {
     ./gradlew --no-daemon "$@" "${VENDOR_ARGS[@]+"${VENDOR_ARGS[@]}"}" "${GRADLE_EXTRA[@]+"${GRADLE_EXTRA[@]}"}"
 }
 
+# The Playwright reporter option of the harness and G-migrate runs: the list reporter prints a
+# line for every passing test, which buries the failures in a CI job log. On CI (CI is set) the
+# dot reporter prints a character per test and the failures at the end, and the github reporter
+# adds an annotation for each; locally the list reporter shows each test as it runs.
+playwright_reporter() {
+    if [ -n "${CI:-}" ]; then echo "--reporter=dot,github"; else echo "--reporter=list"; fi
+}
+
 container_name() {
     echo "uportal-dbh-$1"
 }
@@ -124,6 +132,6 @@ tomcat_errors() {  # the distinct database and schema errors in this checkout's 
         cut -c1-300 | sort | uniq -c | sort -rn | head -n 15
 }
 
-failed_specs() {  # the failure summary at the end of a Playwright list-reporter log
+failed_specs() {  # the failure summary at the end of a Playwright log (list, dot and line reporters print it alike)
     sed -n '/^  [0-9]* failed/,$p' "$1" | head -n 40
 }
