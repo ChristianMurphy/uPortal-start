@@ -648,14 +648,14 @@ jobs:
   # holding a lock dies (tests/cluster/cluster.sh, docs/cluster-tests.md).
   cluster:
     name: "Cluster: two nodes${{ matrix.fault && format(', seeded fault {0}', matrix.fault) || '' }}"
-    needs: [uportal, plan]
+    needs: [uportal]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         # Nightly, each seeded fault must make the checks meant to catch it fail
-        fault: ${{ fromJSON(needs.plan.outputs.set == 'nightly' && '["", "replication-off", "lock-ignored", "event-flush-delayed", "join-gives-up", "merge-clear-off"]' || '[""]') }}
+        fault: ${{ fromJSON(needs.uportal.outputs.set == 'nightly' && '["", "replication-off", "lock-ignored", "event-flush-delayed", "join-gives-up", "merge-clear-off"]' || '[""]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -725,8 +725,8 @@ jobs:
   # (docs/browser-a11y-tests.md).
   browsers:
     name: "Browsers: ${{ matrix.suite }}"
-    needs: [uportal, plan]
-    if: ${{ needs.plan.outputs.set == 'nightly' }}
+    needs: [uportal]
+    if: ${{ needs.uportal.outputs.set == 'nightly' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -838,9 +838,9 @@ jobs:
   # p6spy in front of uPortal's JDBC driver in the deployed copy only (docs/query-budgets.md)
   query-budgets:
     name: "Query budgets: hsqldb"
-    needs: [uportal, plan]
+    needs: [uportal]
     # Prototype only (MOD-D30): on a workstream branch (ccr-43ba0785-hzlrj5-<topic>) nightly only
-    if: ${{ needs.plan.outputs.set != 'workstream' }}
+    if: ${{ needs.uportal.outputs.set != 'workstream' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -900,8 +900,8 @@ jobs:
   # baseline in tests/load/baseline.json, nightly, on PostgreSQL 18 (docs/load-tests.md)
   load:
     name: "Load baseline: postgres-18"
-    needs: [uportal, plan]
-    if: ${{ needs.plan.outputs.set == 'nightly' }}
+    needs: [uportal]
+    if: ${{ needs.uportal.outputs.set == 'nightly' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
