@@ -42,15 +42,17 @@ session could read uPortal but had no push access to it.
 
 ## Gate results
 
-The account's runners were saturated during this session, and the runs on the later commits were
-still queued when it ended. Fill these in when the head runs finish.
+The account's runners were saturated for most of this session, and several runs were superseded
+while queued.
 
 | Run | Commit | Result |
 | --- | --- | --- |
 | CI 38088674821 | `9122724` | `Playwright E2E tests: CAS` (job 114320426287) passed on the first attempt, including the CAS-down seeded fault step. The local-login `Playwright E2E tests` job failed on the wrong-password assertion that `9aa091c` corrects, and the same failure reproduced locally. The build matrix (ubuntu temurin, zulu and corretto, windows, macos) passed. |
 | CI 38091969001 | `9aa091c` | Queued for over an hour, then superseded. |
 | Integration 38088674826 and 38091969031 | `9122724` and `9aa091c` | Superseded while queued. |
-| CI 38094563179, Integration 38094563208 | `d79c291` | Pending. The light profile runs Playwright on HSQLDB with local login, `Playwright: hsqldb, CAS` with the seeded fault, the harness and Playwright on PostgreSQL 18, and one G-migrate pair. MariaDB 12.3 and the other harness vendors run after the merge into the integration branch. |
+| CI 38094563179, Integration 38094563208 | `d79c291` | Superseded by the runs on `2cfdbb6`. |
+| CI 38096198615 | `2cfdbb6` | Passed. |
+| Integration 38096198632 | `2cfdbb6` | All 7 jobs passed. `Playwright: hsqldb` ran the whole suite with local login (job 114344020916), and `Playwright: hsqldb, CAS` (job 114344020930), whose "Seeded fault: the auth spec fails with CAS stopped" step passed. The light profile also ran `Playwright: postgres-18`, `DB harness: postgres-18`, and `G-migrate: mariadb-11.4 to postgres-18`. MariaDB 12.3 and the other harness vendors run after the merge into the integration branch. |
 
 Local runs in the sandbox used Tomcat 9.0.122, JDK 11, uPortal 5.17.9, HSQLDB and Chromium 1194.
 
