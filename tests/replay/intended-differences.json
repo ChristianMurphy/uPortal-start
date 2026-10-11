@@ -240,6 +240,26 @@
             "upgrading": "Popular Portlets is a web component"
         },
         {
+            "id": "background-preference-web-component-page",
+            "path": "/uPortal/*",
+            "field": "body",
+            "detail": "^(- .*(input\\.background-value\\[|form\\.background-edit-form\\[|_background-edit-control$|_background-preference-stylesheet$)|\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-background-preference-[^\\]]+\\.js\\]$)",
+            "reason": "The Background Preference channel in the Customize panel renders <up-background-preference>: the portlet's edit form, hidden input, edit control and inline stylesheet are gone from every page that has the panel, and the page loads the component's module. The component sets the background with an adopted stylesheet, which the outline doesn't show.",
+            "log": "uPortal-start d65aa9e",
+            "visible": true,
+            "upgrading": "Background Preference is a web component"
+        },
+        {
+            "id": "background-preference-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "(webComponent\\.(moduleUrl|tagName): added .*up-background-prefer|portletName: \"backgroundPreference\" -> \"WebComponent\")",
+            "reason": "The layout and portlet registry APIs describe Background Preference as a Web Component channel: its portletName becomes WebComponent and the webComponent parameters are added.",
+            "log": "uPortal-start d65aa9e",
+            "visible": true,
+            "upgrading": "Background Preference is a web component"
+        },
+        {
             "id": "web-components-admin-marketplace",
             "path": "/uPortal/api/marketplace/entries.json",
             "roles": [
