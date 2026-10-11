@@ -27,8 +27,10 @@ it in `.gradle/tomcat-b` on port 8180 (shutdown port 8105), without CAS. The tes
 `org.apereo.portal.PortalInfoProvider.serverName` set to `node-a` or `node-b`, which shows in
 `UP_MUTEX.SERVER_ID` and `UP_RAW_EVENTS.SERVER_ID`. `tests/cluster/cluster.properties`, appended
 to both nodes' `uPortal.properties`, shortens the clustered jobs' periods to about 7 s and the
-aggregation delay to 5 s, so the test does not wait minutes for each run; the lock-abandonment age
-stays at the default 60 s. The harness also logs `ClusterLockServiceImpl` at `TRACE` on both nodes.
+aggregation delay to 5 s, so the test does not wait minutes for each run. The lock-abandonment age
+stays at the default 60 s. The harness also logs `ClusterLockServiceImpl` at `TRACE` and each
+JGroups view to `logs/jgroups/portal.jgroups.log` on both nodes, and starts the checks once both
+nodes have logged a view of two members.
 
 ## The checks
 
@@ -36,17 +38,36 @@ stays at the default 60 s. The harness also logs `ClusterLockServiceImpl` at `TR
 | --- | --- | --- |
 | `invalidation-portlet` | Node B reads a portlet definition (`/api/portlet/what-is-uportal.json`), node A imports it with a new title (`/api/import`), node B must show the new title | 30 s |
 | `invalidation-layout` | Node B loads the student's layout, node A adds a tab to it (`/api/layout?action=addTab`), a new student session on node B must have the tab | 30 s |
-| `invalidation-permission` | Node A grants the student SUBSCRIBE on the Permissions Manager portlet; once node B allows it, node A revokes it, and node B must deny it again | 330 s (see below) |
-| `jobs-once` | Every test user logs in and renders their layout three times on each node; once all raw events are aggregated, each interval's login and portlet-render aggregates (group Everyone) must have grown by exactly the number of raw events | |
+| `invalidation-permission` | Both nodes deny the student the Permissions Manager portlet; node A grants SUBSCRIBE on it, and node A, then node B must allow it; node A revokes it, and node B must deny it again | 330 s (see below) |
+| `jobs-once` | Once node B's scheduled tasks run (120 s after it starts), every test user logs in and renders their layout three times on each node; once the aggregator has read all raw events, each interval's login and portlet-render aggregates (group Everyone) must have grown by exactly the number of raw events | |
 | `failover-takeover` | A table lock on `UP_EVENT_AGGR_STATUS` makes the next aggregation run wait inside its cluster lock; the node holding the lock is killed (`kill -9`), the table lock released. The other node must take the lock over no sooner than 60 s after the dead node's last update (it is not abandoned before), and no later than 60 s + the 28 s server bias + 60 s | 148 s |
 | `failover-jobs-once` | Like `jobs-once`, over events made before the kill (on both nodes) and after it: the survivor aggregates them all, once | |
+| `events-aggregated` | At the end of the run, no raw event is still not aggregated although it is older than the aggregator's last event date (the aggregator never reads it again) | |
 | `no-overlap` | From both nodes' `TRACE` logs (`tests/cluster/lock-overlap.mjs`): no clustered job held its lock on both nodes at once, over the whole run | |
 
 Permissions are the exception to replication: uPortal caches permission checks on each node and
 does not replicate those caches (`AuthorizationImpl.PRINCIPAL_HAS_PERMISSION` for 180 s and
 `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT` for 300 s). A permission revoked on one
-node is still granted on the others until those entries expire. The check holds 5.17 to that
-bound.
+node is still granted on the others until those entries expire. The check allows that bound
+and, when it fails, reports what a new session on the node gets.
+
+The layout check does not depend on replication: uPortal reads a user's layout from the
+database when a session starts and keeps it in the session, so a new session on node B sees the
+tab with or without replication (the `replication-off` fault does not make it fail). It guards
+that node B does not serve the layout from a stale node-wide copy.
+
+## Known failures
+
+The checks in `KNOWN_FAILURES` (`tests/cluster/cluster.sh`) fail because of uPortal problems
+this test found. Their failure shows as a warning without failing the run. When one of them
+passes, the run says so, and its entry can go once uPortal is fixed.
+
+* `invalidation-permission`: once a node has checked a permission, a grant or revocation made
+  through the Permissions Manager does not reach that node's checks within 330 s.
+* `events-aggregated`: a node queues its events in memory and stores them only once its
+  scheduled tasks run, 120 s after it starts. If another node's aggregator has passed their
+  time by then, those events are never aggregated. Every node restart in a running cluster
+  loses the events of its first minutes from the statistics.
 
 ## Seeded faults
 
@@ -55,7 +76,7 @@ seeded fault and passes only if the checks meant to catch it fail:
 
 | Fault | Seeded by | Must fail |
 | --- | --- | --- |
-| `replication-off` | `org.apereo.portal.ehcache.filename=ehcache-no-jgroups.xml` (uPortal's own non-clustered cache file) | `invalidation-portlet`, `invalidation-layout` |
+| `replication-off` | `org.apereo.portal.ehcache.filename=ehcache-no-jgroups.xml` (uPortal's own non-clustered cache file) | `invalidation-portlet` |
 | `lock-ignored` | `org.apereo.portal.concurrency.locking.ClusterLockDao.abandonedLockAge=PT0S`: a held lock counts as abandoned at once | `failover-takeover`, `no-overlap` |
 
 ## Running it
