@@ -735,8 +735,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      # k6 from Grafana's signed apt repository; empty installs the newest (and reports it)
-      K6_VERSION: ''
+      # k6's official image, pinned by digest
+      K6_IMAGE: grafana/k6@sha256:e66db15b860113878fa74670e31f5e274830b7b6e42c8bff28b2f2d86a257603 # v2.3.0
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -776,17 +776,6 @@ jobs:
           gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
           mkdir -p "$gradle_user_home"
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
-      - name: Install k6
-        run: |
-          # The key fingerprint published in k6's installation guide
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
-            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" |
-            sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update -q
-          sudo apt-get install -y -q "k6${K6_VERSION:+=$K6_VERSION}"
-          k6 version
-          echo "::notice title=k6::$(dpkg-query -W k6)"
       - name: Deploy on PostgreSQL 18 and start the portal
         run: |
           # The harness's helpers (tests/db/lib.sh) start the database and the portal
@@ -802,7 +791,8 @@ jobs:
       - name: Run the load scenario
         run: |
           mkdir -p build/load
-          k6 run --quiet tests/load/portal.js
+          docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD:/w" -w /w "$K6_IMAGE" \
+            run --quiet tests/load/portal.js
       - name: Summary
         if: always()
         run: |
