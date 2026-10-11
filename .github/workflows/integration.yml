@@ -345,14 +345,29 @@ jobs:
       - name: CAS log
         if: always()
         run: docker compose --file docker/cas/compose.yaml --project-name uportal-cas-8090 logs --no-color | tail -n 200 || true
+      # The auth spec must fail because CAS is down, at CAS's login form, and for no other reason
+      # (MOD-I241): the portal still answers, the run has no setup errors, only the auth spec fails
       - name: "Seeded fault: the auth spec fails with CAS stopped"
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: build/cas-stopped.json
         run: |
           ./gradlew -q casStop
-          if npx playwright test --config=tests/uportal-pw.config.ts --retries=0 --reporter=line tests/ux/auth; then
+          if curl -s -o /dev/null http://localhost:8090/cas/login; then
+            echo "::error::CAS still answers on port 8090 after casStop"
+            exit 1
+          fi
+          if ! curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/uPortal/ | grep -qE "200|302"; then
+            echo "::error::The portal doesn't answer, so the seeded fault can't be told apart from it"
+            exit 1
+          fi
+          if npx playwright test --config=tests/uportal-pw.config.ts --retries=0 --reporter=line,json tests/ux/auth; then
             echo "::error::The auth spec passed with the CAS server stopped"
             exit 1
           fi
-          echo "The auth spec failed with CAS stopped, as it should" >> "$GITHUB_STEP_SUMMARY"
+          # Chromium shows chrome-error://chromewebdata when the redirect to CAS's login is refused
+          python3 .github/scripts/check-expected-failure.py build/cas-stopped.json ux/auth/ \
+            "Sign In opens the login form of the portal's authMode" 'chrome-error://chromewebdata'
+          echo "The auth spec failed at CAS's login form with CAS stopped, as it should" >> "$GITHUB_STEP_SUMMARY"
       - name: Show Tomcat startup errors
         if: failure()
         run: .github/scripts/tomcat-log-summary.sh
