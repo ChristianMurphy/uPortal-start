@@ -85,6 +85,8 @@ class Session {
         s.requests++;
         s.status[response.status] = (s.status[response.status] ?? 0) + 1;
         s.ms += ms;
+        (latencies[step] ??= []).push(ms);
+        latencies.all.push(ms);
         totals.requests++;
         if (response.status >= 400) {
             s.errors++;
@@ -138,12 +140,29 @@ async function worker(id, deadline) {
     }
 }
 
+// Response times in ms, per step and for all requests, for the percentiles in the result
+const latencies = { all: [] };
+function percentile(values, p) {
+    if (values.length === 0) return 0;
+    const sorted = values.toSorted((a, b) => a - b);
+    return Math.round(sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)]);
+}
+
 const deadline = Date.now() + options.duration * 1000;
 const started = Date.now();
 await Promise.all(Array.from({ length: options.concurrency }, (_, id) => worker(id, deadline)));
 const seconds = (Date.now() - started) / 1000;
-for (const s of Object.values(totals.byStep)) s.meanMs = Math.round(s.ms / Math.max(1, s.requests));
-console.log(JSON.stringify({ ...totals, seconds: Math.round(seconds), requestsPerSecond: Math.round(totals.requests / seconds) }));
+for (const [step, s] of Object.entries(totals.byStep)) {
+    s.meanMs = Math.round(s.ms / Math.max(1, s.requests));
+    s.p95Ms = percentile(latencies[step] ?? [], 95);
+}
+console.log(JSON.stringify({
+    ...totals,
+    p50Ms: percentile(latencies.all, 50),
+    p95Ms: percentile(latencies.all, 95),
+    seconds: Math.round(seconds),
+    requestsPerSecond: Math.round(totals.requests / seconds),
+}));
 const rate = totals.errors / Math.max(1, totals.requests);
 if (totals.requests === 0 || rate > options.maxErrorRate) {
     console.error(`G-index driver: ${totals.errors} of ${totals.requests} requests failed`);
