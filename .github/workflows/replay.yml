@@ -48,6 +48,11 @@ on:
         default: ''
 permissions:
   contents: read
+env:
+  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # writes the cache only on the default branch by default, and none of our work branches is that
+  # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
@@ -194,6 +199,7 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY }}
       - name: Build and install uPortal
         run: ./gradlew --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
@@ -266,6 +272,7 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
