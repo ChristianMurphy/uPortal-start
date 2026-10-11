@@ -1,3 +1,4 @@
+/* global console, process, URL, URLSearchParams */
 // HTTP differential replay and security matrix (docs/http-replay.md).
 //
 //   node tests/replay/replay.mjs record --origin http://localhost:8080 [--suite suite.json] [--out dir] [--label text]
