@@ -70,15 +70,16 @@ uPortal-start with released uPortal 5.17.9 on Tomcat 8.5.100. The current build 
 
 ### Seeded faults
 
-Each fault was applied to the deployed current build after `dataInit` and before Tomcat
-started, then the replay ran against the stand-in's fixtures. None of them is committed.
+Each fault was applied to the deployed current build after `dataInit` and before Tomcat started.
+The replay then ran against the stand-in's recording. The faults stay out of the branch. Without
+a fault, the same procedure passes, with 253 registered differences.
 
 | Fault | What it imitates | Result |
 | --- | --- | --- |
-| `<mvc:path-matching suffix-pattern="false" trailing-slash="false"/>` on `/api` | Spring 6 defaults | **fails**: 30 exchanges and 22 matrix cells. `GET /api/session.json/` changes from 200 to 405 for every role, and `/api/v5-0/people/me.json` and `/people/admin.smith` change from 200 to 404 |
-| `useHttpOnly="false"` in uPortal's `META-INF/context.xml` | the container no longer marking the session cookie HttpOnly | see "What's left" (the first two attempts did not reach the cookie, see the findings) |
+| `<mvc:path-matching suffix-pattern="false" trailing-slash="false"/>` on `/api` | Spring 6 defaults | **fails**: 28 exchanges and 22 matrix cells. `GET /api/session.json/` and `/api/v4-3/dlm/layout.json/` change from 200 to 405 for every role. `/api/v5-0/people/me.json` and `/people/admin.smith` change from 200 to 404 |
+| `useHttpOnly="false"` in uPortal's `META-INF/context.xml` and `<http-only>false</http-only>` in its `web.xml` | the container no longer marking the session cookie HttpOnly | **fails**: 3 exchanges and 2 security checks. The login cookie and the header snapshot lose `httponly` on `JSESSIONID` |
 | `@JsonFormat` removed from `PortletList.updatedOn` (rebuilt jar) | a Jackson date default change | **fails**: 4 exchanges. `$[0].updatedOn` changes from `"9999-99-99 99:99:99 +0000"` to `{epoch-ms:number}` in both the crawl and the suite requests |
-| method security off on `/api` (`global-method-security` commented out) | an admin route opened to guests | **fails**: 38 exchanges, 35 matrix cells and the CSRF table. `GET /api/permissions/owners.json` changes from 403 to 200 for guest, student, staff and faculty |
+| method security off on `/api` (`global-method-security` commented out) | an admin route opened to guests | **fails**: 36 exchanges, 35 matrix cells and the CSRF table. `GET /api/permissions/owners.json` changes from 403 to 200 for guest, student, staff and faculty |
 
 ## Findings
 
@@ -109,7 +110,13 @@ started, then the replay ran against the stand-in's fixtures. None of them is co
    `GET /api/updatePermission` writes through a GET. The CSRF probes record this. A Spring
    Security upgrade that enables CSRF on `/api` fails the replay until it is registered.
 9. **5.17 answers 500 to a portlet-list POST without a name** (`{}`), where 400 is expected.
-10. **Some responses vary by design.** The marketplace's related portlets are a random sample,
+10. **A page render during portlet start-up breaks the emergency alert until a restart.** Pluto
+    initialises NotificationPortlet's portlets on a timer 3 to 20 seconds after Tomcat starts, and
+    a render of `emergency-alert` before that makes Tomcat mark the `EmergencyAlert` servlet
+    unavailable (503) until the next restart. A readiness probe on `/uPortal/` can trigger it,
+    which `integration.yml` and `CI.yml` also use before the Playwright suite. The replay now
+    probes `/uPortal/health-check` and waits 30 seconds before its first render.
+11. **Some responses vary by design.** The marketplace's related portlets are a random sample,
     and several `/api` lists come from hash sets. The replay sorts or masks them, and the comments
     in `lib.mjs` say which.
 
@@ -129,13 +136,15 @@ started, then the replay ran against the stand-in's fixtures. None of them is co
   and the path-matching fault) change at least 22 matrix cells. WS6 should decide per route
   whether to keep the old URLs.
 * `MOD-I?` (API): a portlet-list POST without a name answers 500 (finding 9).
+* `MOD-I?` (Tests): readiness probes that render `/uPortal/` can break NotificationPortlet's
+  emergency alert for the whole run (finding 10). The Playwright jobs could probe
+  `/uPortal/health-check` instead.
 
 ## What's left
 
 * The first CI replay of the current build against the recording from real `master`. Its run
   ID and result go here. Differences between real `master` and the local stand-in (Gradle 6
   overlays, HSQLDB 2.5.1) would show up there first.
-* The HttpOnly fault through `META-INF/context.xml` still has to be rerun on the final fixtures.
 * Not covered yet: browsers other than Chromium, other databases (the replay runs on HSQLDB only), portlet
   resource URLs other than those the suite requests, and the 428 state-changing suite requests
   (only the CSRF probes replay state changes).
