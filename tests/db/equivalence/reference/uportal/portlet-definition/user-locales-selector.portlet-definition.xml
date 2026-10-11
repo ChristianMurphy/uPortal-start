@@ -3,11 +3,11 @@
   <name>User Locales Selector</name>
   <fname>user-locales-selector</fname>
   <desc>Allows a user to indicate locale preferences</desc>
-  <type>Portlet</type>
+  <type>Web Component</type>
   <timeout>30000</timeout>
   <portlet-descriptor>
     <up:isFramework>true</up:isFramework>
-    <up:portletName>UserLocale</up:portletName>
+    <up:portletName>WebComponent</up:portletName>
   </portlet-descriptor>
   <lifecycle>
     <entry name="PUBLISHED" user="system">‹masked›</entry>
@@ -22,5 +22,13 @@
   <parameter>
     <name>iconUrl</name>
     <value>/resource-server/rs/tango/0.8.90/32x32/apps/preferences-desktop-locale.png</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.moduleUrl</name>
+    <value>up-user-locale</value>
+  </parameter>
+  <parameter>
+    <name>webComponent.tagName</name>
+    <value>up-user-locale</value>
   </parameter>
 </portlet-definition>
