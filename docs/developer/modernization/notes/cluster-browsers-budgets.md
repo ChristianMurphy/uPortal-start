@@ -79,9 +79,20 @@ Status at the checkpoint (2026-10-11 01:40 UTC). Nothing is green yet.
   The other failures were errors in the test, fixed in `a63e95a`. The `updatePermission` call
   got HTTP 400 from unencoded `[]` in the query. The layout check looked for the tab in the
   wrong place. The lock times were read as timestamps.
-* Run for `9c71a8e` (pending at the checkpoint) runs the cluster test with the `a63e95a` fixes,
-  both seeded faults, the five browser jobs, the query budgets and the load baseline once on
-  push (`ci(prototype)` commit, to be reverted).
+* Run 38100770775 (head `9c71a8e`, every job once):
+  * Passed: the firefox, webkit and phone browser jobs (the UI specs on all three), visual (10 snapshots
+    written, recorded in `tests/visual/snapshots`).
+  * a11y: failed as expected with an empty baseline. The observed violations are recorded in
+    `tests/a11y/baseline.ts`.
+  * Cluster: both nodes now report their own `portal.home` and server name. `invalidation-layout`
+    passed (674 ms) and `no-overlap` passed (383 runs, all on node A). `invalidation-portlet`
+    failed: node B kept the old title for 300 s although the database had the new one.
+    `invalidation-permission` failed: node B still denied the portlet 330 s after the grant.
+    `jobs-once` failed: 22 raw events stayed unaggregated. The next run prints the JGroups
+    views, the permission rows and the stuck events.
+  * Query budgets: uPortal did not start with p6spy (404). Load: the k6 install failed. Both
+    fixed, see the commits after the run.
+* Run for `250bc60d1` (the fixes, merged with the integration branch) is next.
 
 ## Findings
 
