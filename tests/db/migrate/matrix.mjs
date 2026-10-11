@@ -1,3 +1,4 @@
+/* global console, process */
 // Builds the G-migrate job matrix from matrix.json and checks that it covers what MOD-D25 asks
 // for (see "Copy migration in CI" in docs/db-upgrade-harness.md).
 //

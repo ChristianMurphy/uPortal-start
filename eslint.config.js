@@ -10,24 +10,6 @@ export default [
   // Base JavaScript configuration
   js.configs.recommended,
 
-  // Node scripts (tests/db/migrate, tests/replay)
-  {
-    files: ['**/*.mjs'],
-    languageOptions: {
-      globals: {
-        AbortSignal: 'readonly',
-        Buffer: 'readonly',
-        Headers: 'readonly',
-        structuredClone: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        console: 'readonly',
-        fetch: 'readonly',
-        process: 'readonly',
-      },
-    },
-  },
-
   // Configuration for all TypeScript files
   {
     files: ['**/*.ts', '**/*.tsx'],

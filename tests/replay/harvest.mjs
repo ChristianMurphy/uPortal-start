@@ -1,3 +1,4 @@
+/* global console, process, URL, URLSearchParams */
 // Turns the Playwright traces of a suite run into the list of requests the suite makes, by role
 // (docs/http-replay.md, "Recording the reference").
 //

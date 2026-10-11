@@ -1,3 +1,4 @@
+/* global AbortSignal, Buffer, fetch, Headers, structuredClone, URL, URLSearchParams */
 // Shared code of the HTTP differential replay (docs/http-replay.md): an HTTP session with a cookie
 // jar, the login helpers, and the normalisers that turn a response into the host-neutral, masked
 // form that is stored in tests/replay/fixtures/ and compared on every replay.

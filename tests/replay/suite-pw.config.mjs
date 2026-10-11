@@ -1,3 +1,4 @@
+/* global process */
 // Runs the whole Playwright suite (tests/uportal-pw.config.ts) with a network trace for every test,
 // so tests/replay/harvest.mjs can list the requests it makes (docs/http-replay.md). Used only
 // when the reference is recorded.
