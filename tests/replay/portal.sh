@@ -7,7 +7,7 @@
 # The replay compares a portal in the state a fresh portalInit leaves it in, so the recorder
 # and the replayer both start from a reset portal. dataInit also redeploys every overlay, so
 # anything changed by hand in .gradle/tomcat/webapps is gone after a reset. <checkout> is the
-# uPortal-start checkout that runs the portal (the oracle's own checkout when recording). Gradle
+# uPortal-start checkout that runs the portal (the 5.17 checkout when recording). Gradle
 # arguments such as -PtomcatHttpPort=8180 go to every Gradle call; PORTAL_BASE_URL selects the
 # portal to wait for.
 set -euo pipefail

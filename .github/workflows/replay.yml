@@ -34,8 +34,8 @@ on:
         type: boolean
         required: false
         default: false
-      oracle-ref:
-        description: 'With record: the uPortal-start ref that runs the oracle (5.17)'
+      reference-ref:
+        description: 'With record: the uPortal-start ref that runs the reference (5.17)'
         required: false
         default: 'master'
       uportal-repository:
@@ -266,7 +266,7 @@ jobs:
         run: ./gradlew -S tomcatStop
 
   record:
-    name: "Record the 5.17 oracle"
+    name: "Record the 5.17 reference"
     needs: plan
     if: needs.plan.outputs.record == 'true'
     runs-on: ubuntu-latest
@@ -278,15 +278,15 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The oracle: uPortal-start master runs the released uPortal 5.17 on Tomcat 8.5 (Gradle 6.9.4, Java 11)
-      - name: Checkout the oracle
+      # The reference: uPortal-start master runs the released uPortal 5.17 on Tomcat 8.5 (Gradle 6.9.4, Java 11)
+      - name: Checkout the reference
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.oracle-ref || 'master' }}
-          path: oracle
+          ref: ${{ inputs.reference-ref || 'master' }}
+          path: reference
           persist-credentials: false
-      - name: Bootstrap the oracle's gradle.properties
-        working-directory: oracle
+      - name: Bootstrap the reference's gradle.properties
+        working-directory: reference
         run: |
           cp gradle.properties.example gradle.properties
           grep -E '^(uPortalVersion|tomcatVersion)=' gradle.properties | tee -a "$GITHUB_STEP_SUMMARY"
@@ -304,8 +304,8 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: true
-      - name: Initialize and start the oracle
-        working-directory: oracle
+      - name: Initialize and start the reference
+        working-directory: reference
         run: ./gradlew -S portalInit && ./gradlew -S tomcatStart && ../tests/replay/portal.sh wait
       - name: Install npm dependencies
         run: npm ci
@@ -313,19 +313,19 @@ jobs:
         run: npx playwright install --with-deps chromium
       # The suite's failures do not matter here: a failed test made its requests too
       - name: Run the Playwright suite with network traces
-        run: npx playwright test --config=tests/replay/suite-pw.config.mjs || echo "::warning title=HTTP replay::Some Playwright specs failed against the oracle"
+        run: npx playwright test --config=tests/replay/suite-pw.config.mjs || echo "::warning title=HTTP replay::Some Playwright specs failed against the reference"
       - name: List the requests the suite made
         run: node tests/replay/harvest.mjs build/replay/suite-results build/replay/suite-requests.json http://localhost:8080
       - name: Record
         id: record
         run: |
-          tests/replay/portal.sh reset oracle
-          node tests/replay/replay.mjs record --origin http://localhost:8080 --suite build/replay/suite-requests.json --label "$(sed -n 's/^uPortalVersion=/uPortal /p' oracle/gradle.properties) on uPortal-start master"
+          tests/replay/portal.sh reset reference
+          node tests/replay/replay.mjs record --origin http://localhost:8080 --suite build/replay/suite-requests.json --label "$(sed -n 's/^uPortalVersion=/uPortal /p' reference/gradle.properties) on uPortal-start master"
           echo "recorded=true" >> "$GITHUB_OUTPUT"
       # The masks must hide everything that differs between two runs of the same portal
-      - name: Replay against the oracle itself
+      - name: Replay against the reference itself
         run: |
-          tests/replay/portal.sh reset oracle
+          tests/replay/portal.sh reset reference
           node tests/replay/replay.mjs replay --origin http://localhost:8080 --report build/replay/self-check.md
       - name: Upload the fixtures
         if: always()
@@ -335,11 +335,11 @@ jobs:
           path: |
             tests/replay/fixtures/5.17/
             build/replay/self-check.md
-            oracle/.gradle/tomcat/logs/
+            reference/.gradle/tomcat/logs/
           include-hidden-files: true
-      - name: Stop the oracle
+      - name: Stop the reference
         if: always()
-        working-directory: oracle
+        working-directory: reference
         run: ./gradlew -S tomcatStop
 
   commit:

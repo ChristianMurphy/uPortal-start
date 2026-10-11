@@ -49,7 +49,7 @@ MOD-D29 items 2 and 8. The full description of the tool is in `docs/http-replay.
 ## Results
 
 Gradle 6.9.4 cannot be downloaded in this sandbox (`downloads.gradle.org` answers 403), so
-`master` itself could not run here. Locally the oracle was a stand-in: this branch's
+`master` itself could not run here. Locally the reference was a stand-in, this branch's
 uPortal-start with released uPortal 5.17.9 on Tomcat 8.5.100. The current build was uPortal
 `ccr-43ba0785-hzlrj5` (5.17.10-SNAPSHOT) on Tomcat 9.0.122.
 
