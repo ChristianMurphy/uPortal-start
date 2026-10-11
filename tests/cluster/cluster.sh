@@ -43,6 +43,9 @@
 #                                   (GMS join_timeout=1, max_join_attempts=1)
 #   --join-starts N  only measure joins: start node A, then start and stop node B N times and
 #                count how often cluster-join passed (build/cluster/join-starts.txt)
+#   --lone-restarts N  only measure a lone node's restart after a crash: start node A alone,
+#                then N times kill -9 it and start it again, and time how long it waits on the
+#                coordinator row it left in JGROUPSPING (build/cluster/lone-restarts.txt)
 #   --keep       leave the nodes and the database running afterwards
 #   --no-deploy  reuse the database and the nodes deployed by an earlier --keep run
 #
@@ -58,6 +61,7 @@ ROOT=$(pwd)
 
 FAULT=
 JOIN_STARTS=0
+LONE_RESTARTS=0
 KEEP=false
 DEPLOY=true
 GRADLE_EXTRA=()
@@ -65,10 +69,11 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --fault) FAULT="$2"; shift ;;
         --join-starts) JOIN_STARTS="$2"; shift ;;
+        --lone-restarts) LONE_RESTARTS="$2"; shift ;;
         --keep) KEEP=true ;;
         --no-deploy) DEPLOY=false ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,52p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,55p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
     shift
@@ -850,6 +855,23 @@ fi
 if [ "$setup_ok" = true ]; then
     use_vendor "$VENDOR"
     start_node a || setup_ok=false
+fi
+
+if [ "$setup_ok" = true ] && [ "$LONE_RESTARTS" -gt 0 ]; then
+    # A lone node's restart after a crash: its JGROUPSPING row says it is the coordinator, and
+    # the restarted node sends JOINs to that dead address before it forms a cluster of its own
+    : > "$OUT/lone-restarts.txt"
+    for i in $(seq 1 "$LONE_RESTARTS"); do
+        kill -9 "$(node_pid a)" 2> /dev/null
+        sleep 5
+        since=$(log_clock_ms)
+        start_node a || { echo "restart $i: node A did not start" >> "$OUT/lone-restarts.txt"; continue; }
+        out=$(node tests/cluster/cluster-join.mjs --lone "a=$(printf "%s," "$A_HOME"/logs/catalina.*.log)" --since "$since")
+        echo "restart $i: $out" | tee -a "$OUT/lone-restarts.txt"
+    done
+    collect_logs
+    cleanup
+    exit 0
 fi
 
 if [ "$setup_ok" = true ] && [ "$JOIN_STARTS" -gt 0 ]; then
