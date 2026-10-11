@@ -240,6 +240,77 @@
             "upgrading": "Popular Portlets is a web component"
         },
         {
+            "id": "background-preference-web-component-page",
+            "path": "/uPortal/*",
+            "field": "body",
+            "detail": "^(- .*(input\\.background-value\\[|form\\.background-edit-form\\[|_background-edit-control$|_background-preference-stylesheet$)|\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-background-preference-[^\\]]+\\.js\\]$)",
+            "reason": "The Background Preference channel in the Customize panel renders <up-background-preference>: the portlet's edit form, hidden input, edit control and inline stylesheet are gone from every page that has the panel, and the page loads the component's module. The component sets the background with an adopted stylesheet, which the outline doesn't show.",
+            "log": "uPortal-start d65aa9e",
+            "visible": true,
+            "upgrading": "Background Preference is a web component"
+        },
+        {
+            "id": "background-preference-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "(webComponent\\.(moduleUrl|tagName): added .*up-background-prefer|portletName: \"backgroundPreference\" -> \"WebComponent\")",
+            "reason": "The layout and portlet registry APIs describe Background Preference as a Web Component channel: its portletName becomes WebComponent and the webComponent parameters are added.",
+            "log": "uPortal-start d65aa9e",
+            "visible": true,
+            "upgrading": "Background Preference is a web component"
+        },
+        {
+            "id": "user-locale-web-component-page",
+            "path": "/uPortal/p/user-locales-selector/*",
+            "field": "body",
+            "detail": "^(- |\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-user-locale-[^\\]]+\\.js\\]$)",
+            "reason": "The User Locales Selector channel renders <up-user-locale>: the portlet's form with one radio button per locale and its Update button are gone from the page outline, and the page loads the component's module.",
+            "log": "uPortal-start 24fbb0b",
+            "visible": true,
+            "upgrading": "The user locale selector is a web component"
+        },
+        {
+            "id": "user-locale-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "webComponent\\.(moduleUrl|tagName): added .*up-user-locale",
+            "reason": "The portlet registry and marketplace APIs list the User Locales Selector's webComponent parameters. Its type change is the Favorites registry entry's type line.",
+            "log": "uPortal-start 24fbb0b",
+            "visible": true,
+            "upgrading": "The user locale selector is a web component"
+        },
+        {
+            "id": "session-timeout-web-component-page",
+            "path": "/uPortal/*",
+            "field": "body",
+            "detail": "^(- .*(script\\[src=/uPortal/scripts/session-timeout\\.js\\]$|_session-timeout-dlg$|h4\\.modal-title \"Session expiration\"$|button\\.btn\\.btn-secondary\\.refresh-session\\[type=button\\] \"Yes, keep me signed in\"$|button\\.btn\\.btn-primary\\.logout\\[type=button\\] \"No, log me out\"$)|\\+ +script\\[type=module\\]\\[src=/uPortal/webcomponents/assets/up-session-timeout-[^\\]]+\\.js\\]$)",
+            "reason": "The Session Timeout channel, in the header region of every signed-in page, renders <up-session-timeout>: the portlet's warning dialog (heading and two buttons) and the page's scripts/session-timeout.js are gone from the outline, and the page loads the component's module. The component builds its dialog when the warning is due.",
+            "log": "uPortal-start ccbdf89",
+            "visible": true,
+            "upgrading": "Session Timeout is a web component"
+        },
+        {
+            "id": "session-timeout-web-component-registry",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "(webComponent\\.(moduleUrl|tagName): added .*up-session-timeout|webComponent\\.preferenceAttributes: added .*\"enabled=en|portletName: \"SessionTimeout\" -> \"WebComponent\")",
+            "reason": "The layout and portlet registry APIs describe Session Timeout as a Web Component channel: its portletName becomes WebComponent and the webComponent parameters are added, including the preference attributes for enabled, the dialog's display seconds and the logout URL.",
+            "log": "uPortal-start ccbdf89",
+            "visible": true,
+            "upgrading": "Session Timeout is a web component"
+        },
+        {
+            "id": "preferences-api-npe-message-java14",
+            "path": "/uPortal/api/preferences/*",
+            "status": 500,
+            "field": "*",
+            "reason": "PortletPreferencesRESTController never gets its IPortletDefinitionDao, IPortletEntityRegistry and IPersonManager injected (no setter or @Autowired since 5.17), so every /api/preferences request answers 500 with the NullPointerException's message as a text/plain body. On Java 11 that message is null and the body is empty, as 5.17 recorded it. Java 14 and later describe the null field in the message (JEP 358), so the body becomes text. The status is the same 500.",
+            "log": "MOD-I326",
+            "visible": false,
+            "where": "local",
+            "whereReason": "The replay workflow runs the portal under test on Java 11 (replay.yml sets JAVA_HOME to 11 for Tomcat), which leaves the message null. A local portal on Java 14 or later, such as Java 21 for uPortal 6.0, sends the text."
+        },
+        {
             "id": "search-web-component-page",
             "path": "/uPortal/*",
             "field": "body",
