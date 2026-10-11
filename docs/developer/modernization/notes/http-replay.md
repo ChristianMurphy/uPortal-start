@@ -1,6 +1,7 @@
 # Handoff: HTTP differential replay and security matrix
 
-Workstream branch `ccr-43ba0785-hzlrj5-http-replay` (uPortal-start only, uPortal unchanged).
+Workstream branch `ccr-43ba0785-hzlrj5-http-replay` in uPortal-start. The same branch in uPortal
+changes only `docs/UPGRADING-6.0.md` (968c57dd29), which the registry entries cite.
 MOD-D29 items 2 and 8. The full description of the tool is in `docs/http-replay.md`.
 
 ## What was built
@@ -21,6 +22,8 @@ MOD-D29 items 2 and 8. The full description of the tool is in `docs/http-replay.
   * `replay` compares a portal with them and applies `intended-differences.json`. It writes a
     Markdown report to the job summary and one error annotation per unexplained difference.
   * `--actual` re-evaluates a saved run without a portal.
+* `tests/replay/evaluate.mjs` holds the rules a replay must meet (`docs/http-replay.md`,
+  "Rules"), and `evaluate.check.mjs` tests each rule with a seeded violation.
 * `tests/replay/portal.sh reset` gives each run the state of a fresh `portalInit`. It empties
   HSQLDB, runs `dataInit` (which also redeploys every overlay) and starts Tomcat.
 * `.github/workflows/replay.yml` has two jobs.
@@ -98,6 +101,23 @@ differences.
 | `useHttpOnly="false"` in uPortal's `META-INF/context.xml` and `<http-only>false</http-only>` in its `web.xml` | the container no longer marking the session cookie HttpOnly | **fails**: 3 exchanges and 2 security checks. The login cookie and the header snapshot lose `httponly` on `JSESSIONID` |
 | `@JsonFormat` removed from `PortletList.updatedOn` (rebuilt jar) | a Jackson date default change | **fails**: 4 exchanges. `$[0].updatedOn` changes from `"9999-99-99 99:99:99 +0000"` to `{epoch-ms:number}` in both the crawl and the suite requests |
 | method security off on `/api` (`global-method-security` commented out) | an admin route opened to guests | **fails**: 35 exchanges, 35 matrix cells and the CSRF table. `GET /api/permissions/owners.json` changes from 403 to 200 for guest, student, staff and faculty |
+
+### Seeded rule violations
+
+Two more faults show that a registry entry cannot get around the rules. Both re-evaluate saved local
+runs (`--actual`) against the final reference, with `--upgrading` pointing at uPortal's
+`docs/UPGRADING-6.0.md` from 968c57dd29. The local baseline registry leaves out the four entries
+for the integration changes the local build lacks (see below); with it, the run without a fault
+passes.
+
+| Fault | Result |
+| --- | --- |
+| The method-security fault above, plus a registry entry `"path": "/uPortal/api/*", "field": "*"` with a valid UPGRADING section that tries to excuse it | **fails**: no unexplained exchange is left, but 27 privilege gains (403 to 200 for guest, student, staff and faculty) are reported under rule 1, and the 27 matrix cells stay unexplained |
+| An entry for `/uPortal/api/never-requested/*`, on the passing run | **fails** under rule 4: the entry didn't match any difference |
+
+The same violations, and lost access, visible entries without a section and CSRF changes without
+one, are tested without a portal by `node --test tests/replay/evaluate.check.mjs`, which the
+`rules` job of `replay.yml` runs.
 
 The local uPortal build predates uPortal 3127a82ab9 and bcc1d9139d. These runs did not exercise
 their registry entries, and the CI replay did.
@@ -206,6 +226,22 @@ CI run 38109159151.
 | The record job may push fixtures to the branch it runs for (never the default branch), and a `[replay-record]` commit message triggers it | | `replay.yml` |
 | On workstream branches the replay runs only when `tests/replay` or the workflow changes | | `replay.yml`, MOD-D30 |
 | Node globals declared for `*.mjs` in `eslint.config.js` | | `eslint.config.js` |
+
+Each registry entry now says whether users, admins or API clients see the change (`visible`), and
+visible entries give the UPGRADING-6.0.md section about them (`upgrading`):
+
+| Entry | Visible | UPGRADING-6.0.md section |
+| --- | --- | --- |
+| `tomcat-9-error-page-version`, `tomcat-9-json-charset` | yes | uPortal-start runs Tomcat 9 (new) |
+| `portal-version` | no | |
+| `portal-analytics-dropdown-fix` | yes | Fixes made after uPortal 5.17.9 (new) |
+| `vendored-portlet-mvc-exception` | yes | Spring Portlet MVC is now part of uPortal |
+| `api-unmapped-404-*` | yes | Servlet controllers are mapped by RequestMappingHandlerMapping (now names the 405 to 404 change) |
+| `spring-js-resource-servlet-removed` | yes | The /resources/* servlet is gone |
+| `skin-css-pinned-compilers` | no | `where: local`, unused in CI |
+
+MOD-I130 (CSRF protection on every unsafe `/api` request) will change the CSRF probe results.
+Those changes fail until an entry for them cites MOD-I130 and names its UPGRADING-6.0.md section.
 
 ## What's left
 
