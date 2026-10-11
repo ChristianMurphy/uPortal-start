@@ -11,6 +11,16 @@ import { loginViaUrl, logout } from "../utils/ux-general-utils";
  */
 const SEARCH_URL = `${config.url}p/search/max`;
 
+/**
+ * The query in the page URL. The portal redirects /p/search/max?query=... to
+ * the channel's render URL, where the parameter is the portlet parameter
+ * pP_query.
+ */
+function queryInUrl(page: Page): string | null {
+  const parameters = new URL(page.url()).searchParams;
+  return parameters.get("pP_query") ?? parameters.get("query");
+}
+
 async function openSearch(page: Page, query: string): Promise<void> {
   await page.goto(`${SEARCH_URL}?query=${encodeURIComponent(query)}`);
   await expect(page.locator("up-search")).toHaveAttribute(
@@ -79,7 +89,7 @@ test.describe("Search web components", () => {
     await box.fill("calendar");
     await box.press("Enter");
 
-    await expect(page).toHaveURL(/[&?]query=calendar(&|$)/);
+    await expect.poll(() => queryInUrl(page)).toBe("calendar");
     await search.getByRole("tab", { name: "Portlets" }).click();
     await expect(
       search.getByRole("heading", { level: 3, name: "Calendar" }),
@@ -136,9 +146,7 @@ test.describe("Search web components", () => {
     const sent = new URL(sentRequest.url());
     expect(sent.searchParams.get("q")).toBe(UNICODE_QUERY);
     expect(sent.search).not.toContain("%25");
-    await expect
-      .poll(() => new URL(page.url()).searchParams.get("query"))
-      .toBe(UNICODE_QUERY);
+    await expect.poll(() => queryInUrl(page)).toBe(UNICODE_QUERY);
     await expect(box).toHaveValue(UNICODE_QUERY);
     await expect(
       search.getByRole("status").filter({ hasText: "results for" }),
@@ -159,7 +167,7 @@ test.describe("Search web components", () => {
     await box.press("Enter");
 
     await expect(page).toHaveURL(/\/p\/search[./]/);
-    expect(new URL(page.url()).searchParams.get("query")).toBe(UNICODE_QUERY);
+    expect(queryInUrl(page)).toBe(UNICODE_QUERY);
     await expect(
       page
         .locator("up-search")
