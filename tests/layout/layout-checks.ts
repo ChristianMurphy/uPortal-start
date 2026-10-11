@@ -125,10 +125,10 @@ export async function expectLayoutAsRecorded(
       .map((node) => `${check}: ${node}`),
   );
   if (gone.length > 0) {
-    testInfo.annotations.push({
-      type: "fixed",
-      description: `${name}: no longer seen; remove from the baseline: ${gone.join("; ")}`,
-    });
+    const description = `${name}: no longer seen; remove from the baseline: ${gone.join("; ")}`;
+    testInfo.annotations.push({ type: "fixed", description });
+    // In the job log too, since CI's report is an artifact
+    console.log(`layout ${description}`);
   }
   const unrecorded = problems
     .filter((each) => !(recorded[each.check] ?? []).includes(each.node))
