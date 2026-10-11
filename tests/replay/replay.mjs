@@ -385,6 +385,8 @@ async function replay() {
     lines.push(`## HTTP replay against ${meta.label}: ${failed ? 'differences found' : 'no unexplained differences'}`);
     lines.push('');
     lines.push(`* Requests: ${actual.length} (${actual.filter((e) => e.set === 'crawl').length} crawl, ${actual.filter((e) => e.set === 'suite').length} from the Playwright suite), roles: ${[...new Set(actual.map((e) => e.role))].join(', ')}`);
+    const skipped = (suiteRequests?.requests ?? []).filter((r) => !replayable(r.path)).length;
+    if (skipped > 0) lines.push(`* Suite requests not replayed because they write or name a generated id: ${skipped}`);
     lines.push(`* Compared with the recording: ${compared}; unexplained differences in ${failures.length} exchanges; intended differences applied: ${intended.length}`);
     lines.push(`* Security matrix: ${Object.keys(recordedMatrix).length} routes x ${ROLES.length} roles; changed cells: ${matrixChanges.length} (${matrixChanges.filter((c) => !c.registered).length} unexplained)`);
     lines.push(`* Logins, CSRF and header snapshot: ${securityChanges.length} changes (${securityFailures.length} unexplained)`);
