@@ -1,0 +1,1930 @@
+{
+ "GET /uPortal": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/index.jsp": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/f/welcome/normal/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/f/welcome/": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/f/welcome": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/f/does-not-exist/normal/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/render.userLayoutRootNode.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/render.userLayoutRootNode.uP?uP_root=root&uP_sparam=activeTabTag&activeTabTag=welcome": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-greeting.ctf3/max/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/search/max/render.uP?query=portal": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/directory/max/render.uP?pP_query=admin": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/layout.json": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/s/person/admin": {
+  "guest": "500 server-error",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/s/person": {
+  "guest": "500 server-error",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/s/does-not-exist": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/Login": {
+  "guest": "302 redirect"
+ },
+ "GET /uPortal/Login?userName=admin&password=wrong": {
+  "guest": "302 redirect"
+ },
+ "GET /uPortal/health-check": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/health-check/": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/health-check?detail=ALL": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/500.html": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/does-not-exist.html": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/WEB-INF/web.xml": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/META-INF/MANIFEST.MF": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/media/skins/respondr/defaultSkin.css": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/media/skins/respondr/common/javascript/uportal/up-favorite.js": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/media/skins/icons/mobile/default.png": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/favicon.ico": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/resources/spring/Spring.js": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal//api/session.json": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/session.json;jsessionid=0": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/session.json;x=y": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/%2e%2e/api/session.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/people%2Fme": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "GET /uPortal/api/session.json?a=%ZZ": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/session.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/session.json/": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/session": {
+  "guest": "405 method-not-allowed",
+  "student": "405 method-not-allowed",
+  "staff": "405 method-not-allowed",
+  "faculty": "405 method-not-allowed",
+  "admin": "405 method-not-allowed"
+ },
+ "GET /uPortal/api/groups": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/groups/": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/groups.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/groups.xml": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/ajax-success": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/cookiecheck": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/api/portletList": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portletList?type=manage": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/v4-3/dlm/portletRegistry.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v4-3/dlm/portletRegistry.json?favorite=true": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/fragmentList": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/fragmentList?sort=NAME": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/layoutDoc": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/layoutDoc?tab=welcome": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v1/dlm/layout.json": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/v4-3/dlm/layout.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v4-3/dlm/layout.json/": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/entities/person/admin.json": {
+  "guest": "403 forbidden",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/entities/group/pags.Authenticated%20Users.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/entities.json?q=adm&entityType=person&entityType=group": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "GET /uPortal/api/entities.json": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "GET /uPortal/api/entity/portlet-definition/portal-greeting?format=XML": {
+  "guest": "401 unauthorized",
+  "student": "401 unauthorized",
+  "staff": "401 unauthorized",
+  "faculty": "401 unauthorized",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/entity/portlet-definition/portal-greeting?format=JSON": {
+  "guest": "401 unauthorized",
+  "student": "401 unauthorized",
+  "staff": "401 unauthorized",
+  "faculty": "401 unauthorized",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/entity/user/student?format=XML": {
+  "guest": "401 unauthorized",
+  "student": "401 unauthorized",
+  "staff": "401 unauthorized",
+  "faculty": "401 unauthorized",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/entity/portlet-definition/does-not-exist": {
+  "guest": "401 unauthorized",
+  "student": "401 unauthorized",
+  "staff": "401 unauthorized",
+  "faculty": "401 unauthorized",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/marketplace/entries.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/marketplace/entry/portal-greeting.json": {
+  "guest": "204 allowed",
+  "student": "204 allowed",
+  "staff": "204 allowed",
+  "faculty": "204 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/marketplace/entry/does-not-exist.json": {
+  "guest": "204 allowed",
+  "student": "204 allowed",
+  "staff": "204 allowed",
+  "faculty": "204 allowed",
+  "admin": "204 allowed"
+ },
+ "GET /uPortal/api/v5-0/marketplace/portal-greeting/ratings": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/marketplace/portal-greeting/getRating": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v4-3/pags/Authenticated%20Users.json": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/api/v4-3/pags/PAGS%20Root.json": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/api/v4-3/pags/does-not-exist.json": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/api/people.json?searchTerms[]=username&username=admin": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "GET /uPortal/api/people/admin.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/people/does-not-exist.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people?username=admin": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people?username=nobody-at-all": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people/admin": {
+  "guest": "404 not-found",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people/admin.json": {
+  "guest": "404 not-found",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people/admin.smith": {
+  "guest": "404 not-found",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people/me": {
+  "guest": "404 not-found",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people/me/": {
+  "guest": "404 not-found",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/people/me.json": {
+  "guest": "404 not-found",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/preferences/portal-greeting?method=entity": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/preferences/entity/portal-greeting": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/preferences/definition/portal-greeting?method=definition": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/preferences/does-not-exist?method=entity": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/portlets.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portlets.json?requiredPermissionType=BROWSE": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portlets.json?favorite=true": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portlets": {
+  "guest": "405 method-not-allowed",
+  "student": "405 method-not-allowed",
+  "staff": "405 method-not-allowed",
+  "faculty": "405 method-not-allowed",
+  "admin": "405 method-not-allowed"
+ },
+ "GET /uPortal/api/portlet/portal-greeting.json": {
+  "guest": "403 forbidden",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portlet/portlet-admin.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portlet/does-not-exist.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "403 forbidden"
+ },
+ "GET /uPortal/api/v4-3/portlet/portal-greeting.html": {
+  "guest": "403 forbidden",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v4-3/portlet/portlet-admin.html": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/permissions/principals.json?q=adm": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/permissions/owners.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/permissions/owners/UP_PORTLET_SUBSCRIBE.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/permissions/activities.json?q=SUB": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/assignments/principal/pags.Authenticated%20Users.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/v5-5/permissions/assignments/users/student": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/assignments/target/pags.Authenticated%20Users.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/permissionAssignmentMap?principals[]=pags.Authenticated%20Users&owner=UP_PORTLET_SUBSCRIBE&activity=BROWSE&target=pags.Authenticated%20Users": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "GET /uPortal/api/permissionAssignments?owner=UP_PORTLET_SUBSCRIBE": {
+  "guest": "401 unauthorized",
+  "student": "401 unauthorized",
+  "staff": "401 unauthorized",
+  "faculty": "401 unauthorized",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portlet-list/": {
+  "guest": "401 unauthorized",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/portlet-list": {
+  "guest": "405 method-not-allowed",
+  "student": "405 method-not-allowed",
+  "staff": "405 method-not-allowed",
+  "faculty": "405 method-not-allowed",
+  "admin": "405 method-not-allowed"
+ },
+ "GET /uPortal/api/portlet-list/00000000-0000-0000-0000-000000000000": {
+  "guest": "401 unauthorized",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/api/v5-0/portal/search?q=portal": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/portal/search?q=portal&type=portlets": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/portal/search?q=zzzzqqq": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-0/portal/search/?q=portal": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v5-1/userinfo": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/analytics/level": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/analytics/level/": {
+  "guest": "405 method-not-allowed",
+  "student": "405 method-not-allowed",
+  "staff": "405 method-not-allowed",
+  "faculty": "405 method-not-allowed",
+  "admin": "405 method-not-allowed"
+ },
+ "GET /uPortal/api/analytics/": {
+  "guest": "405 method-not-allowed",
+  "student": "405 method-not-allowed",
+  "staff": "405 method-not-allowed",
+  "faculty": "405 method-not-allowed",
+  "admin": "405 method-not-allowed"
+ },
+ "GET /uPortal/api/analytics?startDate=2020-01-01&endDate=2020-01-02": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/swagger-ui.html": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/v2/api-docs": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "GET /uPortal/api/swagger-resources": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/api/does-not-exist": {
+  "guest": "405 method-not-allowed",
+  "student": "405 method-not-allowed",
+  "staff": "405 method-not-allowed",
+  "faculty": "405 method-not-allowed",
+  "admin": "405 method-not-allowed"
+ },
+ "GET /uPortal/p/AttributeSwapper/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/AttributeSwapper/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/ImportExportPortlet/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/ImportExportPortlet/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/about-college-life/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/about-college-life/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/admin-dashboard/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/admin-dashboard/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/admin-feature/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/admin-feature/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/announcements/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/announcements/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/announcementsAdmin/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/announcementsAdmin/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/attachments/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/attachments/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/background-preference/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/background-preference/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/bookmarks/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/bookmarks/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/cache-manager/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/cache-manager/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/calendar/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/calendar/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/courses/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/courses/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/demo-feature/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/demo-feature/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/directory/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/directory/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/dynamic-respondr-skin/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/dynamic-respondr-skin/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/emergency-alert/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/emergency-alert/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/emergency-alert-admin/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/emergency-alert-admin/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/error/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/error/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/esup-filemanager-demo/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/esup-filemanager-demo/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/faculty-feature/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/faculty-feature/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/favorites/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/favorites/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/favorites-carousel/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/favorites-carousel/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/feedback/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/feedback/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/feedback-admin/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/feedback-admin/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/forgot-password/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/forgot-password/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/fragment-admin/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/fragment-admin/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/fragment-audit/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/fragment-audit/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/google-analytics-config/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/google-analytics-config/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/groupsmanager/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/groupsmanager/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/instructions-for-new-tenants/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/instructions-for-new-tenants/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/js-demo/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/js-demo/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/legal-footer/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/legal-footer/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/logging-in/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/logging-in/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/login/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect-to-login",
+  "staff": "302 redirect-to-login",
+  "faculty": "302 redirect-to-login",
+  "admin": "302 redirect-to-login"
+ },
+ "GET /uPortal/p/login/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect-to-login"
+ },
+ "GET /uPortal/p/notification-banner/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/notification-banner/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/notification-icon/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/notification-icon/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/notification-list/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/notification-list/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/passwordmgr/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/passwordmgr/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/permissionsmanager/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/permissionsmanager/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/personalization-gallery/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/personalization-gallery/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/please-register/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/please-register/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/popular-portlets/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/popular-portlets/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-activity/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-activity/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-administration/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-administration/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-greeting/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/portal-greeting/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-sitemap/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portal-sitemap/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portlet-admin/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portlet-admin/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/portletmarketplace/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/portletmarketplace/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/reset-my-layout/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/reset-my-layout/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/search/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/search/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/session-timeout/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/session-timeout/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/snooper/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/snooper/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/staff-feature/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/staff-feature/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/statistics/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/statistics/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/student-feature/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/student-feature/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/tenant-manager/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/tenant-manager/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/test-portlet-1/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/test-portlet-1/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/test-portlet-2/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/test-portlet-2/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/translator/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/translator/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/uportal-home-page/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/uportal-home-page/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/uportal-links/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/uportal-links/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/user-administration/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/user-administration/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/user-locales-selector/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/user-locales-selector/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/waffle-menu/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/waffle-menu/exclusive/render.uP": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/whos-online/max/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/whos-online/exclusive/render.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "GET /uPortal/p/does-not-exist/max/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "200 allowed"
+ },
+ "GET /uPortal/p/does-not-exist/exclusive/render.uP": {
+  "guest": "302 redirect-to-login",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "302 redirect"
+ },
+ "POST /uPortal/api/layout?action=removeElement&elementID=u999l1n999": {
+  "guest": "401 unauthorized",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "POST /uPortal/api/layout?action=removeFavorite&channelId=999999": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "POST /uPortal/api/layout?action=noSuchAction": {
+  "guest": "404 not-found",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "POST /uPortal/api/portlet-list/": {
+  "guest": "401 unauthorized",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "PUT /uPortal/api/portlet-list/00000000-0000-0000-0000-000000000000": {
+  "guest": "401 unauthorized",
+  "student": "404 not-found",
+  "staff": "404 not-found",
+  "faculty": "404 not-found",
+  "admin": "404 not-found"
+ },
+ "DELETE /uPortal/api/portlet-list/00000000-0000-0000-0000-000000000000": {
+  "guest": "401 unauthorized",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "PUT /uPortal/api/preferences/does-not-exist": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "DELETE /uPortal/api/entity/portlet-definition/does-not-exist": {
+  "guest": "401 unauthorized",
+  "student": "401 unauthorized",
+  "staff": "401 unauthorized",
+  "faculty": "401 unauthorized",
+  "admin": "204 allowed"
+ },
+ "POST /uPortal/api/deletePermission?principal=local.999&owner=UP_NONE&activity=NONE&target=local.999": {
+  "guest": "401 unauthorized",
+  "student": "401 unauthorized",
+  "staff": "401 unauthorized",
+  "faculty": "401 unauthorized",
+  "admin": "500 server-error"
+ },
+ "GET /uPortal/api/updatePermission": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "POST /uPortal/api/marketplace/does-not-exist/rating/3": {
+  "guest": "500 server-error",
+  "student": "500 server-error",
+  "staff": "500 server-error",
+  "faculty": "500 server-error",
+  "admin": "500 server-error"
+ },
+ "POST /uPortal/api/v4-3/pags/does-not-exist.json": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "POST /uPortal/api/analytics": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "POST /uPortal/api/v5-5/oauth/token": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "403 forbidden"
+ },
+ "POST /uPortal/api/import": {
+  "guest": "400 client-error",
+  "student": "400 client-error",
+  "staff": "400 client-error",
+  "faculty": "400 client-error",
+  "admin": "400 client-error"
+ },
+ "DELETE /uPortal/api/v5-4/caches": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden"
+ },
+ "POST /uPortal/p/portal-greeting/max/action.uP": {
+  "guest": "302 redirect",
+  "student": "302 redirect",
+  "staff": "302 redirect",
+  "faculty": "302 redirect",
+  "admin": "403 forbidden"
+ },
+ "POST /uPortal/f/welcome/normal/render.uP": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "403 forbidden"
+ },
+ "POST /uPortal/layout.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "403 forbidden"
+ },
+ "OPTIONS /uPortal/api/session.json": {
+  "guest": "403 forbidden",
+  "student": "403 forbidden",
+  "staff": "403 forbidden",
+  "faculty": "403 forbidden",
+  "admin": "403 forbidden"
+ },
+ "HEAD /uPortal/api/session.json": {
+  "guest": "200 allowed",
+  "student": "200 allowed",
+  "staff": "200 allowed",
+  "faculty": "200 allowed",
+  "admin": "200 allowed"
+ },
+ "TRACE /uPortal/": {
+  "guest": "0 no-response",
+  "student": "0 no-response",
+  "staff": "0 no-response",
+  "faculty": "0 no-response",
+  "admin": "0 no-response"
+ }
+}
