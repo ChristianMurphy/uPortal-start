@@ -13,9 +13,10 @@ import { loginViaApi, logoutViaApi } from "../ux/utils/ux-general-utils";
  * elements. No browser: these run in the database harness too.
  */
 const API = `${config.url}api/v6-0/background-preference/background-preference`;
-// A page with a web-component element, which carries the CSRF header and token
-const ELEMENT_PAGE = `${config.url}p/favorites`;
-const ELEMENT = "up-favorites";
+// The channel's element, on every page in the Customize panel, carries the CSRF
+// header and token
+const ELEMENT_PAGE = `${config.url}f/welcome/normal/render.uP`;
+const ELEMENT = "up-background-preference";
 const IMAGES = `${new URL(config.url).pathname}media/skins/common/backgroundImages`;
 
 interface BackgroundPreference {
@@ -76,7 +77,9 @@ test.describe("Background Preference API as a guest", () => {
 
 test.describe("Background Preference API as a user", () => {
   test.beforeEach(async ({ request }) => {
-    await loginViaApi(request, config.users.student);
+    // Not the student: the UX spec changes the student's background, and the two
+    // spec files can run at the same time
+    await loginViaApi(request, config.users.faculty);
     expect(await choose(request)).toBe(200);
   });
 

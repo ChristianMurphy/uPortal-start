@@ -172,3 +172,110 @@ test.describe("Background Preference as a guest", () => {
     await expect.poll(() => pageBackground(page)).not.toMatch(CHOSEN);
   });
 });
+
+/** How many <style> elements and adopted sheets name one of the channel's images. */
+async function backgroundRules(
+  page: Page,
+): Promise<{ styleElements: number; adoptedSheets: number }> {
+  return page.evaluate(() => {
+    const image = "/backgroundImages/";
+    let styleElements = 0;
+    for (const style of document.querySelectorAll("style")) {
+      if (style.textContent?.includes(image)) styleElements += 1;
+    }
+    let adoptedSheets = 0;
+    for (const sheet of document.adoptedStyleSheets) {
+      const rules = [...sheet.cssRules].map((rule) => rule.cssText);
+      if (rules.some((rule) => rule.includes(image))) adoptedSheets += 1;
+    }
+    return { styleElements, adoptedSheets };
+  });
+}
+
+/*
+ * The channel is the <up-background-preference> web component (a "Web
+ * Component" channel, uPortal MOD-D18) backed by
+ * /api/v6-0/background-preference/background-preference. These tests cover
+ * what the component adds to the portlet's behaviour.
+ */
+test.describe("Background Preference web component", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, config.users.student);
+    await openWelcome(page);
+    await choose(page, "None");
+    await openWelcome(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    // A test may have made the API fail; the reset to None needs it back
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    await openWelcome(page);
+    await choose(page, "None");
+    await logout(page);
+  });
+
+  test("is the up-background-preference element, with the portal's context", async ({
+    page,
+  }) => {
+    const element = channel(page).locator("up-background-preference");
+
+    await expect(element).toHaveAttribute("fname", "background-preference");
+    await expect(element).toHaveAttribute("csrf-header", /.+/);
+    await expect(element).toHaveAttribute("csrf-token", /.+/);
+    await expect(
+      page.locator('script[type="module"][src*="/up-background-preference-"]'),
+    ).toHaveCount(1);
+  });
+
+  test("sets the background with one adopted stylesheet, not a <style> element", async ({
+    page,
+  }) => {
+    await choose(page, "Galaxy");
+    await expect.poll(() => pageBackground(page)).toMatch(fullSize("galaxy"));
+    await choose(page, "Nebula");
+    await expect.poll(() => pageBackground(page)).toMatch(fullSize("nebula"));
+
+    expect(await backgroundRules(page)).toEqual({
+      styleElements: 0,
+      adoptedSheets: 1,
+    });
+
+    await openWelcome(page);
+    await expect.poll(() => pageBackground(page)).toMatch(fullSize("nebula"));
+    expect(await backgroundRules(page)).toEqual({
+      styleElements: 0,
+      adoptedSheets: 1,
+    });
+  });
+
+  test("Escape closes the list and gives focus back to the button", async ({
+    page,
+  }) => {
+    const content = await openChoices(page);
+    await content.getByRole("button", { name: "Galaxy" }).focus();
+
+    await page.keyboard.press("Escape");
+
+    await expect(content.getByText("Galaxy", { exact: true })).toBeHidden();
+    await expect(
+      content.getByRole("button", { name: "Change Background Image" }),
+    ).toBeFocused();
+  });
+
+  test("keeps the list open when the save fails", async ({ page }) => {
+    await page.route("**/api/v6-0/background-preference/**", (route) =>
+      route.request().method() === "PUT"
+        ? route.fulfill({ status: 500, body: "boom" })
+        : route.fallback(),
+    );
+    const content = await openChoices(page);
+
+    await content.getByText("Mountain", { exact: true }).click();
+
+    await expect(content.getByRole("alert")).toHaveText(
+      "Your background could not be changed. Try again later.",
+    );
+    await expect(content.getByText("Mountain", { exact: true })).toBeVisible();
+    await expect.poll(() => pageBackground(page)).not.toMatch(CHOSEN);
+  });
+});
