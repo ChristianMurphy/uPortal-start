@@ -44,8 +44,8 @@
 #                                   they start, as uPortal 5 did (flushInitialDelay=PT120S)
 #                  join-gives-up    node B waits 1 ms for an answer to its JOIN and tries once
 #                                   (GMS join_timeout=1, max_join_attempts=1)
-#                  merge-clear-off  the nodes keep their replicated caches when JGroups merges them
-#                                   (clearReplicatedCachesOnMerge=false)
+#                  merge-clear-off  the nodes keep their caches when JGroups merges them
+#                                   (clearCachesOnMerge=false)
 #   --join-starts N  only measure joins: start node A, then start and stop node B N times and
 #                count how often cluster-join passed (build/cluster/join-starts.txt)
 #   --lone-restarts N  only measure a lone node's restart after a crash: start node A alone,
@@ -214,7 +214,7 @@ append_properties() {  # append_properties <node> <server name>
                 echo "org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S" ;;
             merge-clear-off)
                 echo "# Seeded fault (tests/cluster/cluster.sh --fault merge-clear-off)"
-                echo "org.apereo.portal.cache.clearReplicatedCachesOnMerge=false" ;;
+                echo "org.apereo.portal.cache.clearCachesOnMerge=false" ;;
         esac
     } >> "$file"
 }
