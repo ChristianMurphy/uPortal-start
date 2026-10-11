@@ -37,11 +37,12 @@ Tomcat's `catalina.*` logs and the portal log.
 
 | Check | What it does | Bound |
 | --- | --- | --- |
-| `cluster-join` | From both nodes' Tomcat logs (`tests/cluster/cluster-join.mjs`): node B joins node A's JGroups cluster when it starts, so both nodes install the same view of two members, counted from node B's first JGroups line | 30 s |
+| `cluster-join` | Node B joins node A's JGroups cluster when it starts. `tests/cluster/cluster-join.mjs` reads both nodes' Tomcat logs and finds when the two installed the same view of two members, counted from node B's first JGroups line | 30 s |
 | `invalidation-portlet` | Node B reads a portlet definition (`/api/portlet/what-is-uportal.json`), node A imports it with a new title (`/api/import`), node B must show the new title | 30 s |
 | `invalidation-layout` | Node B loads the student's layout, node A adds a tab to it (`/api/layout?action=addTab`), a new student session on node B must have the tab | 30 s |
 | `invalidation-permission` | Both nodes deny the student the Permissions Manager portlet; node A grants SUBSCRIBE on it, and a new student session on node A, then on node B must allow it; node A revokes it, and a new session on node B must be denied again | 330 s (see below) |
 | `permission-session` | On each node, a student session denied before the grant must be allowed after it. A session allowed before the revocation must be denied after it. Both are polled before any new student login on that node | 30 s |
+| `split-heal` | `iptables` drops the JGroups packets between the nodes (ports 7800 to 7810 on loopback) until each installs a view of one member. Node A imports a new portlet title and grants the student SUBSCRIBE on the Permissions Manager. Node B must still show the old title and deny the student, which shows the split held. The ports are opened again, and once both nodes install a MergeView node B must show the new title and allow its existing student session | 30 s after the merge |
 | `jobs-once` | Once node B's scheduled tasks run (120 s after it starts), every test user logs in and renders their layout three times on each node; once the aggregator has read all raw events, each interval's login and portlet-render aggregates (group Everyone) must have grown by exactly the number of raw events | |
 | `failover-takeover` | A table lock on `UP_EVENT_AGGR_STATUS` makes the next aggregation run wait inside its cluster lock. The test waits 95 s, past the abandonment age and the server bias, before it kills the holder. The other node must not take the lock in that time. The kill is a `kill -9`, and the table lock is released after it. The other node must take the lock over no sooner than 60 s after the dead node's last update (it is not abandoned before), and no later than 60 s + the 28 s server bias + 60 s | 148 s |
 | `failover-jobs-once` | Like `jobs-once`, over events made before the kill (on both nodes) and after it: the survivor aggregates them all, once | |
@@ -54,13 +55,14 @@ permission change clears both caches and the removal is replicated. `invalidatio
 still allows the old bound of 330 s for new sessions, and `permission-session` holds sessions
 that checked the permission before the change to 30 s.
 
-A node that fails to join is split from the cluster: in a local run node B's JOIN timed out
-four times (`GMS join_timeout=1000`, `max_join_attempts=4` in `jgroups.xml`) because node A
-could not yet reach it to answer. Node B then formed a cluster of its own, and dropped node A's
-messages as coming from a non-member until `MERGE3` merged the two 92 s later. A cache entry node B
-read in that time is never invalidated and keeps its old value until it expires (6 hours for
-portlet definitions). `cluster-join` checks the join itself. The invalidation checks start
-after the 60 s wait for a shared view, as before, and catch a split only when it lasts into them.
+A node that fails to join is split from the cluster. In a local run node B's JOIN timed out
+four times (`GMS join_timeout=1000`, `max_join_attempts=4` in uPortal 5's `jgroups.xml`)
+because node A did not yet have its address to answer. Node B then formed a cluster of its own, and
+dropped node A's messages as coming from a non-member until `MERGE3` merged the two 92 s later.
+uPortal 6.0 tries the JOIN 8 times, and `cluster-join` checks the join itself. A network split
+has the same effect, and for that uPortal 6.0 empties the replicated caches on each node when
+JGroups installs a MergeView, so an entry read during the split is read again from the
+database. `split-heal` checks that.
 
 The layout check does not depend on replication: uPortal reads a user's layout from the
 database when a session starts and keeps it in the session, so a new session on node B sees the
@@ -93,6 +95,7 @@ seeded fault and passes only if the checks meant to catch it fail:
 | (fixture) | `tests/cluster/fixtures/overlap-*.log`: two node logs where the aggregation job runs on both at once, checked before each run | `no-overlap` |
 | `event-flush-delayed` | `org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S`: events are written 120 s after start, as in uPortal 5 | `events-aggregated` |
 | `join-gives-up` | Node B's `jgroups.xml` with `join_timeout="1" max_join_attempts="1"`: node B gives up on its JOIN at once and forms a cluster of its own | `cluster-join` |
+| `merge-clear-off` | `org.apereo.portal.cache.clearReplicatedCachesOnMerge=false`: the nodes keep their replicated caches when JGroups merges them | `split-heal` |
 
 `lock-ignored` makes node B take a lock node A still holds, but in runs 38110056978 to 38120174431
 node B rarely ran the job while node A was inside it, so `no-overlap` failed under it only once in
@@ -104,6 +107,8 @@ has no fault in the matrix: removing the cache clear from uPortal was shown once
 
 You need Docker, Node.js, curl, Java 11 for the portal and a JDK 21 for Gradle (see
 "Prerequisites" in `README.md`), a `gradle.properties`, and about 4 GB of free memory.
+`split-heal` also needs `iptables`. The script runs it directly as root, and through
+`sudo -n` otherwise, which works on GitHub's runners.
 
 ```bash
 tests/cluster/cluster.sh                          # deploy, start both nodes, run every check
@@ -114,13 +119,13 @@ tests/cluster/cluster.sh --join-starts 20         # start node B 20 times, count
 tests/cluster/cluster.sh --lone-restarts 10       # crash and restart node A alone 10 times
 ```
 
-`--join-starts` runs no other check. It starts node A, then starts and stops node B the given
-number of times, and writes each start's `cluster-join` outcome to `build/cluster/join-starts.txt`.
-`--lone-restarts` starts node A alone, then kills it with `kill -9` and starts it again the given
-number of times. JDBC_PING returns the row the killed node left in `JGROUPSPING` as a coordinator,
-so the restarted node sends JOINs to that dead address until it gives up after
-`join_timeout` × `max_join_attempts`. `build/cluster/lone-restarts.txt` has the wait of each
-restart, which a longer join setting adds to every single-server restart after a crash.
+`--join-starts` skips the checks. It starts node A, then starts and stops node B N times, and writes
+each start's `cluster-join` outcome to `build/cluster/join-starts.txt`. `--lone-restarts` starts
+node A alone, then kills it with `kill -9` and starts it again N times. JDBC_PING returns the row
+the killed node left in `JGROUPSPING` as a coordinator. The restarted node sends JOINs to that dead
+address until it gives up after `join_timeout` × `max_join_attempts`.
+`build/cluster/lone-restarts.txt` has the wait of each restart, which a longer join setting adds to
+every single-server restart after a crash.
 
 Arguments after `--` are passed to every Gradle call, and results are in `build/cluster/results.txt`, with
 both nodes' logs in `build/cluster/logs-a` and `logs-b`; on GitHub Actions failed checks also
