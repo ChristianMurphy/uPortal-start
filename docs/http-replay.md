@@ -155,24 +155,75 @@ Each entry matches requests by `path` (a glob in which `*` matches anything), an
 `roles`, `method` and `set` (`crawl` or `suite`). It matches one kind of difference by `field`:
 `status`, `location`, `header:<name>`, `cookie:<name>`, `body`, or a glob of these. Optional
 `from` and `to` values must match exactly, so a later change of the new value is reported again.
-An entry with `security` instead of `path` matches a change in the security checks by its path,
-such as `logins.admin.cas.password` or `csrf.*`. Each entry has a `reason` and a `log`
-reference:
+`fromMatch` and `toMatch` are regular expressions for long values, and `detail` is a regular
+expression that every changed line of a JSON or HTML body must match. An entry with `security`
+instead of `path` matches a change in the security checks by its path, such as
+`logins.admin.cas.password` or `csrf`.
+
+Every entry has these fields:
+
+| Field | Meaning |
+| --- | --- |
+| `reason` | why the difference is intended |
+| `log` | the log entry or commit it comes from |
+| `visible` | whether a user, an admin or an API client sees the change |
+| `upgrading` | the heading of the section in uPortal's `docs/UPGRADING-6.0.md` that tells adopters about it. Required when `visible` is true, for lost access and for CSRF changes |
+| `where`, `whereReason` | for an entry that applies only on some machines, where it applies and why |
 
 ```json
 {
-    "id": "portlet-list-duplicate-name",
-    "path": "/uPortal/api/portlet-list/*",
-    "method": "POST",
+    "id": "api-unmapped-404-status",
+    "path": "/uPortal/api/*",
     "field": "status",
-    "from": 500,
-    "to": 400,
-    "reason": "A duplicate name was hidden behind a 500 by SQLNextExceptionLoggerAspect; it is a 400 now",
-    "log": "MOD-I97"
+    "from": 405,
+    "to": 404,
+    "reason": "An unmapped GET under /api answered 405 on 5.17 ...",
+    "log": "uPortal 3127a82ab9",
+    "visible": true,
+    "upgrading": "Servlet controllers are mapped by RequestMappingHandlerMapping"
 }
 ```
 
-The report lists the entries that didn't match anything, so stale entries can be removed.
+The CSRF protection of every unsafe `/api` request (MOD-I130) will change CSRF probe results. Their
+entries cite MOD-I130 and its UPGRADING-6.0.md section.
+
+## Rules
+
+`tests/replay/evaluate.mjs` applies these rules, and `tests/replay/evaluate.check.mjs` shows each
+of them failing a run with a seeded violation (the "Replay rules" job runs it on every push).
+
+1. **No privilege gain.** A request that 5.17 did not serve (401, 403, 404, 405, or a redirect to
+   the login page) and that is served now (a 2xx answer) fails the run. No registry entry can
+   excuse it, in the crawl, in the suite's requests or in the security matrix.
+2. **Lost access is a breaking change.** A request that 5.17 served and that is not served now
+   fails unless the registry entry for its status gives an UPGRADING-6.0.md section.
+3. **Adopters can read about visible changes.** An entry with `"visible": true` names its
+   UPGRADING-6.0.md section in `upgrading`. In CI the replay job checks out that file from the
+   uPortal ref it built and fails when the section does not exist (`--upgrading`).
+4. **Stale entries fail.** An entry that doesn't match any difference fails the run, unless `where` and
+   `whereReason` say on which machines it applies. The reference's own self-check skips this rule
+   (`--self-check true`), because nothing is expected to differ there.
+5. **Every other difference fails**, and each mask that hides one is backed by evidence (see
+   "Unreported changes").
+
+## Unreported changes
+
+The masks and the order-free comparisons hide some differences on purpose. Each says in
+`tests/replay/lib.mjs` which run showed that 5.17 itself varies there ("Seen:") or that the value
+is random or the time by design. The replay does not report a change in:
+
+* generated ids: user, group, portlet, portlet type and entity type ids, the user part of layout
+  node ids, Pluto namespaces, transient subscribe ids (`ctf`);
+* the order of lists of objects in JSON, and the order of elements in a page;
+* the order of the Set-backed APIs: groups, permission assignments, entity children and search
+  results, marketplace entries and their categories, portlet lists;
+* the values of dates and times (their format is still compared), of the health checks'
+  measurements, of the session key and host name, and of the userinfo token's times;
+* permission target names (5.17 names them ambiguously), the marketplace's related portlets
+  beyond their number, and the calendar demo's answers for one day;
+* the names of aggregated skin resources, which follow the build (their pages are compared);
+* session ids, CAS tickets, UUIDs and cookie values;
+* requests that are not replayed (see "What is requested").
 
 ## Running it
 
