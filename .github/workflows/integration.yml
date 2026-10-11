@@ -23,11 +23,11 @@ name: Integration
 # Every database runs as a throwaway container that the scripts start from the image (pinned by
 # digest) in tests/db/vendors/<vendor>.properties, or as uPortal-start's own HSQLDB server.
 #
-# Prototype only (MOD-D30): a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs a light profile
-# to spare the account's runners: the uPortal build, Playwright on HSQLDB (local login, and the
-# auth specs with CAS), the harness and Playwright on PostgreSQL 18, and one cross-vendor G-migrate
-# pair. The integration branch runs
-# everything above on every push, and the schedule the nightly sets.
+# Prototype only (MOD-D30): a push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs a
+# light profile to spare the account's runners: the uPortal build, Playwright on HSQLDB (local
+# login, and the auth specs with CAS), the harness and Playwright on PostgreSQL 18, and one
+# cross-vendor G-migrate pair. A manual run on a workstream branch (such as a landing check) and
+# the integration branch run everything above, and the schedule or nightly=true the nightly sets.
 #
 on:
   push:
@@ -55,7 +55,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Manual and scheduled runs get their own group, so a newer push doesn't cancel them.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   # Prototype only (MOD-D30): a newer push to a workstream branch cancels the older run.
   cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
@@ -168,11 +169,11 @@ jobs:
         with:
           persist-credentials: false
       # nightly: the schedule or a manual nightly run; workstream (prototype only, MOD-D30): a
-      # ccr-43ba0785-hzlrj5-<topic> branch; push: everything else
+      # push to a ccr-43ba0785-hzlrj5-<topic> branch; push: everything else, manual runs included
       - name: Choose the set
         id: set
         env:
-          SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && 'workstream' || 'push' }}
+          SET: ${{ (github.event_name == 'schedule' || inputs.nightly == true) && 'nightly' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && 'workstream' || 'push' }}
         run: echo "set=$SET" >> "$GITHUB_OUTPUT"
       # Checks the coverage rules too, so a pair list that misses a source or target fails here
       - name: G-migrate pairs
@@ -251,6 +252,9 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
         run: npx playwright test --config=tests/uportal-pw.config.ts
+      - name: Show Tomcat startup errors
+        if: failure()
+        run: .github/scripts/tomcat-log-summary.sh
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -349,6 +353,9 @@ jobs:
             exit 1
           fi
           echo "The auth spec failed with CAS stopped, as it should" >> "$GITHUB_STEP_SUMMARY"
+      - name: Show Tomcat startup errors
+        if: failure()
+        run: .github/scripts/tomcat-log-summary.sh
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -374,9 +381,9 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      # Prototype only (MOD-D30): a workstream branch runs PostgreSQL 18 only
+      # Prototype only (MOD-D30): a push to a workstream branch runs PostgreSQL 18 only
       matrix:
-        vendor: ${{ fromJSON(startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && '["postgres-18"]' || '["hsqldb", "postgres-18", "mysql-9.7", "mariadb-12.3", "sqlserver-2025", "oracle-23"]') }}
+        vendor: ${{ fromJSON(startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && '["postgres-18"]' || '["hsqldb", "postgres-18", "mysql-9.7", "mariadb-12.3", "sqlserver-2025", "oracle-23"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -424,6 +431,9 @@ jobs:
         env:
           VENDOR: ${{ matrix.vendor }}
         run: tests/db/harness.sh --portal "$VENDOR" -- -PdbWaitSeconds=600
+      - name: Show Tomcat startup errors
+        if: failure()
+        run: .github/scripts/tomcat-log-summary.sh
       - name: Upload snapshots and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -492,6 +502,9 @@ jobs:
         env:
           VENDOR: ${{ matrix.vendor }}
         run: tests/db/harness.sh --full-suite "$VENDOR" -- -PdbWaitSeconds=600
+      - name: Show Tomcat startup errors
+        if: failure()
+        run: .github/scripts/tomcat-log-summary.sh
       - name: Upload snapshots, test results and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -565,6 +578,9 @@ jobs:
           options=()
           if [ "$PLAYWRIGHT" = true ]; then options+=(--playwright); fi
           tests/db/migrate.sh "${options[@]}" "$SOURCE" "$TARGET" -- -PdbWaitSeconds=600
+      - name: Show Tomcat startup errors
+        if: failure()
+        run: .github/scripts/tomcat-log-summary.sh
       - name: Upload the report and logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

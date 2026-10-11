@@ -1,0 +1,43 @@
+--- reference/uportal/portlet-definition/feedback-admin.portlet-definition.xml
++++ export/uportal/portlet-definition/feedback-admin.portlet-definition.xml
+@@ -10,7 +10,7 @@
+     <up:portletName>AdminFeedbackPortlet</up:portletName>
+   </portlet-descriptor>
+   <lifecycle>
+-    <entry name="PUBLISHED" user="admin">2017-08-24T21:42:51.015Z</entry>
++    <entry name="PUBLISHED" user="admin">2017-08-24T21:42:51Z</entry>
+   </lifecycle>
+   <category>Administration</category>
+   <group>Portal Administrators</group>
+--- reference/uportal/portlet-definition/feedback.portlet-definition.xml
++++ export/uportal/portlet-definition/feedback.portlet-definition.xml
+@@ -10,7 +10,7 @@
+     <up:portletName>SubmitFeedbackPortlet</up:portletName>
+   </portlet-descriptor>
+   <lifecycle>
+-    <entry name="PUBLISHED" user="admin">2017-08-24T21:42:22.480Z</entry>
++    <entry name="PUBLISHED" user="admin">2017-08-24T21:42:22Z</entry>
+   </lifecycle>
+   <category>uPortal</category>
+   <group>Authenticated Users</group>
+--- reference/uportal/portlet-definition/fixture-rich-content.portlet-definition.xml
++++ export/uportal/portlet-definition/fixture-rich-content.portlet-definition.xml
+@@ -15,7 +15,7 @@
+   </portlet-descriptor>
+   <lifecycle>
+     <entry name="CREATED" user="fixture-lo">2023-01-15T08:30:00Z</entry>
+-    <entry name="APPROVED" user="admin">2023-01-16T09:45:30.250Z</entry>
++    <entry name="APPROVED" user="admin">2023-01-16T09:45:30Z</entry>
+     <entry name="PUBLISHED" user="admin">2023-02-01T00:00:00Z</entry>
+     <entry name="EXPIRED" user="fixture-lo">2099-12-31T23:59:59Z</entry>
+   </lifecycle>
+--- reference/uportal/user/fixture-zoe.user.xml
++++ export/uportal/user/fixture-zoe.user.xml
+@@ -1,6 +1,6 @@
+ <user username="fixture-zoe" version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/user https://source.jasig.org/schemas/uportal/io/user/user-4.0.xsd">
+   <password>(MD5)mhmjKvf2F3gPizS9DrA+CsFmqj74oTSb</password>
+-  <lastPasswordChange>2024-02-29T23:59:58.123Z</lastPasswordChange>
++  <lastPasswordChange>2024-02-29T23:59:58Z</lastPasswordChange>
+   <attribute>
+     <name>description</name>
+     <value>Ünïcødé fixture description: àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕÜ çñß àéîõü ÀÉÎÕ ñ Ü end at 254 chars..</value>

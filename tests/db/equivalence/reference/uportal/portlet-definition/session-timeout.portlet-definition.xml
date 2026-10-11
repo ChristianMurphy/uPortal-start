@@ -1,0 +1,16 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Session Timeout</title>
+  <name>Session Timeout</name>
+  <fname>session-timeout</fname>
+  <desc>Provides an alert that will appear before a session timeout, giving the user the opportunity to refresh their session.</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>SessionTimeout</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Authenticated Users</group>
+</portlet-definition>

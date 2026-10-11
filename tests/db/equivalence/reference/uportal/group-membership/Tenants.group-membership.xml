@@ -1,0 +1,7 @@
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Tenants</name>
+  <entity-type>org.apereo.portal.security.IPerson</entity-type>
+  <creator>system</creator>
+  <description>Parent group for all tenants in the portal</description>
+  <children/>
+</group>

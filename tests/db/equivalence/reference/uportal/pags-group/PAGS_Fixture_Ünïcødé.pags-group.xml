@@ -1,0 +1,28 @@
+<pags-group script="classpath://org/jasig/portal/io/import-pags-group_v4-1.crn">
+  <name>PAGS Fixture Ünïcødé</name>
+  <description>Personen mit «ünïcødé» Attributen &amp; mehr</description>
+  <members>
+    <member-name>PAGS Fixture Child 🌱</member-name>
+  </members>
+  <selection-test>
+    <test-group>
+      <test>
+        <attribute-name>eduPersonAffiliation</attribute-name>
+        <tester-class>org.apereo.portal.groups.pags.testers.RegexTester</tester-class>
+        <test-value>^affili[eé]$|^&lt;none&gt;$</test-value>
+      </test>
+      <test>
+        <attribute-name>sn</attribute-name>
+        <tester-class>org.apereo.portal.groups.pags.testers.StringEqualsIgnoreCaseTester</tester-class>
+        <test-value>ünïcødé-łøwęr</test-value>
+      </test>
+    </test-group>
+    <test-group>
+      <test>
+        <attribute-name>title</attribute-name>
+        <tester-class>org.apereo.portal.groups.pags.testers.StringEqualsTester</tester-class>
+        <test-value>研究员 · Researcher · Исследователь</test-value>
+      </test>
+    </test-group>
+  </selection-test>
+</pags-group>

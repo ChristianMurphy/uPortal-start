@@ -1,0 +1,10 @@
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Students</name>
+  <entity-type>org.apereo.portal.security.IPerson</entity-type>
+  <creator>system</creator>
+  <description>All students</description>
+  <children>
+    <literal>student-lo</literal>
+    <literal>student</literal>
+  </children>
+</group>

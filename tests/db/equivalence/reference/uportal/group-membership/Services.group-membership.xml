@@ -1,0 +1,7 @@
+<group script="classpath://org/apereo/portal/io/import-group_membership_v5-0.crn">
+  <name>Services</name>
+  <entity-type>org.apereo.portal.portlet.om.IPortletDefinition</entity-type>
+  <creator>system</creator>
+  <description>Services Portlets</description>
+  <children/>
+</group>

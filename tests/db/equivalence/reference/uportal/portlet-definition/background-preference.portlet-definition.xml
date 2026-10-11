@@ -1,0 +1,73 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Background Preference</title>
+  <name>background-preference</name>
+  <fname>background-preference</fname>
+  <desc>Display user selected background images on main page.</desc>
+  <type>Portlet</type>
+  <timeout>30000</timeout>
+  <portlet-descriptor>
+    <up:isFramework>true</up:isFramework>
+    <up:portletName>backgroundPreference</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <group>Authenticated Users</group>
+  <parameter>
+    <name>alternate</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>blockImpersonation</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>editable</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasAbout</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hasHelp</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>hideFromMobile</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>highlight</name>
+    <value>false</value>
+  </parameter>
+  <parameter>
+    <name>showChrome</name>
+    <value>false</value>
+  </parameter>
+  <portlet-preference>
+    <name>backgroundImageCaptions</name>
+    <readOnly>false</readOnly>
+    <value>Galaxy</value>
+    <value>Mountain</value>
+    <value>Nebula</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>defaultBackgroundImages</name>
+    <readOnly>false</readOnly>
+    <value>${portalContext}/media/skins/common/backgroundImages/galaxy.jpg</value>
+    <value>${portalContext}/media/skins/common/backgroundImages/mountain.jpg</value>
+    <value>${portalContext}/media/skins/common/backgroundImages/nebula.jpg</value>
+  </portlet-preference>
+  <portlet-preference>
+    <name>defaultBackgroundThumbnailImages</name>
+    <readOnly>false</readOnly>
+    <value>${portalContext}/media/skins/common/backgroundImages/thumbnails/galaxy.jpg</value>
+    <value>${portalContext}/media/skins/common/backgroundImages/thumbnails/mountain.jpg</value>
+    <value>${portalContext}/media/skins/common/backgroundImages/thumbnails/nebula.jpg</value>
+  </portlet-preference>
+</portlet-definition>

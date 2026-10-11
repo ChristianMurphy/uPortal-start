@@ -13,9 +13,22 @@ class PortalShellInvoker {
         File serverBase = project.rootProject.file(project.rootProject.ext['buildProperties'].getProperty('server.base'))
         File deployDir = new File (serverBase, "webapps/${project.name}")
 
-        File libsDir = project.rootProject.extensions.getByType(BasePluginExtension).libsDirectory.get().asFile
+        /*
+         * The shell jars go into a directory of their own that holds exactly the jars of this
+         * uPortalVersion: a build that switches versions (tests/db/equivalence.sh deploys 5.17
+         * and then the current build into one checkout) must not leave the other version's jars
+         * on the classpath, where the wildcard would pick up both.
+         */
+        File libsDir = new File(project.rootProject.extensions.getByType(BasePluginExtension).libsDirectory.get().asFile, 'portal-shell')
         libsDir.mkdirs()
-        project.configurations.shell.files.each {
+        Set<File> shellJars = project.configurations.shell.files
+        Set<String> wanted = shellJars.collect { it.name } as Set
+        libsDir.listFiles().each {
+            if (!wanted.contains(it.name)) {
+                it.delete()
+            }
+        }
+        shellJars.each {
             project.ant.copy(todir: libsDir, file: it.absolutePath)
         }
 

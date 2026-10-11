@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ | Migration-equivalence fixture: a fragment for the deep members of the fixture's nested groups,
+ | with an audience that combines group membership and a PAGS group.
+ +-->
+<fragment-definition xmlns:dlm="http://org.apereo.portal.layout.dlm.config" script="classpath://org/jasig/portal/io/import-fragment-definition_v3-1.crn">
+  <dlm:fragment name="Fixture Ünïcødé" ownerID="fixture-lo" precedence="55">
+    <dlm:audience evaluatorFactory="org.apereo.portal.layout.dlm.providers.GroupMembershipEvaluatorFactory">
+      <paren mode="OR">
+        <attribute mode="deepMemberOf" name="Fixture Root ✨"/>
+        <attribute mode="memberOf" name="PAGS Fixture Ünïcødé"/>
+      </paren>
+    </dlm:audience>
+  </dlm:fragment>
+</fragment-definition>

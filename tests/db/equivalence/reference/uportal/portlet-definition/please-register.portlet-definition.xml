@@ -1,0 +1,44 @@
+<portlet-definition version="5.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-5.0.xsd">
+  <title>Please Register</title>
+  <name>Please Register</name>
+  <fname>please-register</fname>
+  <desc>uPortal registration message.</desc>
+  <type>CMS</type>
+  <timeout>10000</timeout>
+  <portlet-descriptor>
+    <up:webAppName>/SimpleContentPortlet</up:webAppName>
+    <up:portletName>cms</up:portletName>
+  </portlet-descriptor>
+  <lifecycle>
+    <entry name="PUBLISHED" user="system">‹masked›</entry>
+  </lifecycle>
+  <category>Administration</category>
+  <category>Information</category>
+  <group>Everyone</group>
+  <permissions>
+    <permission activity="BROWSE" system="UP_PORTLET_SUBSCRIBE">
+      <group>Everyone</group>
+    </permission>
+  </permissions>
+  <parameter>
+    <name>configurable</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>disableDynamicTitle</name>
+    <value>true</value>
+  </parameter>
+  <parameter>
+    <name>iconUrl</name>
+    <value>/resource-server/rs/tango/0.8.90/32x32/mimetypes/text-html.png</value>
+  </parameter>
+  <parameter>
+    <name>mobileIconUrl</name>
+    <value>/uPortal/media/skins/icons/mobile/advising.png</value>
+  </parameter>
+  <portlet-preference>
+    <name>content</name>
+    <readOnly>false</readOnly>
+    <value>\n\n                &lt;h2&gt;Please register&lt;/h2&gt;\n\n                &lt;p&gt;\n                    Please &lt;a href="http://www.apereo.org/uportal/deployments"\n                    target="_blank"&gt;list your deployment of uPortal alongside\n                    the many others already registered&lt;/a&gt; so that the many\n                    people who have made uPortal possible can know that their\n                    code is working for you as well.\n                &lt;/p&gt;\n\n                &lt;p&gt;\n                    To list your deployment, please fill out\n                    &lt;a href="https://spreadsheets.google.com/viewform?formkey=dHJIS3g5d0c3ajZXZVRwZUpPNWNXcHc6MQ"\n                    target="_blank"&gt;this short form&lt;/a&gt;.\n                &lt;/p&gt;\n\n        </value>
+  </portlet-preference>
+</portlet-definition>
