@@ -300,6 +300,17 @@
             "upgrading": "Session Timeout is a web component"
         },
         {
+            "id": "preferences-api-npe-message-java14",
+            "path": "/uPortal/api/preferences/*",
+            "status": 500,
+            "field": "*",
+            "reason": "PortletPreferencesRESTController never gets its IPortletDefinitionDao, IPortletEntityRegistry and IPersonManager injected (no setter or @Autowired since 5.17), so every /api/preferences request answers 500 with the NullPointerException's message as a text/plain body. On Java 11 that message is null and the body is empty, as 5.17 recorded it. Java 14 and later describe the null field in the message (JEP 358), so the body becomes text. The status is the same 500.",
+            "log": "MOD-I326",
+            "visible": false,
+            "where": "local",
+            "whereReason": "The replay workflow runs the portal under test on Java 11 (replay.yml sets JAVA_HOME to 11 for Tomcat), which leaves the message null. A local portal on Java 14 or later, such as Java 21 for uPortal 6.0, sends the text."
+        },
+        {
             "id": "web-components-admin-marketplace",
             "path": "/uPortal/api/marketplace/entries.json",
             "roles": [
