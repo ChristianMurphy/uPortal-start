@@ -208,6 +208,14 @@ for (const request of REQUESTS) {
   );
 }
 
+// Every request reads something: no statement at all means the instrumentation did not work
+if (Object.values(observed).every((r) => r.first === 0 && r.warm === 0)) {
+  console.log(
+    "FAILED: no request counted a statement; p6spy did not log uPortal's SQL (see run.sh's output)",
+  );
+  process.exit(1);
+}
+
 const json = JSON.stringify(observed, null, 2);
 if (RECORD) {
   writeFileSync(BUDGETS, `${json}\n`);

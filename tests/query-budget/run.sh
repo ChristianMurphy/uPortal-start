@@ -106,6 +106,12 @@ if [ "$code" != 200 ]; then
 fi
 node tests/query-budget/query-budget.mjs "$SQL_LOG" "${RECORD[@]+"${RECORD[@]}"}" | tee "$OUT/results.txt"
 status=${PIPESTATUS[0]}
+# What p6spy logged, by thread and category, to see why a request counts nothing
+echo "sql.log: $(wc -l < "$SQL_LOG" 2> /dev/null || echo 'no file') lines; by thread and category:"
+cut -d'|' -f2,3 "$SQL_LOG" 2> /dev/null | sed -E 's/[0-9]+/#/g' | sort | uniq -c | sort -rn | head -n 15
+head -n 3 "$SQL_LOG" 2> /dev/null | cut -c1-200
+ls "$TOMCAT"/bin/spy.log "$TOMCAT"/spy.log 2> /dev/null
+grep -hi 'p6spy' "$TOMCAT/logs/portal/portal.log" 2> /dev/null | cut -c1-200 | head -n 5
 gradle tomcatStop || true
 cp "$SQL_LOG" "$OUT/" 2> /dev/null || true
 
