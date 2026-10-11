@@ -3,6 +3,12 @@
 # docs/db-upgrade-harness.md. One line per table: <TABLE> rows <+n|-n> <MOD reference>
 #
 # Favorites as a Web Component channel: the Web Component portlet type, and the favorites
-# definition's webComponent.tagName and webComponent.moduleUrl parameters
+# definition's webComponent.tagName and webComponent.moduleUrl parameters (2 of the 7 parameters).
+# Search and the search launcher as Web Component channels: webComponent.tagName and moduleUrl on
+# both, and webComponent.attributes on the launcher (5 of the 7 parameters); the eight portlet
+# preferences the Search portlet read are removed (RESTSearch, searchLaunchFname, and the three
+# auto-suggest preferences of each channel), one value each.
 UP_PORTLET_TYPE rows +1 MOD-I134
-UP_PORTLET_DEF_PARAM rows +2 MOD-I134
+UP_PORTLET_DEF_PARAM rows +7 MOD-I134
+UP_PORTLET_PREF rows -8 MOD-I134
+UP_PORTLET_PREF_VALUES rows -8 MOD-I134

@@ -22,13 +22,13 @@
 <portlet-definition xmlns="https://source.jasig.org/schemas/uportal/io/portlet-definition" xmlns:ns2="https://source.jasig.org/schemas/uportal" xmlns:ns3="https://source.jasig.org/schemas/uportal/io/permission-owner" xmlns:ns4="https://source.jasig.org/schemas/uportal/io/stylesheet-descriptor" xmlns:ns5="https://source.jasig.org/schemas/uportal/io/portlet-type" xmlns:ns6="https://source.jasig.org/schemas/uportal/io/user" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="4.0" xsi:schemaLocation="https://source.jasig.org/schemas/uportal/io/portlet-definition https://source.jasig.org/schemas/uportal/io/portlet-definition/portlet-definition-4.0.xsd">
     <title>Search</title>
     <name>Search</name>
-    <fname>search</fname>   <!-- Value must match the fname in searchLaunchFname in searchlauncher.portlet-definition.xml -->
+    <fname>search</fname>   <!-- The search-launcher channel's search-fname attribute names this fname -->
     <desc>Search the portal, directory, and campus web.</desc>
-    <type>Portlet</type>
+    <type>Web Component</type>
     <timeout>30000</timeout>
     <portlet-descriptor>
         <ns2:isFramework>true</ns2:isFramework>
-        <ns2:portletName>Search</ns2:portletName>
+        <ns2:portletName>WebComponent</ns2:portletName>
     </portlet-descriptor>
     <category>Information</category>
     <group>Everyone</group>
@@ -44,33 +44,12 @@
         <name>mobileIconUrl</name>
         <value>/uPortal/media/skins/icons/mobile/search.png</value>
     </parameter>
-    <!-- By default the search auto-suggest should use the pre-populated portlet list since uPortal is currently
-         too slow in returning search results for auto-suggest. -->
-    <portlet-preference>
-        <name>autoSuggestResultsProcessor</name>
-        <readOnly>false</readOnly>
-        <value>portletListProcessor</value>
-    </portlet-preference>
-    <!-- By default the search auto-suggest should use the pre-populated portlet list since uPortal is currently
-         too slow in returning search results for auto-suggest. -->
-    <portlet-preference>
-        <name>prepopulateAutoSuggestUrl</name>
-        <readOnly>false</readOnly>
-        <value>/api/portletList</value>
-    </portlet-preference>
-    <!-- By default the search auto-suggest should use the pre-populated portlet list since uPortal is currently
-         too slow in returning search results for auto-suggest. -->
-    <portlet-preference>
-        <name>prepopulateUrlPattern</name>
-        <readOnly>false</readOnly>
-        <value>/p/$fname/max</value>
-    </portlet-preference>
-    <!-- Choose between the standard Search portlet or REST Search. Currently the difference is that
-         Search portlet (RESTSearch = false) includes results from portlet content, while REST Search only matches portlet
-         metadata (e.g. title, description). Search portlet has a greater performance impact, while
-         REST Search has newer UI. -->
-    <portlet-preference>
-        <name>RESTSearch</name>
-        <value>true</value>
-    </portlet-preference>
+    <parameter>
+        <name>webComponent.moduleUrl</name>
+        <value>up-search</value>
+    </parameter>
+    <parameter>
+        <name>webComponent.tagName</name>
+        <value>up-search</value>
+    </parameter>
 </portlet-definition>

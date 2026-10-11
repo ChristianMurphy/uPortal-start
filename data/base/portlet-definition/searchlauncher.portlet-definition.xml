@@ -24,11 +24,11 @@
     <name>SearchLauncher</name>
     <fname>search-launcher</fname>
     <desc>Search Launcher to launch the search portlet that searches the portal, directory, and campus web.</desc>
-    <type>Portlet</type>
+    <type>Web Component</type>
     <timeout>30000</timeout>
     <portlet-descriptor>
         <ns2:isFramework>true</ns2:isFramework>
-        <ns2:portletName>Search</ns2:portletName>
+        <ns2:portletName>WebComponent</ns2:portletName>
     </portlet-descriptor>
     <group>Everyone</group>
     <parameter>
@@ -47,35 +47,17 @@
         <name>role</name>
         <value>searchLauncher</value>
     </parameter>
-    <!-- Set portlet preference searchLaunchFname=fname of the search portlet to indicate this portlet should
-         display the Search Launcher page and submit searches and search autocomplete to the portlet with the
-         indicated fname.  This allows the SearchLauncher portlet to launch a search to the search portlet, which
-         is the portlet a user could add to their page or might be present on the user's page.
-    -->
-    <portlet-preference>
-        <name>searchLaunchFname</name>
-        <readOnly>true</readOnly>
-        <value>search</value>   <!-- Value must match the fname of the search portlet a user may have on their page -->
-    </portlet-preference>
-    <!-- By default the search auto-suggest should use the pre-populated portlet list since uPortal is currently
-         too slow in returning search results for auto-suggest. -->
-    <portlet-preference>
-        <name>autoSuggestResultsProcessor</name>
-        <readOnly>false</readOnly>
-        <value>portletListProcessor</value>
-    </portlet-preference>
-    <!-- By default the search auto-suggest should use the pre-populated portlet list since uPortal is currently
-         too slow in returning search results for auto-suggest. -->
-    <portlet-preference>
-        <name>prepopulateAutoSuggestUrl</name>
-        <readOnly>false</readOnly>
-        <value>/api/portletList</value>
-    </portlet-preference>
-    <!-- By default the search auto-suggest should use the pre-populated portlet list since uPortal is currently
-         too slow in returning search results for auto-suggest. -->
-    <portlet-preference>
-        <name>prepopulateUrlPattern</name>
-        <readOnly>false</readOnly>
-        <value>/p/$fname/max</value>
-    </portlet-preference>
+    <!-- search-fname is the fname of the search channel that a search opens -->
+    <parameter>
+        <name>webComponent.attributes</name>
+        <value>search-fname=search</value>
+    </parameter>
+    <parameter>
+        <name>webComponent.moduleUrl</name>
+        <value>up-search</value>
+    </parameter>
+    <parameter>
+        <name>webComponent.tagName</name>
+        <value>up-search-launcher</value>
+    </parameter>
 </portlet-definition>
