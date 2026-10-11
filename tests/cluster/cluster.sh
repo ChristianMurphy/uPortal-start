@@ -311,8 +311,10 @@ check_cluster_join() {  # check_cluster_join <since ms>: node B joined node A's 
     esac
 }
 
+# These read the whole log on purpose: with pipefail, grep -q stops at the first match and the
+# grep still scanning the logs dies of SIGPIPE when it finds another line, which fails the check
 two_member_view() {  # two_member_view <node>: the node logged a cluster view of two members
-    jgroups_lines "$1" | grep -qE '\|[0-9]+\] \(2\) \['
+    jgroups_lines "$1" | grep -E '\|[0-9]+\] \(2\) \[' > /dev/null
 }
 
 view_state() {  # whether each node has logged a cluster view of two members so far
@@ -613,7 +615,7 @@ views_installed() {  # views_installed <node>: the "installing view" lines the n
 }
 
 new_view_matches() {  # new_view_matches <node> <lines before> <pattern>: a later view matches
-    views_installed "$1" | tail -n +"$(( $2 + 1 ))" | grep -qE "$3"
+    views_installed "$1" | tail -n +"$(( $2 + 1 ))" | grep -E "$3" > /dev/null
 }
 
 check_split_heal() {
