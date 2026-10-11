@@ -60,7 +60,7 @@ four times (`GMS join_timeout=1000`, `max_join_attempts=4` in uPortal 5's `jgrou
 because node A did not yet have its address to answer. Node B then formed a cluster of its own, and
 dropped node A's messages as coming from a non-member until `MERGE3` merged the two 92 s later.
 uPortal 6.0 tries the JOIN 8 times, and `cluster-join` checks the join itself. A network split
-has the same effect, and for that uPortal 6.0 empties the replicated caches on each node when
+has the same effect, and for that uPortal 6.0 empties the caches on each node when
 JGroups installs a MergeView, so an entry read during the split is read again from the
 database. `split-heal` checks that.
 
@@ -95,7 +95,7 @@ seeded fault and passes only if the checks meant to catch it fail:
 | (fixture) | `tests/cluster/fixtures/overlap-*.log`: two node logs where the aggregation job runs on both at once, checked before each run | `no-overlap` |
 | `event-flush-delayed` | `org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S`: events are written 120 s after start, as in uPortal 5 | `events-aggregated` |
 | `join-gives-up` | Node B's `jgroups.xml` with `join_timeout="1" max_join_attempts="1"`: node B gives up on its JOIN at once and forms a cluster of its own | `cluster-join` |
-| `merge-clear-off` | `org.apereo.portal.cache.clearReplicatedCachesOnMerge=false`: the nodes keep their replicated caches when JGroups merges them | `split-heal` |
+| `merge-clear-off` | `org.apereo.portal.cache.clearCachesOnMerge=false`: the nodes keep their caches when JGroups merges them | `split-heal` |
 
 `lock-ignored` makes node B take a lock node A still holds, but in runs 38110056978 to 38120174431
 node B rarely ran the job while node A was inside it, so `no-overlap` failed under it only once in
