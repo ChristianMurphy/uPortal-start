@@ -2,6 +2,7 @@ import { test, expect, Locator, Page } from "@playwright/test";
 import { config } from "../../general-config";
 import {
   loginViaUrl,
+  sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 import { clickToNavigate, openPortlet } from "../utils/ux-admin-utils";
@@ -108,7 +109,8 @@ test.describe("Import/Export portlet", () => {
     // Removes the copy if the test failed before its own delete step. A
     // missing entity is not an error.
     await page.request.delete<unknown>(
-      `${config.url}api/entity/${PORTLET_DEFINITION}/${fname}`
+      `${config.url}api/entity/${PORTLET_DEFINITION}/${fname}`,
+      { headers: await sessionCsrfHeaders(page.request) }
     );
   });
 

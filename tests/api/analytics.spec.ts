@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./utils/csrf-request";
 import { config } from "../general-config";
 import { loginViaApi } from "../ux/utils/ux-general-utils";
 

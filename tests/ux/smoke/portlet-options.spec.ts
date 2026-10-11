@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { config } from "../../general-config";
-import { loginViaUrl, logout, openDropdown } from "../utils/ux-general-utils";
+import {
+  loginViaUrl,
+  logout,
+  openDropdown,
+  waitForPortalRequestsToSettle,
+} from "../utils/ux-general-utils";
 
 test.describe("Portlet Options menu", () => {
   test.beforeEach(async ({ page }) => {
@@ -50,6 +55,35 @@ test.describe("Portlet Options menu", () => {
     await expect(
       menu.locator(".up-portlet-options-item.directUrl")
     ).toBeVisible();
+  });
+
+  test("Favorite and unfavorite from the menu send the CSRF token", async ({
+    page,
+  }) => {
+    // modern-favorite.js posts to /api/layout, which needs the page's CSRF
+    // token (MOD-I130). Toggling twice leaves the layout as it was.
+    const calendarWrapper = page.locator(
+      ".up-portlet-wrapper:has(.portlet-title a[title='Calendar'])"
+    );
+    for (let toggle = 0; toggle < 2; toggle++) {
+      await openDropdown(
+        calendarWrapper.locator(".portlet-options-menu .dropdown-toggle").first()
+      );
+      const [response] = await Promise.all([
+        page.waitForResponse(
+          (candidate) =>
+            candidate.url().includes("/api/layout?action=") &&
+            candidate.request().method() === "POST"
+        ),
+        calendarWrapper
+          .locator(".up-portlet-options-item.favorite a")
+          .click(),
+      ]);
+      expect(response.request().headers()["x-csrf-token"]).toBeTruthy();
+      expect(response.status()).toBe(200);
+      await waitForPortalRequestsToSettle(page);
+      await page.reload();
+    }
   });
 
   test("Options dropdown shows expected items for locked portlet", async ({

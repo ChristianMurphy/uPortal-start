@@ -3,6 +3,7 @@ import { config } from "../../general-config";
 import {
   loginViaUrl,
   logout,
+  sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 
@@ -35,6 +36,7 @@ interface FavoritesBody {
 async function addChannel(page: Page): Promise<void> {
   const response = await page.request.post<LayoutResponse>(LAYOUT_API, {
     form: { action: "addPortlet", fname: FNAME, tabName: "Welcome" },
+    headers: await sessionCsrfHeaders(page.request),
   });
   expect(response.status()).toBe(200);
   const body = await response.json();
@@ -46,6 +48,7 @@ async function removeChannels(page: Page): Promise<void> {
   for (let removed = 0; removed < 10; removed++) {
     const response = await page.request.post<unknown>(LAYOUT_API, {
       form: { action: "removeByFName", fname: FNAME },
+      headers: await sessionCsrfHeaders(page.request),
     });
     // 400: no channel with the fname is left
     if (response.status() === 400) return;

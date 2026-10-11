@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { config } from "../../general-config";
-import { loginViaUrl } from "../utils/ux-general-utils";
+import { loginViaUrl, sessionCsrfHeaders } from "../utils/ux-general-utils";
 import {
   clickToNavigate,
   openPortlet,
@@ -33,7 +33,8 @@ test.describe("Portlet Administration", () => {
     // through the import/export REST API so later runs start clean. A
     // missing entity is not an error.
     await page.request.delete<unknown>(
-      `${config.url}api/entity/portlet-definition/${fname}`
+      `${config.url}api/entity/portlet-definition/${fname}`,
+      { headers: await sessionCsrfHeaders(page.request) }
     );
   });
 
