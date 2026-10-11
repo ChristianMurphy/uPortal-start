@@ -71,6 +71,7 @@ export async function loginViaPage(
   page: Page,
   user: Record<string, string>
 ): Promise<void> {
+  await trackPortalRequests(page);
   // Navigate to uPortal welcome page prior to login
   const landingPageUrl = `${config.url}f/welcome/normal/render.uP`;
   await page.goto(landingPageUrl);
@@ -84,6 +85,10 @@ export async function loginViaPage(
   await expect(loggedInUserDisplay).toHaveText(
     `You are signed in as ${user.displayName}`
   );
+  // As loginViaUrl does: a /p/ page opened next while the landing page's
+  // portlets still have *.uP requests in flight renders without its
+  // portlet (MOD-I56)
+  await waitForPortalRequestsToSettle(page);
 }
 
 /*
@@ -137,9 +142,7 @@ export async function expectSignedOut(page: Page): Promise<void> {
 
 /*
  * Confirm the login form rejected the credentials submitted by
- * submitLoginForm.  CAS stays on its form with an error.  uPortal goes back
- * to the guest page without saying why; its login form shows the error when
- * it is opened again.
+ * submitLoginForm:  the user is back on the login form, which says why.
  */
 export async function expectLoginRefused(page: Page): Promise<void> {
   if (config.authMode === "cas") {
@@ -150,12 +153,63 @@ export async function expectLoginRefused(page: Page): Promise<void> {
       "Authentication attempt has failed"
     );
   } else {
-    await expectSignedOut(page);
-    await openLoginForm(page);
+    await expect(page).toHaveURL((url) =>
+      url.href.startsWith(`${config.url}p/login`)
+    );
     await expect(page.locator(".portlet-msg-error")).toContainText(
       "Invalid username or password"
     );
+    await expectLoginForm(page);
+    await expect(page.locator("div.user-name")).toHaveCount(0);
   }
+}
+
+interface CsrfHeaders {
+  sessionId: string;
+  headers: Record<string, string>;
+}
+
+const csrfHeadersBySession = new WeakMap<APIRequestContext, CsrfHeaders>();
+
+async function portalSessionId(request: APIRequestContext): Promise<string> {
+  const portalPath = new URL(config.url).pathname;
+  const { cookies } = await request.storageState();
+  const session = cookies.find(
+    (cookie) =>
+      cookie.name === "JSESSIONID" && portalPath.startsWith(cookie.path)
+  );
+  return session?.value ?? "";
+}
+
+/*
+ * The header that carries the session's CSRF token.  uPortal requires the
+ * token on POST, PUT, PATCH and DELETE under /api (MOD-I130), unless the
+ * request has a Bearer token.  Portal pages carry it in their _csrf and
+ * _csrf_header meta tags:  this reads them from the user's default page, and
+ * again whenever the session changes (logging in or out starts a new one).
+ */
+export async function sessionCsrfHeaders(
+  request: APIRequestContext
+): Promise<Record<string, string>> {
+  const known = csrfHeadersBySession.get(request);
+  const sessionId = await portalSessionId(request);
+  if (known && sessionId !== "" && known.sessionId === sessionId) {
+    return known.headers;
+  }
+  const response = await request.get<unknown>(config.url);
+  expect(response.status()).toEqual(200);
+  const html = await response.text();
+  const token = /<meta name="_csrf" content="([^"]+)"/.exec(html)?.[1];
+  const header = /<meta name="_csrf_header" content="([^"]+)"/.exec(html)?.[1];
+  if (token === undefined || header === undefined) {
+    throw new Error(`No CSRF meta tags on ${response.url()}`);
+  }
+  const headers = { [header]: token };
+  csrfHeadersBySession.set(request, {
+    sessionId: await portalSessionId(request),
+    headers,
+  });
+  return headers;
 }
 
 const trackedPages = new WeakSet<Page>();
