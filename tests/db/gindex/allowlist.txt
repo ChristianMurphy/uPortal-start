@@ -4,7 +4,8 @@
 #
 # <subject> is a glob over what the audit reports: <table>.<constraint or index> for fk-no-index,
 # duplicate-index and redundant-index, and <table>@<statement> for seq-scan (the 8 hex digits
-# identify one SQL statement; the summary shows its text). Every entry needs a reason. Entries
+# identify one SQL statement, the same on both vendors' quoting and across Hibernate versions that
+# renumber their aliases; the summary shows its text). Every entry needs a reason. Entries
 # marked "6.0:" are 5.17 gaps that the 6.0 index set fixes (docs/developer/modernization/notes/
 # g-index.md in uPortal-start, "Recommended 6.0 index changes", R1 to R9); drop the entry when the
 # change lands. An entry that no longer matches anything is listed under the audit summary; a

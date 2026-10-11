@@ -33,6 +33,25 @@ import subprocess
 import sys
 from collections import defaultdict
 
+# Aliases Hibernate numbers in the SQL it generates: localaccou0_ and USER_DIR1_13_0_ (Hibernate 4
+# and 5), l1_0 (Hibernate 6). An upgrade renumbers them without changing the statement.
+HIBERNATE_ALIAS = re.compile(r"\b[a-z][a-z0-9_]*?\d+_(?:\d+_?)*(?![a-z0-9_])")
+
+
+def statement_id(text):
+    """The id of a statement in findings and the allowlist: an md5 of its text, lower case, without
+    quoting, spacing or Hibernate's numbered aliases, so the same statement keeps its id across
+    Hibernate versions and vendors' quoting."""
+    s = re.sub(r"\s+", " ", text.lower().replace("`", "").replace('"', "")).strip()
+    s = re.sub(r" ?([.,()=]) ?", r"\1", s)
+    s = HIBERNATE_ALIAS.sub("t", s)
+    return hashlib.md5(s.encode()).hexdigest()[:16]
+
+
+def legacy_statement_id(text):
+    """The PostgreSQL statement id before statement_id (MOD-I240): kept for one run to re-record the allowlist."""
+    return hashlib.md5(re.sub(r"\s+", " ", text).strip().encode()).hexdigest()[:16]
+
 GATE_CHECKS = ("seq-scan", "fk-no-index", "duplicate-index", "redundant-index")
 REPORT_CHECKS = ("unused-index", "top-total", "top-mean")
 
@@ -266,13 +285,14 @@ def seq_scans(plans, tables, min_rows):
                 continue
             # Plans are logged without verbose output (a tenth of the size), so the statement's
             # text identifies it
-            qid = hashlib.md5(re.sub(r"\s+", " ", plan.get("Query Text", "")).strip().encode()).hexdigest()[:16]
+            qid = statement_id(plan.get("Query Text", ""))
             key = (qid, table)
             g = grouped.get(key)
             if g is None:
                 g = grouped[key] = {
                     # table@statement: an allowlist entry covers one statement, not every scan
                     "check": "seq-scan", "subject": f"{table}@{qid[:8]}", "table": table, "rows": info["rows"],
+                    "legacy_subject": f"{table}@{legacy_statement_id(plan.get('Query Text', ''))[:8]}",
                     "queryid": qid, "query": re.sub(r"\s+", " ", plan.get("Query Text", ""))[:600],
                     "sql": plan.get("Query Text", ""),
                     "parameters": (plan.get("Query Parameters") or "")[:300],
@@ -415,7 +435,8 @@ ORDER BY {order} DESC LIMIT {limit}
 
 MY_FULL_SCANS = """
 SELECT digest AS queryid, count_star AS calls, sum_no_index_used AS no_index_used,
-       sum_rows_examined AS rows_examined, sum_rows_sent AS rows_sent, LEFT(digest_text, 600) AS query
+       sum_rows_examined AS rows_examined, sum_rows_sent AS rows_sent, LEFT(digest_text, 600) AS query,
+       digest_text AS full_text
 FROM gindex.workload_digests
 WHERE sum_no_index_used > 0
 """
@@ -454,7 +475,7 @@ def audit_mariadb(db, args):
     # Full scans: digests whose executions used no index. EXPLAIN the digest text with '1' for
     # each placeholder to find the tables read with type ALL; if that fails, name every large table
     for r in my_json(db, MY_FULL_SCANS, ["queryid", "calls", "no_index_used", "rows_examined",
-                                         "rows_sent", "query"]):
+                                         "rows_sent", "query", "full_text"]):
         scanned = explain_full_scans(db, r["query"])
         named = scanned if scanned is not None else {
             t.lower() for t in re.findall(r"`?\b(up_[a-z0-9_]+)\b`?", r["query"], re.I)}
@@ -462,7 +483,8 @@ def audit_mariadb(db, args):
             info = tables.get(table)
             if info is None or info["rows"] < args.min_rows:
                 continue
-            findings.append({"check": "seq-scan", "subject": f"{table}@{str(r['queryid'])[:8]}", "table": table,
+            findings.append({"check": "seq-scan", "subject": f"{table}@{statement_id(r['full_text'])[:8]}",
+                             "legacy_subject": f"{table}@{str(r['queryid'])[:8]}", "table": table,
                              "rows": info["rows"], "queryid": r["queryid"], "query": re.sub(r"\s+", " ", r["query"]),
                              "executions": int(r["no_index_used"]), "rows_examined": int(r["rows_examined"]),
                              "index_exists": None if scanned is None else False,
@@ -560,9 +582,17 @@ def apply_allowlist(findings, entries):
         if f["check"] not in GATE_CHECKS:
             continue
         for e in entries:
+            if e["check"] != f["check"]:
+                continue
             # Case-insensitive: MariaDB reports index names upper case
-            if e["check"] == f["check"] and fnmatch.fnmatchcase(f["subject"].lower(), e["subject"].lower()):
+            if fnmatch.fnmatchcase(f["subject"].lower(), e["subject"].lower()):
                 f["allowed"] = e["reason"]
+                e["used"] = True
+                break
+            # For one run (MOD-I240): an entry still written with the old statement id
+            if f.get("legacy_subject") and fnmatch.fnmatchcase(f["legacy_subject"].lower(), e["subject"].lower()):
+                f["allowed"] = e["reason"]
+                f["allowed_by_legacy_id"] = e["line"]
                 e["used"] = True
                 break
 
@@ -618,6 +648,14 @@ def report(findings, stats, args, entries):
         for f in allowed:
             lines.append(f"| {f['check']} | `{f['subject']}` | {describe(f)} | {md_escape(f['allowed'])} |")
         lines += ["", "</details>", ""]
+    moved = [f for f in allowed if f.get("allowed_by_legacy_id")]
+    if moved:
+        lines += ["### Statement ids to re-record", "",
+                  "Allowlist entries that matched by the old statement id; write them with the new one.", "",
+                  "| Allowlist line | Old subject | New subject |", "| ---: | --- | --- |"]
+        lines += [f"| {f['allowed_by_legacy_id']} | `{f['legacy_subject']}` | `{f['subject']}` |"
+                  for f in sorted(moved, key=lambda f: f["allowed_by_legacy_id"])]
+        lines.append("")
     missing = [e for e in entries if e["required"] and not e["used"]]
     if missing:
         lines += ["### Stale required allowlist entries", "",
