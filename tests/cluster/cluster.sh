@@ -15,6 +15,9 @@
 #   invalidation-permission  a permission granted, then revoked, on one node is enforced in a new
 #                            session on the other
 #   permission-session       a session that checked the permission before the change follows it
+#   split-heal               the nodes are split (JGroups traffic blocked), node A changes a portlet
+#                            title and grants a permission, and once JGroups merges the nodes again
+#                            node B shows both: the title, and an existing session allowed
 #   jobs-once                login and render events made on both nodes are aggregated exactly
 #                            once: each interval's aggregate counts equal the raw events
 #   failover-takeover        the node holding the aggregation lock is killed; the other node
@@ -41,6 +44,8 @@
 #                                   they start, as uPortal 5 did (flushInitialDelay=PT120S)
 #                  join-gives-up    node B waits 1 ms for an answer to its JOIN and tries once
 #                                   (GMS join_timeout=1, max_join_attempts=1)
+#                  merge-clear-off  the nodes keep their replicated caches when JGroups merges them
+#                                   (clearReplicatedCachesOnMerge=false)
 #   --join-starts N  only measure joins: start node A, then start and stop node B N times and
 #                count how often cluster-join passed (build/cluster/join-starts.txt)
 #   --lone-restarts N  only measure a lone node's restart after a crash: start node A alone,
@@ -49,10 +54,10 @@
 #   --keep       leave the nodes and the database running afterwards
 #   --no-deploy  reuse the database and the nodes deployed by an earlier --keep run
 #
-# Needs Docker, curl, Node.js, Java 11 in JAVA_HOME (the portal) and a JDK 21 for Gradle. Node A
-# is this checkout's Tomcat (.gradle/tomcat, port 8080); node B is a copy of it in
-# .gradle/tomcat-b on port 8180 (shutdown port 8105). Everything a run produces is in
-# build/cluster/.
+# Needs Docker, curl, Node.js, Java 11 in JAVA_HOME (the portal), a JDK 21 for Gradle, and iptables
+# as root or through sudo without a password (split-heal). Node A is this checkout's Tomcat
+# (.gradle/tomcat, port 8080); node B is a copy of it in .gradle/tomcat-b on port 8180 (shutdown
+# port 8105). Everything a run produces is in build/cluster/.
 #
 set -uo pipefail
 
@@ -73,7 +78,7 @@ while [ $# -gt 0 ]; do
         --keep) KEEP=true ;;
         --no-deploy) DEPLOY=false ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,55p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,61p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
     shift
@@ -85,6 +90,7 @@ declare -A FAULT_CHECKS=(
     [lock-ignored]="failover-takeover"
     [event-flush-delayed]="events-aggregated"
     [join-gives-up]="cluster-join"
+    [merge-clear-off]="split-heal"
 )
 # Checks that fail because of a known uPortal problem (docs/cluster-tests.md): reported as
 # warnings, they do not fail the run. Remove an entry once uPortal is fixed.
@@ -206,6 +212,9 @@ append_properties() {  # append_properties <node> <server name>
             event-flush-delayed)
                 echo "# Seeded fault (tests/cluster/cluster.sh --fault event-flush-delayed)"
                 echo "org.apereo.portal.events.handlers.db.PortalEventDaoQueuingEventHandler.flushInitialDelay=PT120S" ;;
+            merge-clear-off)
+                echo "# Seeded fault (tests/cluster/cluster.sh --fault merge-clear-off)"
+                echo "org.apereo.portal.cache.clearReplicatedCachesOnMerge=false" ;;
         esac
     } >> "$file"
 }
@@ -559,6 +568,91 @@ check_permission_invalidation() {
     fi
 }
 
+# ---- Split and merge ---------------------------------------------------------------------------
+
+# Both nodes' JGroups TCP ports (TCP bind_port 7800 and its port range); HTTP and the database
+# stay reachable
+SPLIT_PORTS=7800:7810
+# After the merge, node B must show what node A changed during the split within this time
+SPLIT_HEAL_BOUND_S=30
+
+firewall() {  # firewall <iptables arguments...>
+    if [ "$(id -u)" = 0 ]; then iptables "$@"; else sudo -n iptables "$@"; fi
+}
+
+split() {  # drop every JGroups packet between the nodes, both ways
+    firewall -I INPUT -i lo -p tcp --dport "$SPLIT_PORTS" -j DROP &&
+        firewall -I INPUT -i lo -p tcp --sport "$SPLIT_PORTS" -j DROP
+}
+
+heal() {
+    firewall -D INPUT -i lo -p tcp --dport "$SPLIT_PORTS" -j DROP 2> /dev/null
+    firewall -D INPUT -i lo -p tcp --sport "$SPLIT_PORTS" -j DROP 2> /dev/null
+    return 0
+}
+
+views_installed() {  # views_installed <node>: the "installing view" lines the node has logged
+    grep -h 'GMS.installView' "$(node_home "$1")"/logs/catalina.*.log 2> /dev/null
+}
+
+new_view_matches() {  # new_view_matches <node> <lines before> <pattern>: a later view matches
+    views_installed "$1" | tail -n +"$(( $2 + 1 ))" | grep -qE "$3"
+}
+
+check_split_heal() {
+    local a=$JARS/split-a b=$JARS/split-b s=$JARS/split-student-b admin=$JARS/split-admin
+    local original changed before_a before_b merged elapsed stale=()
+    login a admin "$a" && login b admin "$b" && login a admin "$admin" ||
+        { record split-heal FAIL "admin login failed"; return; }
+    # Node B caches the portlet definition, and a student session on node B the denial
+    original=$(portlet_title_on b "$b")
+    login b student "$s" && denied_on b "$s" ||
+        { record split-heal FAIL "the student could already open $PERMISSION_FNAME on node B (HTTP $(status_of))"; return; }
+    get a "$a" "/api/entity/portlet-definition/$PORTLET_FNAME?download=false" > "$OUT/split-original.xml"
+    grep -q "<title>$original</title>" "$OUT/split-original.xml" ||
+        { record split-heal FAIL "could not export $PORTLET_FNAME from node A (HTTP $(status_of))"; return; }
+    changed="$original (split $RANDOM)"
+    sed "s#<title>$original</title>#<title>$changed</title>#" "$OUT/split-original.xml" > "$OUT/split-changed.xml"
+
+    before_a=$(views_installed a | wc -l)
+    before_b=$(views_installed b | wc -l)
+    split || { record split-heal FAIL "could not block the JGroups ports with iptables"; return; }
+    log "split-heal: JGroups ports $SPLIT_PORTS blocked"
+    if ! { poll 60 new_view_matches a "$before_a" '\] \(1\) \[' && poll 60 new_view_matches b "$before_b" '\] \(1\) \['; }; then
+        heal
+        record split-heal FAIL "the nodes did not both install a view of one member within 60 s of the split"
+        return
+    fi
+    log "split-heal: both nodes installed a view of one member"
+    curl -sS -b "$a" -H "$(csrf_header a "$a")" -o /dev/null -w '%{http_code}' -F "file=@$OUT/split-changed.xml;type=text/xml" \
+        "$(node_url a)/api/import" > "$OUT/status"
+    [ "$(status_of)" = 200 ] && update_permission "$admin" GRANT ||
+        { heal; record split-heal FAIL "the changes on node A failed during the split (HTTP $(status_of))"; return; }
+    sleep 5
+    # The split must hold: node B has not heard of either change
+    title_is b "$b" "$original" || stale+=("node B showed '$(portlet_title_on b "$b")' during the split")
+    denied_on b "$s" || stale+=("the student session on node B was allowed during the split")
+    before_a=$(views_installed a | wc -l)
+    before_b=$(views_installed b | wc -l)
+    heal
+    log "split-heal: JGroups ports unblocked"
+    if ! { poll 120 new_view_matches a "$before_a" 'MergeView' && poll 120 new_view_matches b "$before_b" 'MergeView'; }; then
+        record split-heal FAIL "the nodes did not both install a MergeView within 120 s of the heal"
+    elif [ ${#stale[@]} -gt 0 ]; then
+        record split-heal FAIL "the split did not hold: $(IFS=';'; echo "${stale[*]}")"
+    else
+        merged=$(now_ms)
+        if poll "$SPLIT_HEAL_BOUND_S" title_is b "$b" "$changed" && poll "$SPLIT_HEAL_BOUND_S" allowed_on b "$s"; then
+            elapsed=$(( $(now_ms) - merged ))
+            record split-heal PASS "after the merge node B showed the title and allowed the student session within ${elapsed} ms (both changed on node A during the split)"
+        else
+            record split-heal FAIL "$SPLIT_HEAL_BOUND_S s after the merge node B showed '$(portlet_title_on b "$b")' (database: '$changed') and the student session got HTTP $(portlet_status b "$s")"
+        fi
+    fi
+    curl -sS -b "$a" -H "$(csrf_header a "$a")" -o /dev/null -F "file=@$OUT/split-original.xml;type=text/xml" "$(node_url a)/api/import"
+    update_permission "$admin" INHERIT
+}
+
 # ---- Clustered jobs ----------------------------------------------------------------------------
 
 traffic() {  # traffic <rounds>: every test user logs in and renders their layout on both nodes
@@ -812,6 +906,7 @@ node_errors() {  # the distinct errors in both nodes' portal logs, as a warning 
 # ---- Run ---------------------------------------------------------------------------------------
 
 cleanup() {
+    heal
     if [ "$KEEP" = false ]; then
         stop_node a
         stop_node b
@@ -866,8 +961,8 @@ if [ "$setup_ok" = true ] && [ "$LONE_RESTARTS" -gt 0 ]; then
         sleep 5
         since=$(log_clock_ms)
         start_node a || { echo "restart $i: node A did not start" >> "$OUT/lone-restarts.txt"; continue; }
-        out=$(node tests/cluster/cluster-join.mjs --lone "a=$(printf "%s," "$A_HOME"/logs/catalina.*.log)" --since "$since")
-        echo "restart $i: $out" | tee -a "$OUT/lone-restarts.txt"
+        outcome=$(node tests/cluster/cluster-join.mjs --lone "a=$(printf "%s," "$A_HOME"/logs/catalina.*.log)" --since "$since")
+        echo "restart $i: $outcome" | tee -a "$OUT/lone-restarts.txt"
     done
     collect_logs
     cleanup
@@ -880,16 +975,16 @@ if [ "$setup_ok" = true ] && [ "$JOIN_STARTS" -gt 0 ]; then
     for i in $(seq 1 "$JOIN_STARTS"); do
         since=$(log_clock_ms)
         start_node b || { echo "start $i: node B did not start" >> "$OUT/join-starts.txt"; stop_node b; continue; }
-        out=$(join_outcome "$since")
+        outcome=$(join_outcome "$since")
         rc=$?
         for _ in $(seq 1 $(( JOIN_BOUND_S + 30 ))); do
             [ "$rc" -ne 2 ] && break
             sleep 1
-            out=$(join_outcome "$since")
+            outcome=$(join_outcome "$since")
             rc=$?
         done
-        [ "$rc" -eq 2 ] && out="FAIL: still undecided $(( JOIN_BOUND_S + 30 )) s after node B answered: ${out#UNDECIDED: }"
-        echo "start $i: $out" | tee -a "$OUT/join-starts.txt"
+        [ "$rc" -eq 2 ] && outcome="FAIL: still undecided $(( JOIN_BOUND_S + 30 )) s after node B answered: ${outcome#UNDECIDED: }"
+        echo "start $i: $outcome" | tee -a "$OUT/join-starts.txt"
         stop_node b
         sleep 5
     done
@@ -913,6 +1008,7 @@ if [ "$setup_ok" = true ]; then
     check_portlet_invalidation
     check_layout_invalidation
     check_permission_invalidation
+    check_split_heal
     if check_jobs_once; then
         check_failover
     fi
