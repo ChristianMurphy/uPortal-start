@@ -33,6 +33,21 @@ import subprocess
 import sys
 from collections import defaultdict
 
+# Aliases Hibernate numbers in the SQL it generates: localaccou0_ and USER_DIR1_13_0_ (Hibernate 4
+# and 5), l1_0 (Hibernate 6). An upgrade renumbers them without changing the statement.
+HIBERNATE_ALIAS = re.compile(r"\b[a-z][a-z0-9_]*?\d+_(?:\d+_?)*(?![a-z0-9_])")
+
+
+def statement_id(text):
+    """The id of a statement in findings and the allowlist: an md5 of its text, lower case, without
+    quoting, spacing or Hibernate's numbered aliases, so the same statement keeps its id across
+    Hibernate versions and vendors' quoting."""
+    s = re.sub(r"\s+", " ", text.lower().replace("`", "").replace('"', "")).strip()
+    s = re.sub(r" ?([.,()=]) ?", r"\1", s)
+    s = HIBERNATE_ALIAS.sub("t", s)
+    return hashlib.md5(s.encode()).hexdigest()[:16]
+
+
 GATE_CHECKS = ("seq-scan", "fk-no-index", "duplicate-index", "redundant-index")
 REPORT_CHECKS = ("unused-index", "top-total", "top-mean")
 
@@ -266,7 +281,7 @@ def seq_scans(plans, tables, min_rows):
                 continue
             # Plans are logged without verbose output (a tenth of the size), so the statement's
             # text identifies it
-            qid = hashlib.md5(re.sub(r"\s+", " ", plan.get("Query Text", "")).strip().encode()).hexdigest()[:16]
+            qid = statement_id(plan.get("Query Text", ""))
             key = (qid, table)
             g = grouped.get(key)
             if g is None:
@@ -415,7 +430,8 @@ ORDER BY {order} DESC LIMIT {limit}
 
 MY_FULL_SCANS = """
 SELECT digest AS queryid, count_star AS calls, sum_no_index_used AS no_index_used,
-       sum_rows_examined AS rows_examined, sum_rows_sent AS rows_sent, LEFT(digest_text, 600) AS query
+       sum_rows_examined AS rows_examined, sum_rows_sent AS rows_sent, LEFT(digest_text, 600) AS query,
+       digest_text AS full_text
 FROM gindex.workload_digests
 WHERE sum_no_index_used > 0
 """
@@ -454,7 +470,7 @@ def audit_mariadb(db, args):
     # Full scans: digests whose executions used no index. EXPLAIN the digest text with '1' for
     # each placeholder to find the tables read with type ALL; if that fails, name every large table
     for r in my_json(db, MY_FULL_SCANS, ["queryid", "calls", "no_index_used", "rows_examined",
-                                         "rows_sent", "query"]):
+                                         "rows_sent", "query", "full_text"]):
         scanned = explain_full_scans(db, r["query"])
         named = scanned if scanned is not None else {
             t.lower() for t in re.findall(r"`?\b(up_[a-z0-9_]+)\b`?", r["query"], re.I)}
@@ -462,7 +478,7 @@ def audit_mariadb(db, args):
             info = tables.get(table)
             if info is None or info["rows"] < args.min_rows:
                 continue
-            findings.append({"check": "seq-scan", "subject": f"{table}@{str(r['queryid'])[:8]}", "table": table,
+            findings.append({"check": "seq-scan", "subject": f"{table}@{statement_id(r['full_text'])[:8]}", "table": table,
                              "rows": info["rows"], "queryid": r["queryid"], "query": re.sub(r"\s+", " ", r["query"]),
                              "executions": int(r["no_index_used"]), "rows_examined": int(r["rows_examined"]),
                              "index_exists": None if scanned is None else False,

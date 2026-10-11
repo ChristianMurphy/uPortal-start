@@ -93,7 +93,9 @@ the 5.17 export on its own vendor exactly.
 On HSQLDB and PostgreSQL 18, 5.17's export equals the reference. On MySQL and MariaDB, 5.17's
 schema stores timestamps as `DATETIME` without fractional seconds (MOD-I95), so the 5.17 export
 loses the milliseconds of four values: three lifecycle entries and one `lastPasswordChange`.
-`vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that.
+`vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that. On SQL Server, 5.17 stores them
+as `datetime`, in steps of 1/300 s: the one value in the reference that isn't on such a step,
+feedback-admin's PUBLISHED date, comes back 2 ms later. `vendors/sqlserver.diff` records that.
 
 ## SQL Server: the fixture in windows-1252
 
@@ -106,11 +108,13 @@ fixture as it is.
 
 When the 5.17 side of a run is SQL Server (in place, or the source of a copy), `equivalence.sh`
 converts the fixture and the reference with `tests/db/equivalence/code_page.py` before it starts.
-The same function, `to_code_page`, converts both: each character outside windows-1252 becomes one
-`?`, in file contents, numeric character references and file names. It leaves text already in
-windows-1252 unchanged. Both comparisons are exact: 5.17's export must equal the converted
-reference, and the export of the build under test must equal 5.17's. A copy into SQL Server uses
-the fixture unchanged, so it shows whether 6.0 on SQL Server keeps text outside windows-1252.
+The same function, `to_code_page`, converts both. Each character outside windows-1252 becomes one
+`_`, whether it is in a file's text or a file name, and so does a numeric character reference to
+one. It leaves text already in windows-1252 unchanged. It writes `_` rather than SQL Server's `?`
+because 5.17 names exported files after group names, and `?` is not allowed in a GitHub Actions
+artifact. Both comparisons are exact: 5.17's export must equal the converted reference, and the
+export of the build under test must equal 5.17's. A copy into SQL Server uses the fixture unchanged,
+so it shows whether 6.0 on SQL Server keeps text outside windows-1252.
 
 The conversion changes these fixture fields:
 
@@ -136,6 +140,16 @@ The conversion changes these fixture fields:
 
 `python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'` tests the conversion. The
 plan job of `migration-equivalence.yml` runs it.
+
+## Oracle: no 5.17 export
+
+uPortal 5.17's `dataExport` fails for every layout profile on Oracle (MOD-I200). Its
+`export-profile.crn` passes the profile's ids to Java methods that take a `long` or an `int`, and
+Oracle returns its `NUMBER` columns as `BigDecimal`, which Groovy doesn't convert. 6.0 converts
+them, but 5.17's export on Oracle can't be the comparison. When the 5.17 side of a run is Oracle
+(in place, or the source of a copy), `equivalence.sh` skips 5.17's export. The export of the build
+under test, masked like the reference, must then equal the reference, apart from
+`vendors/oracle.diff` if 5.17 stores the fixture differently on Oracle.
 
 ## Reading a failure
 

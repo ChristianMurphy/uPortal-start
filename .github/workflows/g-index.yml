@@ -14,6 +14,11 @@ name: G-index
 #             the schedule or a manual run with "nightly"; workstream branches run only the push
 #             job (Prototype only, MOD-D30: CI capacity is shared by the workstreams)
 #
+# Prototype only (MOD-I306): a push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs the
+# push job only when it changes persistence, SQL, schema, data files or G-index itself, in
+# uPortal-start or in the uPortal branch of the same name; .github/scripts/gindex-changes.sh lists
+# the paths. The integration branch, a manual run and the schedule always run it.
+#
 # The full campus (scale 1: 100,000 users, 155 million raw events) does not fit a GitHub runner;
 # docs/g-index.md describes running it on real hardware.
 #
@@ -40,11 +45,21 @@ on:
         required: false
         default: ''
       uportal-ref:
-        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else its nearest parent branch (ccr-x-topic -> ccr-x), else master'
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch ccr-43ba0785-hzlrj5, else master'
         required: false
         default: ''
 permissions:
   contents: read
+env:
+  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # writes the cache only on the default branch by default, and none of our work branches is that
+  # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
+  # Prototype only (MOD-D53): the first job of a key to finish saves its Gradle cache, and an entry
+  # is never replaced. So one job per runner OS and set of build files saves it, the one whose
+  # Gradle work is the broadest, and the other jobs of the key only read (this variable). On the
+  # default branch and in pull requests every job keeps the action's default.
+  GRADLE_CACHE_READ_ONLY_SHARED: ${{ github.event.repository.default_branch != github.ref_name }}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Prototype only (MOD-D30): a workstream branch runs the one push job, and a newer push cancels
@@ -58,45 +73,72 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.uportal.outputs.version }}
+      runs: ${{ steps.runs.outputs.runs }}
     steps:
+      # The planning of the G-index runs (MOD-I303) runs first in this job, not in a job of its own
+      # that the build would wait for. So does the check of what a topic push changes (MOD-I306):
+      # when it finds nothing G-index measures, the build below and the G-index job are skipped.
+      - name: Checkout the history to compare
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          fetch-depth: 0
+          filter: blob:none
+          path: plan
+      - name: Does the push change what G-index measures
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+          START_DIR: plan
+          UPORTAL_URL: https://github.com/${{ github.repository_owner }}/uPortal
+        run: plan/.github/scripts/gindex-changes.sh
+      - name: Choose the push or the nightly set
+        id: runs
+        env:
+          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
+          SCALE: ${{ inputs.scale }}
+          CHANGES: ${{ steps.changes.outputs.run }}
+        run: |
+          if [ -n "$SCALE" ] && ! [[ "$SCALE" =~ ^(0\.[0-9]+|1(\.0+)?)$ ]]; then
+            echo "Unexpected scale '$SCALE'" >&2
+            exit 1
+          fi
+          if [ "$NIGHTLY" = true ]; then
+            runs='[{"vendor":"postgres-18","scale":"0.05","duration":"600","faults":false},{"vendor":"mariadb-12.3","scale":"0.05","duration":"600","faults":false}]'
+          else
+            runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true}]'
+          fi
+          if [ -n "$SCALE" ]; then
+            runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
+          fi
+          if [ "$CHANGES" = false ]; then
+            runs='[]'
+          fi
+          echo "runs=$runs" >> "$GITHUB_OUTPUT"
+          echo "G-index runs: $runs" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=G-index runs::$runs"
       - name: Choose the uPortal repository and ref
         id: source
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         env:
           INPUT_REPOSITORY: ${{ inputs.uportal-repository }}
           INPUT_REF: ${{ inputs.uportal-ref }}
           OWNER: ${{ github.repository_owner }}
           BRANCH: ${{ github.ref_name }}
-        run: |
-          repository="${INPUT_REPOSITORY:-$OWNER/uPortal}"
-          ref="$INPUT_REF"
-          # A workstream branch (MOD-D30) such as ccr-x-topic uses uPortal's ccr-x-topic if it
-          # exists, else drops one -suffix at a time until a uPortal branch matches (ccr-x).
-          candidate="$BRANCH"
-          while [ -z "$ref" ] && [ -n "$candidate" ]; do
-            if git ls-remote --exit-code --heads "https://github.com/$repository" "refs/heads/$candidate" > /dev/null; then
-              ref="$candidate"
-            elif [[ "$candidate" == *-* ]]; then
-              candidate="${candidate%-*}"
-            else
-              candidate=""
-            fi
-          done
-          ref="${ref:-master}"
-          if ! [[ "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && "$ref" =~ ^[A-Za-z0-9_./-]+$ ]]; then
-            echo "Unexpected repository '$repository' or ref '$ref'" >&2
-            exit 1
-          fi
-          echo "repository=$repository" >> "$GITHUB_OUTPUT"
-          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+        run: plan/.github/scripts/choose-uportal.sh
       - name: Checkout uPortal
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ${{ steps.source.outputs.repository }}
-          ref: ${{ steps.source.outputs.ref }}
+          ref: ${{ steps.source.outputs.sha || steps.source.outputs.ref }}
           persist-credentials: false
       # uPortal's CI matrix includes the JDK its .sdkmanrc pins; build with that major version
       - name: Read uPortal's JDK
         id: jdk
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         run: |
           sdk=$(sed -n 's/^java=//p' .sdkmanrc | tr -d '\r')
           version=${sdk%%.*}
@@ -112,18 +154,23 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "distribution=$distribution" >> "$GITHUB_OUTPUT"
       - name: Setup Java
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: ${{ steps.jdk.outputs.distribution }}
           java-version: ${{ steps.jdk.outputs.version }}
       - name: Setup Gradle
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Build and install uPortal
-        run: ./gradlew -S --stacktrace --no-daemon --no-parallel install
+        if: ${{ steps.runs.outputs.runs != '[]' }}
+        run: ./gradlew --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
         id: uportal
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         env:
           REPOSITORY: ${{ steps.source.outputs.repository }}
           REF: ${{ steps.source.outputs.ref }}
@@ -137,55 +184,46 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Built uPortal $version from $REPOSITORY@$REF ($(git rev-parse HEAD))" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload the uPortal build
+        if: ${{ steps.runs.outputs.runs != '[]' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: uportal-maven-local
           path: ~/.m2/repository/org/jasig/portal/
           if-no-files-found: error
           retention-days: 7
-
-  plan:
-    name: "Plan the G-index runs"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      runs: ${{ steps.set.outputs.runs }}
-    steps:
-      - name: Choose the push or the nightly set
-        id: set
+      # The last lines of the job's log say which uPortal was built, because agents can't read the
+      # job summary (MOD-I307)
+      - name: Say which uPortal was built
+        if: ${{ !cancelled() }}
         env:
-          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
-          SCALE: ${{ inputs.scale }}
+          UPORTAL: ${{ steps.source.outputs.description }}
+          VERSION: ${{ steps.uportal.outputs.version }}
+          RUNS: ${{ steps.runs.outputs.runs }}
+          CHANGES: ${{ steps.changes.outputs.report }}
         run: |
-          if [ -n "$SCALE" ] && ! [[ "$SCALE" =~ ^(0\.[0-9]+|1(\.0+)?)$ ]]; then
-            echo "Unexpected scale '$SCALE'" >&2
-            exit 1
-          fi
-          if [ "$NIGHTLY" = true ]; then
-            runs='[{"vendor":"postgres-18","scale":"0.05","duration":"600","faults":false},{"vendor":"mariadb-12.3","scale":"0.05","duration":"600","faults":false}]'
-          else
-            runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true}]'
-          fi
-          if [ -n "$SCALE" ]; then
-            runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
-          fi
-          echo "runs=$runs" >> "$GITHUB_OUTPUT"
-          echo "G-index runs: $runs" >> "$GITHUB_STEP_SUMMARY"
+          echo "uPortal under test: ${UPORTAL:-none chosen}"
+          echo "Built uPortal ${VERSION:-(no build)}"
+          echo "G-index change check: $CHANGES"
+          echo "G-index runs: $RUNS"
 
   g-index:
     name: "G-index: ${{ matrix.vendor }} at ${{ matrix.scale }}"
-    needs: [uportal, plan]
+    needs: uportal
+    if: ${{ needs.uportal.outputs.runs != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.plan.outputs.runs) }}
+        include: ${{ fromJSON(needs.uportal.outputs.runs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The allowlist's statement ids must survive a Hibernate upgrade (MOD-I240)
+      - name: Test the audit's statement ids
+        run: python3 -B -m unittest discover -s tests/db/gindex -p 'test_*.py'
       - name: Download the uPortal build
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
@@ -210,10 +248,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
+          cache: npm
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY_SHARED }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           gradle_user_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
@@ -221,6 +261,14 @@ jobs:
           echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64" >> "$gradle_user_home/gradle.properties"
       - name: Install npm dependencies
         run: npm ci
+      - name: Find the Playwright version
+        id: playwright
+        run: echo "version=$(npx playwright --version | sed 's/^Version //')" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       - name: Load the campus, run the workload, audit
