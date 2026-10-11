@@ -380,5 +380,9 @@ jobs:
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
             commit -q -m "test(e2e): record the 5.17 http replay fixtures" -m "Recorded by $RUN_URL" -m "[skip ci]"
           auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          # Commits pushed to the branch while the recording ran are kept: the fixtures go on top
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch -q "https://github.com/$REPOSITORY.git" "refs/heads/$BRANCH"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            rebase -q FETCH_HEAD
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push "https://github.com/$REPOSITORY.git" "HEAD:refs/heads/$BRANCH"
           echo "Committed the fixtures to $BRANCH as $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
