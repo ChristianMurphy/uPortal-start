@@ -9,8 +9,9 @@
 #   invalidation-portlet     a portlet definition changed on one node shows on the other
 #   invalidation-layout      a user's layout changed on one node shows in a new session on the
 #                            other
-#   invalidation-permission  a permission granted, then revoked, on one node is enforced on the
-#                            other
+#   invalidation-permission  a permission granted, then revoked, on one node is enforced in a new
+#                            session on the other
+#   permission-session       a session that checked the permission before the change follows it
 #   jobs-once                login and render events made on both nodes are aggregated exactly
 #                            once: each interval's aggregate counts equal the raw events
 #   failover-takeover        the node holding the aggregation lock is killed; the other node
@@ -69,7 +70,7 @@ declare -A FAULT_CHECKS=(
 # Checks that fail because of a known uPortal problem (docs/cluster-tests.md): reported as
 # warnings, they do not fail the run. Remove an entry once uPortal is fixed.
 declare -A KNOWN_FAILURES=(
-    [invalidation-permission]="permission checks are cached per node and not invalidated when a permission changes"
+    [permission-session]="a session keeps the permission decisions it made for minutes after a change"
     [events-aggregated]="events a node stores after another node's aggregator passed their time are never aggregated"
 )
 if [ -n "$FAULT" ] && [ -z "${FAULT_CHECKS[$FAULT]+x}" ]; then
@@ -192,8 +193,8 @@ trace_cluster_locks() {  # trace_cluster_locks <node>: log every cluster-lock ch
     file=$(node_home "$1")/webapps/uPortal/WEB-INF/classes/logback.xml
     grep -q 'ClusterLockServiceImpl" level="TRACE"' "$file" && return 0
     sed -i 's#</configuration>#  <logger name="org.apereo.portal.concurrency.locking.ClusterLockServiceImpl" level="TRACE"/>\n</configuration>#' "$file"
-    # JGroups' warnings and each cluster view the node installs, to uPortal's JGroups log
-    sed -i 's#</configuration>#  <logger name="org.jgroups" level="INFO" additivity="false"><appender-ref ref="JG"/></logger>\n  <logger name="org.jgroups.protocols.pbcast.GMS" level="DEBUG" additivity="false"><appender-ref ref="JG"/></logger>\n</configuration>#' "$file"
+    # JGroups' warnings and each cluster view the node installs, to the portal log
+    sed -i 's#</configuration>#  <logger name="org.jgroups" level="INFO"/>\n  <logger name="org.jgroups.protocols.pbcast.GMS" level="DEBUG"/>\n</configuration>#' "$file"
 }
 
 deploy() {
@@ -231,7 +232,7 @@ show_nodes() {  # each node's JVM portal.home and configured server name
 }
 
 two_member_view() {  # two_member_view <node>: the node's JGroups log shows a view of two members
-    grep -qE '\] \(2\) \[' "$(node_home "$1")/logs/jgroups/portal.jgroups.log" 2> /dev/null
+    grep -qE '\|[0-9]+\] \(2\) \[' "$(node_home "$1")/logs/portal/portal.log" 2> /dev/null
 }
 
 wait_for_cluster() {  # both nodes registered in JGroups' JDBC_PING table, and in one view
@@ -398,58 +399,71 @@ portlet_status() {  # portlet_status <node> <jar>: HTTP status of the portlet's 
 }
 
 denied_on() { [ "$(portlet_status "$1" "$2")" = 403 ]; }
-fresh_session_on() {  # fresh_session_on <node>: what a new student session on the node gets
-    local jar=$JARS/perm-fresh-$1
+new_session_status() {  # new_session_status <node>: what a new student session on the node gets
+    local jar=$JARS/perm-new-$1
     rm -f "$jar"
-    login "$1" student "$jar" || { echo "a new student session on node $1 could not log in"; return; }
-    echo "a new student session on node $1 gets HTTP $(portlet_status "$1" "$jar")"
+    login "$1" student "$jar" || { echo login-failed; return; }
+    portlet_status "$1" "$jar"
+    logout "$1" "$jar"
 }
+new_session_allowed() { [ "$(new_session_status "$1")" = 200 ]; }
+new_session_denied() { [ "$(new_session_status "$1")" = 403 ]; }
 allowed_on() { [ "$(portlet_status "$1" "$2")" = 200 ]; }
 
 check_permission_invalidation() {
-    local admin=$JARS/perm-admin a=$JARS/perm-a b=$JARS/perm-b started elapsed
+    local admin=$JARS/perm-admin early=$JARS/perm-early granted=$JARS/perm-granted started elapsed session=()
     PERSON_TYPE=$(sql "select entity_type_id from up_entity_type where entity_type_name = 'org.apereo.portal.security.IPerson'")
     PORTLET_ID=$(sql "select portlet_def_id from up_portlet_def where portlet_fname = '$PERMISSION_FNAME'")
     if [ -z "$PERSON_TYPE" ] || [ -z "$PORTLET_ID" ]; then
         record invalidation-permission FAIL "could not look up the person entity type or portlet $PERMISSION_FNAME"
         return
     fi
-    login a admin "$admin" && login a student "$a" && login b student "$b" ||
+    login a admin "$admin" && login a student "$early" ||
         { record invalidation-permission FAIL "logins failed"; return; }
     # Both nodes check (and cache) the denial first
-    if ! denied_on a "$a" || ! denied_on b "$b"; then
+    if ! denied_on a "$early" || ! new_session_denied b; then
         record invalidation-permission FAIL "student could already open $PERMISSION_FNAME (HTTP $(status_of))"
         return
     fi
-    # Grant, and wait until node B allows it (its cached denial expires), so node B caches the grant
     update_permission "$admin" GRANT || { record invalidation-permission FAIL "grant on node A failed (HTTP $(status_of))"; return; }
     log "invalidation-permission: UP_PERMISSION rows for the target: $(sql "select principal_type, principal_key, activity, permission_type from up_permission
          where target = 'PORTLET_ID.$PORTLET_ID'" | tr '\n' ' ')"
     started=$(now_ms)
-    if ! poll 30 allowed_on a "$a"; then
-        # Not a replication problem: the node that made the change keeps its own cached denial
-        record invalidation-permission FAIL "node A itself, where the grant was made, still denied the portlet 30 s later (HTTP $(status_of))$(late_by "$PERMISSION_BOUND_S" allowed_on a "$a"); $(fresh_session_on a)"
+    if ! poll 30 new_session_allowed a; then
+        record invalidation-permission FAIL "a new session on node A, where the grant was made, still denied the portlet 30 s later"
         update_permission "$admin" INHERIT
         return
     fi
-    if ! poll "$PERMISSION_BOUND_S" allowed_on b "$b"; then
-        record invalidation-permission FAIL "node A allowed the grant at once, node B still denied it $PERMISSION_BOUND_S s later; $(fresh_session_on b)"
+    if ! poll "$PERMISSION_BOUND_S" new_session_allowed b; then
+        record invalidation-permission FAIL "a new session on node B still denied the portlet $PERMISSION_BOUND_S s after node A granted it"
         update_permission "$admin" INHERIT
         return
     fi
-    log "invalidation-permission: node B allowed the grant after $(( $(now_ms) - started )) ms"
+    log "invalidation-permission: a new session on node B allowed the grant after $(( $(now_ms) - started )) ms"
+    # A session that checked the permission before the change
+    poll 30 allowed_on a "$early" ||
+        session+=("the student's session that was denied before the grant was still denied 30 s after it")
+    login a student "$granted" && allowed_on a "$granted" || { record invalidation-permission FAIL "a new session on node A was not allowed"; return; }
+
     # Revoke: the security-relevant direction
     update_permission "$admin" INHERIT || { record invalidation-permission FAIL "revoke on node A failed (HTTP $(status_of))"; return; }
     started=$(now_ms)
-    if ! poll 30 denied_on a "$a"; then
-        record invalidation-permission FAIL "node A itself, where the permission was revoked, still allowed the portlet 30 s later (HTTP $(status_of))"
+    if ! poll 30 new_session_denied a; then
+        record invalidation-permission FAIL "a new session on node A, where the permission was revoked, was still allowed 30 s later"
         return
     fi
-    if poll "$PERMISSION_BOUND_S" denied_on b "$b"; then
+    if poll "$PERMISSION_BOUND_S" new_session_denied b; then
         elapsed=$(( $(now_ms) - started ))
-        record invalidation-permission PASS "node B denied the revoked permission ${elapsed} ms after node A revoked it (bound ${PERMISSION_BOUND_S} s)"
+        record invalidation-permission PASS "a new session on node B was denied ${elapsed} ms after node A revoked the permission (bound ${PERMISSION_BOUND_S} s)"
     else
-        record invalidation-permission FAIL "node B still allowed the portlet $PERMISSION_BOUND_S s after node A revoked the permission"
+        record invalidation-permission FAIL "a new session on node B was still allowed $PERMISSION_BOUND_S s after node A revoked the permission"
+    fi
+    poll 30 denied_on a "$granted" ||
+        session+=("the student's session that was allowed before the revocation was still allowed 30 s after it")
+    if [ ${#session[@]} -eq 0 ]; then
+        record permission-session PASS "sessions that checked the permission before a change follow the grant and the revocation within 30 s"
+    else
+        record permission-session FAIL "$(IFS=';'; echo "${session[*]}")"
     fi
 }
 
@@ -702,10 +716,10 @@ cleanup() {
 jgroups_report() {  # the cluster views and JGroups problems each node logged
     local n f
     for n in a b; do
-        f=$(node_home "$n")/logs/jgroups/portal.jgroups.log
-        log "node $n JGroups: $(grep -c . "$f" 2> /dev/null || echo 0) lines"
-        grep -hE 'view|View|GMS|ERROR|WARN' "$f" 2> /dev/null | sed -E 's/ [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:,]+ - / - /' |
-            cut -c1-220 | sort | uniq -c | sort -rn | head -n 12
+        f=$(node_home "$n")/logs/portal/portal.log
+        log "node $n JGroups: $(grep -ciE 'jgroups|GMS' "$f" 2> /dev/null) lines in the portal log"
+        grep -hiE 'jgroups|GMS' "$f" 2> /dev/null | grep -E 'view|View|ERROR|WARN' |
+            sed -E 's/ [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:,]+ - / - /' | cut -c1-220 | sort | uniq -c | sort -rn | head -n 12
     done
 }
 
