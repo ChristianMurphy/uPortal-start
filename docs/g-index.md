@@ -86,12 +86,14 @@ their tables in the same database and their 5.x schema in 6.0 (MOD-D11).
 ### The allowlist
 
 `tests/db/gindex/allowlist.txt` lists the findings that do not fail the audit, each with a reason:
-`<check> <subject glob> [vendor=x] -- <reason>`. The subject is `<table>.<constraint or index>`,
+`<check> <subject glob> [vendor=x] [required] -- <reason>`. The subject is `<table>.<constraint or index>`,
 or `<table>@<statement>` for a sequential scan, where the eight hex digits identify one SQL
 statement (shown in the summary). Entries marked `6.0:` are 5.17 gaps that the 6.0 index set
 removes. Delete them when that change is merged. A new statement that scans a large table fails the
 audit until it is fixed or reviewed into the list, and so do new foreign keys and duplicate indexes
-the checks report. The summary lists the entries that didn't match a finding.
+the checks report. The summary lists the entries that didn't match a finding. An entry marked
+`required` fails the audit when it doesn't match a finding: the R4 foreign-key checks use it, so their
+entries come out when R4's index lands and can't cover a later scan of the same tables.
 
 On GitHub Actions the load, workload and audit tables go to the job summary and every failing
 finding becomes an annotation with its suggested DDL.
