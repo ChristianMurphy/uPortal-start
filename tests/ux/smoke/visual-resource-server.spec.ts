@@ -36,6 +36,21 @@ function isCkeditorVersionCheck(url: string): boolean {
   return url.startsWith(CKEDITOR_VERSION_CHECK);
 }
 
+/*
+ * How each engine reports a request it cancelled because the page went
+ * away: Chromium, WebKit, Firefox. The landing page after loginViaUrl
+ * starts /api/portletList (the search launcher's autosuggest);
+ * loginViaUrl waits for *.uP requests only, so the next goto can cancel
+ * it. Chromium's ERR_ABORTED was ignored from the start; WebKit's wording
+ * failed the student test once (cluster run 38136427089, job
+ * 114475288020) and passed on its retry.
+ */
+const CANCELLED_BY_BROWSER = new Set([
+  "net::ERR_ABORTED",
+  "Load request cancelled",
+  "NS_BINDING_ABORTED",
+]);
+
 function attachListeners(page: Page): {
   consoleErrors: string[];
   netIssues: NetIssue[];
@@ -68,9 +83,9 @@ function attachListeners(page: Page): {
 
   page.on("requestfailed", (request) => {
     const reason = request.failure()?.errorText ?? "request failed";
-    // ERR_ABORTED is fired when an in-flight request is cancelled by
-    // navigation/teardown — not a server issue. Ignore.
-    if (reason === "net::ERR_ABORTED") return;
+    // A request the browser cancels because its page goes away (navigation
+    // or teardown) is not a server issue. Ignore it, in each engine's words.
+    if (CANCELLED_BY_BROWSER.has(reason)) return;
     if (isCkeditorVersionCheck(request.url())) return;
     netIssues.push({ url: request.url(), reason });
   });
