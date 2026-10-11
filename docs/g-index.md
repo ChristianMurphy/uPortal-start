@@ -88,7 +88,9 @@ their tables in the same database and their 5.x schema in 6.0 (MOD-D11).
 `tests/db/gindex/allowlist.txt` lists the findings that do not fail the audit, each with a reason:
 `<check> <subject glob> [vendor=x] [required] -- <reason>`. The subject is `<table>.<constraint or index>`,
 or `<table>@<statement>` for a sequential scan, where the eight hex digits identify one SQL
-statement (shown in the summary). Entries marked `6.0:` are 5.17 gaps that the 6.0 index set
+statement (shown in the summary). They're an md5 of the statement's text in lower case, without
+quoting, spacing or the aliases Hibernate numbers (`localaccou0_`, `USER_DIR1_13_0_`, `l1_0`), so a
+Hibernate upgrade that renumbers its aliases keeps them. Entries marked `6.0:` are 5.17 gaps that the 6.0 index set
 removes. Delete them when that change is merged. A new statement that scans a large table fails the
 audit until it is fixed or reviewed into the list, and so do new foreign keys and duplicate indexes
 the checks report. The summary lists the entries that didn't match a finding. An entry marked
