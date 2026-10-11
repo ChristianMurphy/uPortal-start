@@ -82,7 +82,8 @@ All of them are on the allowlist with reasons. The main findings, by cost:
 | 38095359976 | `9daa0c2` | Push job: audit passed, the seeded-fault step failed on a too strict check (fixed in `8097e9e`). PostgreSQL 0.05 passed. MariaDB 0.05 failed and found R12 to R14. |
 | 38099973730 | `7ccf893` | All jobs green: PostgreSQL 0.01 with the seeded faults, PostgreSQL 0.05 and MariaDB 0.05. The PostgreSQL seq-scan check didn't read any plans in this run (`-c auto_explain.log_min_duration=-1` on the command line overrode the `ALTER SYSTEM` that turns it on). |
 | 38100597244 | `31142c6` | First run with executed plans in CI. MariaDB 0.05 green. PostgreSQL found 4 (0.01) and 15 (0.05) new statements, now reviewed into the allowlist and R15. |
-| final | this branch | The push job on the light profile (MOD-D30), see the branch's latest G-index run |
+| 38106800664 | `74bb1f7` | Push job on the light profile (MOD-D30): one new finding, a `DELETE` on `UP_UNIQUE_STR_SEGMENT__UIDS` that the audit didn't re-plan. The primary key serves it, and the table had grown after `ANALYZE` (fixed in `d43f914`). |
+| 38108477585 | `d43f914` | Green. PostgreSQL 18 at 1/100: 3,242,266 rows in 246 s, 131 Playwright specs passed, 355 statements, 182,553 executions, 161,682 executed plans. The audit passed (0 failing, 51 allowlisted). The seeded-fault run failed the audit with all three expected findings: seq-scan and fk-no-index on `UP_PORTLET_PREF`, duplicate-index on `UP_USER`. |
 
 The audit now fails when its plan log doesn't contain a plan. A capture problem can't pass unnoticed again.
 
@@ -98,7 +99,7 @@ The audit now fails when its plan log doesn't contain a plan. A capture problem 
 | fk-no-index | `up_portlet_pref.fk_pgqclxrroe8ed8stf00pt2s93` | `(portlet_prefs_id) -> up_portlet_prefs` | same |
 | duplicate-index | `up_user.gx_fault_dup` | covered by `upu_user_name` | `DROP INDEX gx_fault_dup;` |
 
-CI repeats the run after every push job. Its "Seeded faults must fail the audit" step requires the `fk-no-index` and `duplicate-index` findings and reports the `seq-scan` one when the driver loaded portlet preferences. It passed in run 38099973730, with the findings as notice annotations.
+CI repeats the run after every push job. Its "Seeded faults must fail the audit" step requires the `fk-no-index` and `duplicate-index` findings and reports the `seq-scan` one when the driver loaded portlet preferences. It passed in runs 38099973730 and 38108477585, with the findings as notice annotations.
 
 The before/after run also caught an index change that would have hurt. Dropping the six `idx_up_*_grp` indexes, which each table's unique key covers, turned the aggregation job's `DISTINCT` group query into a full scan of `UP_LOGIN_EVENT_AGGR` and `UP_CONCURRENT_USER_AGGR` (`seq-scan up_login_event_aggr@a3f20bff`, 311 executions). R8 keeps those indexes until R7.
 
