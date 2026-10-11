@@ -470,4 +470,77 @@ test.describe("Popular Portlets", () => {
       page.locator(".up-portlet-titlebar .portlet-title")
     ).toContainText("Courses");
   });
+
+  /*
+   * The tests above record the portlet's behaviour and pass on both the
+   * portlet and the web component. The ones below are about the web component
+   * (<up-popular-portlets>, a "Web Component" channel since uPortal MOD-D18).
+   */
+  test("renders the web component channel with the portal context", async ({
+    page,
+  }) => {
+    const apiCall = page.waitForResponse((response) =>
+      response.url().includes("/api/v6-0/popular-portlets?")
+    );
+    await openPopularPortlets(page);
+
+    const element = page.locator("up-popular-portlets");
+    await expect(element).toHaveCount(1);
+    await expect(element).toHaveAttribute("fname", "popular-portlets");
+    await expect(element).toHaveAttribute("window-state", "maximized");
+    await expect(element).toHaveAttribute("context-path", "/uPortal");
+    await expect(element).toHaveAttribute("csrf-token", /\S/);
+    await expect(
+      page.locator(
+        'script[type="module"][src*="/webcomponents/assets/up-popular-portlets-"]'
+      )
+    ).toHaveCount(1);
+
+    const response = await apiCall;
+    expect(response.status()).toBe(200);
+    const query = new URL(response.url()).searchParams;
+    expect(query.get("days")).toBe("30");
+    expect(query.get("locale")).toMatch(/^[a-z]{2,3}(-[\dA-Za-z]+)*$/);
+  });
+
+  test("a filter keeps the rows it names, also after sorting", async ({
+    page,
+  }) => {
+    const table = await openPopularPortlets(page);
+    await page.getByRole("columnheader").nth(1).click();
+    await expect(page.getByRole("columnheader").nth(1)).toHaveAttribute(
+      "aria-sort",
+      "ascending"
+    );
+
+    await page
+      .getByRole("combobox", { name: "Filter by Title" })
+      .selectOption("courses");
+
+    await expect(dataRows(table)).toHaveCount(1);
+    await expect(linkTo(table, "Courses")).toBeVisible();
+    await page
+      .getByRole("button", { name: "Remove the filter courses" })
+      .click();
+    await expect(
+      page.getByRole("combobox", { name: "Filter by Title" })
+    ).toBeFocused();
+  });
+
+  test("sorts and pages from the keyboard", async ({ page }) => {
+    const table = await openPopularPortlets(page);
+    const title = page.getByRole("columnheader").nth(0);
+
+    await title.getByRole("button").focus();
+    await page.keyboard.press("Enter");
+    await expect(title).toHaveAttribute("aria-sort", "descending");
+    const fnames = await listedFnames(table);
+    expect(fnames).toEqual([...fnames].sort(byCodeUnits).reverse());
+
+    await pageSize(page).selectOption("5");
+    const paging = page.getByRole("navigation", { name: "pagination" });
+    await paging.getByLabel("Next", { exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(info(page)).toHaveText(/^Viewing page 2\./);
+  });
 });
