@@ -9,8 +9,6 @@ on:
   pull_request:
     branches:
       - master
-  schedule:
-    - cron: '29 3 * * *'
   workflow_dispatch:
     inputs:
       nightly:
@@ -45,11 +43,10 @@ jobs:
       #   push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>): Linux, Temurin;
       #   master, pull requests, the integration branch and a manual run on any branch:
       #     Linux, Windows and macOS with Temurin;
-      #   the schedule and a manual run with "nightly" ticked: those, plus Linux with Zulu and
-      #     Corretto.
+      #   a manual run with "nightly" ticked: those, plus Linux with Zulu and Corretto.
       matrix: >-
         ${{ fromJSON(
-        (github.event_name == 'schedule' || inputs.nightly == true) && '{"platform":["ubuntu-latest"],"java-distribution":["temurin","zulu","corretto"],"java-version":[11],"include":[{"platform":"windows-latest","java-distribution":"temurin","java-version":11},{"platform":"macos-latest","java-distribution":"temurin","java-version":11}]}'
+        inputs.nightly == true && '{"platform":["ubuntu-latest"],"java-distribution":["temurin","zulu","corretto"],"java-version":[11],"include":[{"platform":"windows-latest","java-distribution":"temurin","java-version":11},{"platform":"macos-latest","java-distribution":"temurin","java-version":11}]}'
         || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && github.event_name != 'workflow_dispatch' && '{"include":[{"platform":"ubuntu-latest","java-distribution":"temurin","java-version":11}]}'
         || '{"platform":["ubuntu-latest"],"java-distribution":["temurin"],"java-version":[11],"include":[{"platform":"windows-latest","java-distribution":"temurin","java-version":11},{"platform":"macos-latest","java-distribution":"temurin","java-version":11}]}') }}
     runs-on: ${{ matrix.platform }}

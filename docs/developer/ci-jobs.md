@@ -4,7 +4,8 @@ This page lists what each uPortal-start workflow runs for each kind of push. The
 workstream branches (`ccr-43ba0785-hzlrj5-<topic>`) are prototype only (MOD-D30, MOD-D55,
 MOD-I306) and go before upstreaming. A manual run on any branch counts as the integration branch
 here, except in `Migration equivalence`, which gives a manual run on a workstream branch the
-workstream set. The nightly run is the schedule or a manual run with `nightly` ticked.
+workstream set. The nightly run is the schedule or a manual run with `nightly` ticked. `CI` has no
+schedule. Its nightly set runs only from a manual run.
 
 | Workflow | Push to a workstream branch | Integration branch, manual run | Nightly |
 | --- | --- | --- | --- |
