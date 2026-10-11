@@ -42,6 +42,15 @@ export const config = {
       password: "student",
       displayName: "Steven Student",
     },
+    // Only the language tests sign in as the developer, since they change the
+    // user's saved language, which a parallel spec would see at its sign-in
+    developer: {
+      id: "xx",
+      username: "developer",
+      // eslint-disable-next-line sonarjs/no-hardcoded-credentials
+      password: "developer",
+      displayName: "Developer User",
+    },
   },
   formats: {
     auditDateTimeTz:
