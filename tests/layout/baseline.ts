@@ -180,6 +180,7 @@ export const baseline: Baseline = {
     ],
     spill: [
       "#portalNavigation_u#l#s#.portal-navigation.movable.editable a.nav-tab-controls.portal-navigation-delete",
+      "#portletContent_u#l#n#.fl-widget-content.fl-fix.up-portlet-content-wrapper div.content",
       "#tabLink_u#l#s#.portal-navigation-link",
       "#tabLink_u#l#s#.portal-navigation-link.flc-inlineEditable",
     ],
@@ -313,6 +314,7 @@ export const baseline: Baseline = {
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
+      "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
     ],
   },
   "faculty tab welcome 768": {
@@ -326,12 +328,14 @@ export const baseline: Baseline = {
     spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "faculty tab welcome 1024": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
       "#tabLink_u#l#s#.portal-navigation-link",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "faculty tab welcome 1366": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
@@ -341,6 +345,7 @@ export const baseline: Baseline = {
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
       "#tabLink_u#l#s#.portal-navigation-link",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "faculty tab welcome 1920": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
@@ -425,6 +430,7 @@ export const baseline: Baseline = {
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
+      "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
     ],
   },
   "staff tab welcome 768": {
@@ -438,12 +444,14 @@ export const baseline: Baseline = {
     spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "staff tab welcome 1024": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
       "#tabLink_u#l#s#.portal-navigation-link",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "staff tab welcome 1366": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
@@ -453,6 +461,7 @@ export const baseline: Baseline = {
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
       "#tabLink_u#l#s#.portal-navigation-link",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "staff tab welcome 1920": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
@@ -553,6 +562,7 @@ export const baseline: Baseline = {
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
+      "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
     ],
   },
   "student tab welcome 768": {
@@ -566,12 +576,14 @@ export const baseline: Baseline = {
     spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "student tab welcome 1024": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
       "#tabLink_u#l#s#.portal-navigation-link",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "student tab welcome 1366": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
@@ -581,6 +593,7 @@ export const baseline: Baseline = {
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
       "#tabLink_u#l#s#.portal-navigation-link",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "student tab welcome 1920": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
