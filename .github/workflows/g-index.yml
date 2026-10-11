@@ -10,7 +10,9 @@ name: G-index
 #   push      PostgreSQL 18 at 1/100 of the MOD-Q7 campus (1,000 users, 50,000 raw events a day
 #             for 31 days, 2 years of aggregations), then the same database with seeded faults
 #             (a dropped index the workload needs, a duplicate index), which must fail the audit
-#   nightly   PostgreSQL 18 and MariaDB 12.3 at 1/20 (5,000 users, 250,000 raw events a day)
+#   nightly   PostgreSQL 18 and MariaDB 12.3 at 1/20 (5,000 users, 250,000 raw events a day), on
+#             the schedule or a manual run with "nightly"; workstream branches run only the push
+#             job (Prototype only, MOD-D30: CI capacity is shared by the workstreams)
 #
 # The full campus (scale 1: 100,000 users, 155 million raw events) does not fit a GitHub runner;
 # docs/g-index.md describes running it on real hardware.
@@ -45,7 +47,9 @@ permissions:
   contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Prototype only (MOD-D30): a workstream branch runs the one push job, and a newer push cancels
+  # the older run; the integration branch keeps every run
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
 jobs:
   uportal:
@@ -162,11 +166,6 @@ jobs:
           else
             runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true}]'
           fi
-          # Temporary (fork only): the nightly set also on push, to prove it once where the workflow is
-          # not on the default branch and cannot be scheduled. Reverted next.
-          if [ "$GITHUB_EVENT_NAME" = push ]; then
-            runs='[{"vendor":"postgres-18","scale":"0.01","duration":"240","faults":true},{"vendor":"postgres-18","scale":"0.05","duration":"600","faults":false},{"vendor":"mariadb-12.3","scale":"0.05","duration":"600","faults":false}]'
-          fi
           if [ -n "$SCALE" ]; then
             runs=$(jq -c --arg s "$SCALE" 'map(.scale = $s)' <<< "$runs")
           fi
@@ -230,7 +229,7 @@ jobs:
           SCALE: ${{ matrix.scale }}
           DURATION: ${{ matrix.duration }}
         run: tests/db/gindex/gindex.sh --keep --scale "$SCALE" --duration "$DURATION" "$VENDOR" -- -PdbWaitSeconds=600
-      # The gate must fail when an index the workload uses is gone or a duplicate appears
+      # The audit must fail when an index the workload uses is gone or a duplicate appears
       - name: Seeded faults must fail the audit
         if: ${{ matrix.faults }}
         env:
