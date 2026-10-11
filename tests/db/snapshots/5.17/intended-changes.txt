@@ -3,13 +3,13 @@
 # docs/db-upgrade-harness.md. One line per table: <TABLE> rows <+n|-n> <MOD reference>
 # A generator definition removed from the mappings: generators declared -table(<TABLE>) <MOD reference>
 #
-# Favorites, Popular Portlets, Search and the search launcher as Web Component channels: the Web
-# Component portlet type; webComponent.tagName and webComponent.moduleUrl on all four definitions,
-# and webComponent.attributes on the launcher (9 parameters); the eight portlet preferences the
-# Search portlet read are removed (RESTSearch, searchLaunchFname, and the three auto-suggest
-# preferences of each channel), one value each.
+# Favorites, Popular Portlets, Background Preference, Search and the search launcher as Web
+# Component channels: the Web Component portlet type; webComponent.tagName and
+# webComponent.moduleUrl on all five definitions, and webComponent.attributes on the launcher (11
+# parameters); the eight portlet preferences the Search portlet read are removed (RESTSearch,
+# searchLaunchFname, and the three auto-suggest preferences of each channel), one value each.
 UP_PORTLET_TYPE rows +1 MOD-I134
-UP_PORTLET_DEF_PARAM rows +9 MOD-I134
+UP_PORTLET_DEF_PARAM rows +11 MOD-I134
 UP_PORTLET_PREF rows -8 MOD-I134
 UP_PORTLET_PREF_VALUES rows -8 MOD-I134
 # Hibernate 5.2 (P2-3): the 49 @TableGenerator definitions in hibernate_sequences, each under the
