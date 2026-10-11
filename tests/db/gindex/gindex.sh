@@ -101,7 +101,8 @@ GEN=(python3 -I tests/db/gindex/generate.py)
 mkdir -p "$OUT"
 rm -f "$OUT"/*.md "$OUT"/findings.json "$OUT"/plans.json*
 
-step() { echo; echo "==== G-index $VENDOR: $*"; }
+# Each step is a phase: it ends when the next step starts or when run returns (see phase_next)
+step() { phase_next "$*"; }
 
 summary() {  # summary <file>: append to the GitHub job summary
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -f "$1" ]; then cat "$1" >> "$GITHUB_STEP_SUMMARY"; fi
@@ -173,14 +174,26 @@ EOF
 customize_template() {
     # A real layout customization by the quickstart student (a tab with two columns, a favorite),
     # made through the layout API so DLM writes the rows; the generator clones them
-    local jar="$OUT/template.cookies" home tok cal
+    local jar="$OUT/template.cookies" home tok hdr cal
     home=$(curl -s -c "$jar" -b "$jar" -L "${URL}Login?userName=student&password=student")
-    tok=$(grep -o '_csrf=[0-9a-f-]*' <<< "$home" | head -1 | cut -d= -f2)
+    # The session's CSRF token (MOD-I130): the page's _csrf and _csrf_header meta tags, as the
+    # portal's own scripts read it; a portal without them (5.17) has it in its forms
+    tok=$(grep -o '<meta name="_csrf" content="[^"]*"' <<< "$home" | head -1 | sed 's/.*content="//; s/"$//')
+    hdr=$(grep -o '<meta name="_csrf_header" content="[^"]*"' <<< "$home" | head -1 | sed 's/.*content="//; s/"$//')
+    if [ -z "$tok" ]; then tok=$(grep -o '_csrf=[0-9a-f-]*' <<< "$home" | head -1 | cut -d= -f2); fi
+    local csrf=()
+    if [ -n "$hdr" ] && [ -n "$tok" ]; then csrf=(-H "$hdr: $tok"); fi
     cal=$(echo "SELECT portlet_def_id FROM up_portlet_def WHERE portlet_fname = 'calendar';" | dbsql | tr -d '[:space:]')
-    curl -sf -b "$jar" -c "$jar" -X POST "${URL}api/layout" \
-        --data "_csrf=$tok&action=addTab&widths%5B%5D=50&widths%5B%5D=50&tabName=My%20Stuff" > /dev/null || return 1
-    curl -sf -b "$jar" -c "$jar" -X POST "${URL}api/layout" \
-        --data "_csrf=$tok&action=addFavorite&channelId=$cal" > /dev/null || return 1
+    local data status
+    for data in "action=addTab&widths%5B%5D=50&widths%5B%5D=50&tabName=My%20Stuff" "action=addFavorite&channelId=$cal"; do
+        status=$(curl -s -o "$OUT/template-response.txt" -w '%{http_code}' -b "$jar" -c "$jar" "${csrf[@]+"${csrf[@]}"}" \
+            -X POST "${URL}api/layout" --data "_csrf=$tok&$data")
+        if [ "$status" != 200 ]; then
+            echo "POST api/layout ${data%%&*}: HTTP $status (CSRF token $([ -n "$tok" ] && echo found || echo missing)," \
+                "header ${hdr:-none}): $(head -c 300 "$OUT/template-response.txt")" >&2
+            return 1
+        fi
+    done
     curl -s -b "$jar" "${URL}Logout" > /dev/null
 }
 
@@ -340,18 +353,22 @@ workload() {
     capture on || { echo "could not reset the statement statistics" >&2; return 1; }
     local started
     started=$(date +%s)
+    step "workload: start the portal"
     start_portal "$VENDOR" || return 1
     if [ "$SUITE" = true ]; then
+        step "workload: the whole Playwright suite"
         PORTAL_BASE_URL="$URL" npx playwright test --config=tests/uportal-pw.config.ts --reporter=list \
             --output="$OUT/playwright" > "$OUT/playwright.log" 2>&1
         echo "Playwright suite: $(grep -E '^ +[0-9]+ (passed|failed|flaky|skipped)' "$OUT/playwright.log" | tr -s ' ' | tr '\n' ',')"
     fi
+    step "workload: the driver and the analytics jobs"
     node tests/db/gindex/driver.mjs --url "$URL" --users "$(python3 -c "print(max(50, round(100000 * $SCALE)))")" \
         --concurrency "$CONCURRENCY" --duration "$DURATION" --seed "$SEED" > "$OUT/driver.json" 2> "$OUT/driver.log" || status=1
     cat "$OUT/driver.json" "$OUT/driver.log"
     # The analytics jobs start 120 s after the portal and then run every ~20 s; give them three rounds
     while [ $(( $(date +%s) - started )) -lt 200 ]; do sleep 10; done
     # Stop the portal first: its pools hold most of the database's connections
+    step "workload: stop the portal, freeze the statistics"
     stop_own_tomcat "$VENDOR"
     capture off || { echo "could not freeze the captured statements" >&2; return 1; }
     local elapsed=$(( $(date +%s) - started ))
@@ -392,10 +409,14 @@ workload() {
     return $status
 }
 
+remove_database() { docker rm -f "$CONTAINER" > /dev/null 2>&1 || true; }
+
 run
 status=$?
+phase_end "$status"
 if [ "$KEEP" = false ] && [ "$EXTERNAL" = false ]; then
-    docker rm -f "$CONTAINER" > /dev/null 2>&1 || true
+    timed "stop the database" remove_database
 fi
+phase_summary "G-index $VENDOR phases"
 echo "==== G-index $VENDOR: $([ $status -eq 0 ] && echo PASSED || echo FAILED)"
 exit $status
