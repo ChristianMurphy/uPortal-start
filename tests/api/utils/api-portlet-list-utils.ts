@@ -112,9 +112,14 @@ export async function getPortletList(
   return json;
 }
 
+/*
+ * POST a portlet-list that fails validation. `rule` is the end of the message, such as
+ * "must have 1 to 100 characters and no spaces."
+ */
 export async function createPortletListFailsWith409(
   request: APIRequestContext,
   inputTypeToFail: string,
+  rule: string,
   ownerUsername: string,
   portletListName: string,
   items: Array<Record<string, string>>
@@ -131,14 +136,18 @@ export async function createPortletListFailsWith409(
   );
   expect(responseCreation.status()).toEqual(409);
   expect(await responseCreation.json()).toEqual({
-    message: `Specified ${inputTypeToFail} is not the correct length or has invalid characters.`,
+    message: `Specified ${inputTypeToFail} ${rule}`,
   });
 }
 
+/*
+ * PUT a portlet-list change that fails validation. `rule` is the end of the message.
+ */
 export async function updatePortletListFailsWith409(
   request: APIRequestContext,
   portletListUuid: string,
   inputTypeToFail: string,
+  rule: string,
   ownerUsername: string,
   portletListName: string,
   items: Array<Record<string, string>>
@@ -155,7 +164,7 @@ export async function updatePortletListFailsWith409(
   );
   expect(responseCreation.status()).toEqual(409);
   expect(await responseCreation.json()).toEqual({
-    message: `Specified ${inputTypeToFail} is not the correct length or has invalid characters.`,
+    message: `Specified ${inputTypeToFail} ${rule}`,
   });
 }
 
