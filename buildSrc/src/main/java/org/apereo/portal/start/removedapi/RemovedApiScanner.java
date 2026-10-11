@@ -1,6 +1,5 @@
 package org.apereo.portal.start.removedapi;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -279,7 +278,7 @@ public final class RemovedApiScanner {
                 } else if (name.startsWith("WEB-INF/lib/") && name.endsWith(".jar")) {
                     String jar = name.substring("WEB-INF/lib/".length());
                     try (InputStream in = z.getInputStream(e)) {
-                        walkJar(jar, in.readAllBytes(), classes, jsps);
+                        walkJar(jar, in, classes, jsps);
                     }
                 } else if (jsps != null && JSP_FILE.matcher(name).matches()) {
                     try (InputStream in = z.getInputStream(e)) {
@@ -290,9 +289,10 @@ public final class RemovedApiScanner {
         }
     }
 
-    private void walkJar(String jar, byte[] bytes, ClassFileVisitor classes, TextFileVisitor jsps)
+    /** Streams the nested jar:  a WAR can hold jars of 100 MB and more (webjars), too big to buffer. */
+    private void walkJar(String jar, InputStream in, ClassFileVisitor classes, TextFileVisitor jsps)
             throws IOException {
-        try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+        try (ZipInputStream zin = new ZipInputStream(in)) {
             for (ZipEntry e = zin.getNextEntry(); e != null; e = zin.getNextEntry()) {
                 String name = e.getName();
                 if (name.endsWith(".class") && !name.startsWith("META-INF/versions/")) {
