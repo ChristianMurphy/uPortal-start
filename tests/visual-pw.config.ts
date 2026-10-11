@@ -11,7 +11,10 @@ const config: PlaywrightTestConfig = {
   ...base,
   testDir: "visual",
   testMatch: "**/*.visual.ts",
-  retries: 0,
+  // The guest page's load event sometimes never fires (runs 38106773735,
+  // 38110056978 and 38113631592, on either project, even after a warm-up);
+  // a retry loads it again. A snapshot difference fails both attempts.
+  retries: 1,
   // The first pages after the portal starts load its caches
   timeout: 60_000,
   globalSetup: "./visual/warm-up.ts",
