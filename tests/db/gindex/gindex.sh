@@ -359,7 +359,9 @@ workload() {
     {
         echo "### G-index workload ($VENDOR)"
         echo
-        echo "Portal start, $([ "$SUITE" = true ] && echo "the whole Playwright suite ($(grep -E '^ +[0-9]+ (passed|failed|flaky)' "$OUT/playwright.log" | tr -s ' ' | sed 's/^ //' | paste -sd, -)), ")the driver ($CONCURRENCY users for $DURATION s: $(python3 -c "import json; d=json.load(open('$OUT/driver.json')); print(f\"{d['requests']} requests, {d['logins']} logins, {d['errors']} errors\")" 2>/dev/null || echo 'no result')) and the analytics jobs; $elapsed s in all."
+        echo "Portal start, $([ "$SUITE" = true ] && echo "the whole Playwright suite ($(grep -E '^ +[0-9]+ (passed|failed|flaky)' "$OUT/playwright.log" | tr -s ' ' | sed 's/^ //' | paste -sd, -)), ")the driver ($CONCURRENCY users for $DURATION s: $(python3 -c "import json; d=json.load(open('$OUT/driver.json')); print(f\"{d['requests']} requests, {d['logins']} logins, {d['errors']} errors, p50 {d['p50Ms']} ms, p95 {d['p95Ms']} ms\")" 2>/dev/null || echo 'no result')) and the analytics jobs; $elapsed s in all."
+        # A pool with no free connection for maxWait fails the request (docs/connection-budget.md)
+        echo "Connection pool timeouts (\"Pool empty\") in Tomcat's logs: $(grep -rh 'Pool empty' .gradle/tomcat/logs 2>/dev/null | wc -l)."
         echo
         echo "| Job or path | Executions captured |"
         echo "| --- | ---: |"
