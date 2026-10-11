@@ -131,9 +131,11 @@ jobs:
         with:
           cache-provider: basic
       # `install` publishes to ~/.m2 on every uPortal build (an alias of publishToMavenLocal
-      # since Gradle 9); the tests already ran in uPortal's own CI
+      # since Gradle 9); the tests already ran in uPortal's own CI. -PquietCompile (uPortal's
+      # build.gradle, ignored by a ref without it) leaves the compiler warnings out of the log
+      # and keeps every compile error.
       - name: Build and install uPortal
-        run: ./gradlew -S --stacktrace --no-daemon --no-parallel install
+        run: ./gradlew -S --stacktrace --no-daemon --no-parallel -PquietCompile install
       - name: Read the uPortal version
         id: uportal
         env:
