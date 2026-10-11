@@ -1,6 +1,7 @@
 # Data changes made on purpose since the 5.17 baselines were recorded. dbVerify adds each row-count
 # delta to every vendor's baseline before comparing; see "Intended data changes" in
 # docs/db-upgrade-harness.md. One line per table: <TABLE> rows <+n|-n> <MOD reference>
+# A generator definition removed from the mappings: generators declared -table(<TABLE>) <MOD reference>
 #
 # Favorites, Popular Portlets, Search and the search launcher as Web Component channels: the Web
 # Component portlet type; webComponent.tagName and webComponent.moduleUrl on all four definitions,
@@ -11,3 +12,7 @@ UP_PORTLET_TYPE rows +1 MOD-I134
 UP_PORTLET_DEF_PARAM rows +9 MOD-I134
 UP_PORTLET_PREF rows -8 MOD-I134
 UP_PORTLET_PREF_VALUES rows -8 MOD-I134
+# Hibernate 5.2 (P2-3): the 49 @TableGenerator definitions in hibernate_sequences, each under the
+# name of the entity's @SequenceGenerator, are removed. Hibernate always used the sequence
+# definition, and no database ever had a hibernate_sequences table (MOD-D33, ADR 0006).
+generators declared -table(hibernate_sequences) MOD-D33

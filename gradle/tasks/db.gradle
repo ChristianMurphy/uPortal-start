@@ -248,20 +248,23 @@ task dbSnapshot {
 task dbVerify {
     group 'Database harness'
     description 'Compares build/db-harness/<vendor> with tests/db/snapshots/<dbBaseline>/<vendor> (-PdbBaseline, default 5.17), ' +
-            'plus the row-count deltas in tests/db/snapshots/<dbBaseline>/intended-changes.txt; fails on any drift'
+            'plus the row-count deltas and removed generator definitions in tests/db/snapshots/<dbBaseline>/intended-changes.txt; ' +
+            'fails on any drift'
     mustRunAfter dbSnapshot
 
     doLast {
         Map h = requireHarness()
         File baseline = harnessBaselineDir()
         File current = harnessOutputDir()
+        File intendedFile = new File(baseline.parentFile, SnapshotComparison.INTENDED_CHANGES)
         List<SnapshotComparison.IntendedChange> intended
         try {
-            intended = SnapshotComparison.readIntendedChanges(new File(baseline.parentFile, SnapshotComparison.INTENDED_CHANGES))
+            intended = SnapshotComparison.readIntendedChanges(intendedFile)
         } catch (IllegalArgumentException e) {
             throw new GradleException(e.message)
         }
-        SnapshotComparison result = SnapshotComparison.compare(baseline, current, h.sequenceValues, intended)
+        List<SnapshotComparison.DeclarationChange> declarations = SnapshotComparison.readDeclarationChanges(intendedFile)
+        SnapshotComparison result = SnapshotComparison.compare(baseline, current, h.sequenceValues, intended, declarations)
         List<String> report = result.report("Database harness: ${h.vendor} (${current}) compared with ${baseline}")
         File reportFile = new File(current, 'drift-report.txt')
         reportFile.setText(report.join('\n') + '\n', 'UTF-8')
