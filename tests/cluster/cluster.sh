@@ -303,6 +303,13 @@ get() {  # get <node> <jar> <path>: the response body; the status code goes to $
     curl -sS -b "$2" -c "$2" -o - -w '%{stderr}%{http_code}' "$(node_url "$1")$3" 2> "$OUT/status"
 }
 
+csrf_header() {  # csrf_header <node> <jar>: "<header>: <token>" for the session's POSTs under /api
+    local html
+    html=$(curl -sS -L -b "$2" -c "$2" "$(node_url "$1")/")
+    printf '%s: %s' "$(sed -n 's/.*<meta name="_csrf_header" content="\([^"]*\)".*/\1/p' <<< "$html" | head -n 1)" \
+        "$(sed -n 's/.*<meta name="_csrf" content="\([^"]*\)".*/\1/p' <<< "$html" | head -n 1)"
+}
+
 status_of() { tail -c 3 "$OUT/status"; }
 
 poll() {  # poll <seconds> <command...>: run the command every second until it succeeds
@@ -349,7 +356,7 @@ check_portlet_invalidation() {
     changed="$original (cluster $RANDOM)"
     sed "s#<title>$original</title>#<title>$changed</title>#" "$OUT/portlet-original.xml" > "$OUT/portlet-changed.xml"
     started=$(now_ms)
-    curl -sS -b "$a" -o /dev/null -w '%{http_code}' -F "file=@$OUT/portlet-changed.xml;type=text/xml" \
+    curl -sS -b "$a" -H "$(csrf_header a "$a")" -o /dev/null -w '%{http_code}' -F "file=@$OUT/portlet-changed.xml;type=text/xml" \
         "$(node_url a)/api/import" > "$OUT/status"
     if [ "$(status_of)" != 200 ] || ! title_is a "$a" "$changed"; then
         record invalidation-portlet FAIL "import on node A failed (HTTP $(status_of))"
@@ -361,7 +368,7 @@ check_portlet_invalidation() {
     else
         record invalidation-portlet FAIL "node B still showed '$(portlet_title_on b "$b")' 30 s after node A imported '$changed' (database: '$(sql "select portlet_title from up_portlet_def where portlet_fname = '$PORTLET_FNAME'")')$(late_by 270 title_is b "$b" "$changed"); $(view_state)"
     fi
-    curl -sS -b "$a" -o /dev/null -F "file=@$OUT/portlet-original.xml;type=text/xml" "$(node_url a)/api/import"
+    curl -sS -b "$a" -H "$(csrf_header a "$a")" -o /dev/null -F "file=@$OUT/portlet-original.xml;type=text/xml" "$(node_url a)/api/import"
 }
 
 has_tab_after_login() {  # has_tab_after_login <node> <jar> <tab>: a new session renders the tab
@@ -381,7 +388,7 @@ check_layout_invalidation() {
     logout b "$b"
     login a student "$a" || { record invalidation-layout FAIL "student login on node A failed"; return; }
     started=$(now_ms)
-    curl -sS -b "$a" -o "$OUT/add-tab.json" -w '%{http_code}' --data-urlencode "tabName=$tab" \
+    curl -sS -b "$a" -H "$(csrf_header a "$a")" -o "$OUT/add-tab.json" -w '%{http_code}' --data-urlencode "tabName=$tab" \
         --data-urlencode 'widths%5B%5D=100' "$(node_url a)/api/layout?action=addTab" > "$OUT/status"
     stored=$(sql "select count(*) from up_layout_struct where name = '$tab'")
     if [ "$(status_of)" != 200 ] || [ "$stored" != 1 ]; then
@@ -398,10 +405,9 @@ check_layout_invalidation() {
 }
 
 PERMISSION_FNAME=permissionsmanager
-# uPortal caches permission checks per node without replicating them
-# (AuthorizationImpl.PRINCIPAL_HAS_PERMISSION, 180 s, and
-# AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT, 300 s, in ehcache.xml): a revoked
-# permission is enforced on the other node only once those entries expire.
+# uPortal caches permission checks per node (AuthorizationImpl.PRINCIPAL_HAS_PERMISSION, 180 s,
+# and AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT, 300 s, in ehcache.xml). A change
+# clears both caches and the clear is replicated, so the other node enforces it at once.
 PERMISSION_BOUND_S=330
 # Sessions that checked the permission before the change
 PERMISSION_SESSION_BOUND_S=30
@@ -409,7 +415,8 @@ PERMISSION_SESSION_BOUND_S=30
 update_permission() {  # update_permission <jar> <GRANT|INHERIT>: student, SUBSCRIBE on the portlet
     local principal
     principal="$PERSON_TYPE.student"
-    curl -sS -b "$1" -o /dev/null -w '%{http_code}' -G "$(node_url a)/api/updatePermission" \
+    # POST with the CSRF token since uPortal 6.0 (it was a GET)
+    curl -sS -b "$1" -H "$(csrf_header a "$1")" -o /dev/null -w '%{http_code}' "$(node_url a)/api/updatePermission" \
         --data-urlencode "principal=$principal" --data-urlencode "principals%5B%5D=$principal" \
         --data-urlencode "assignment=$2" --data-urlencode owner=UP_PORTLET_SUBSCRIBE \
         --data-urlencode activity=SUBSCRIBE --data-urlencode "target=PORTLET_ID.$PORTLET_ID" > "$OUT/status"
