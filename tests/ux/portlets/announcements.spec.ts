@@ -71,13 +71,18 @@ test.describe("Announcements Admin Portlet", () => {
       page.getByRole("button", { name: "Save Announcement" })
     ).toBeVisible();
 
-    // TinyMCE editor should have initialized
-    await page.waitForTimeout(2000);
-    const mceState = await page.evaluate(() => {
-      const t = window.tinymce ?? window.tinyMCE;
-      return { editors: t?.editors?.length ?? 0 };
-    });
-    expect(mceState.editors).toBeGreaterThan(0);
+    // TinyMCE editor should have initialized: poll for it instead of a fixed
+    // 2-second wait (MOD-I345)
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const t = window.tinymce ?? window.tinyMCE;
+            return t?.editors?.length ?? 0;
+          }),
+        { message: "TinyMCE editors on the add announcement form" }
+      )
+      .toBeGreaterThan(0);
   });
 
   test("create, verify, and delete announcement", async ({ page }) => {
