@@ -95,6 +95,48 @@ schema stores timestamps as `DATETIME` without fractional seconds (MOD-I95), so 
 loses the milliseconds of four values: three lifecycle entries and one `lastPasswordChange`.
 `vendors/mysql.diff` and `vendors/mariadb.diff` record exactly that.
 
+## SQL Server: the fixture in windows-1252
+
+uPortal 5.17 creates `varchar` columns. On SQL Server's default collation they keep only the
+windows-1252 code page, and 5.17 stores other characters as `?` (MOD-I196). It then can't find a row
+again by such a name: the import of `PAGS Fixture Child 🌱` stops because the group it just
+inserted isn't found under that name. A UTF-8 collation doesn't help, because `varchar(n)` then
+counts bytes and the fixture's longest values no longer fit. So no 5.17 site on SQL Server holds the
+fixture as it is.
+
+When the 5.17 side of a run is SQL Server (in place, or the source of a copy), `equivalence.sh`
+converts the fixture and the reference with `tests/db/equivalence/code_page.py` before it starts.
+The same function, `to_code_page`, converts both: each character outside windows-1252 becomes one
+`?`, in file contents, numeric character references and file names. It leaves text already in
+windows-1252 unchanged. Both comparisons are exact: 5.17's export must equal the converted
+reference, and the export of the build under test must equal 5.17's. A copy into SQL Server uses
+the fixture unchanged, so it shows whether 6.0 on SQL Server keeps text outside windows-1252.
+
+The conversion changes these fixture fields:
+
+| Fixture file | Fields |
+| --- | --- |
+| `news-reader/fixture-unicode.pnd.xml` | `name`, `predefinedRoles/role` |
+| `uportal/fragment-definition/fixture-lo.fragment-definition.xml` | the audience's `attribute/@name` |
+| `uportal/fragment-layout/fixture-lo.fragment-layout.xml` | a tab's `folder/@name` |
+| `uportal/group_membership/Equipe_Unicode.group-membership.xml` | `children/group` |
+| `uportal/group_membership/Fixture_Category.group-membership.xml` | `name` |
+| `uportal/group_membership/Fixture_Root.group-membership.xml` | `name`, `description` |
+| `uportal/group_membership/Research_Group_CJK.group-membership.xml` | `name`, `description` |
+| `uportal/layout/fixture-zoe.layout.xml` | a tab's `folder/@name` |
+| `uportal/pags-group/PAGS_Fixture.pags-group.xml` | `members/member-name`, two `test-value`s |
+| `uportal/pags-group/PAGS_Fixture_Child.pags-group.xml` | `name` |
+| `uportal/permission_owner/FIXTURE_OWNER.permission-owner.xml` | `desc`, `activity/desc` |
+| `uportal/permission_set/Equipe_Unicode__BROWSE__UP_PORTLET_SUBSCRIBE.permission-set.xml` | `target/group` |
+| `uportal/permission_set/Fixture_Root__FIXTURE_ACT__FIXTURE_OWNER.permission-set.xml` | `principal/group`, `target/literal` |
+| `uportal/permission_set/Research_Group_CJK__MAX_INACTIVE__UP_SYSTEM.permission-set.xml` | `principal/group` |
+| `uportal/portlet-definition/fixture-rich-content.portlet-definition.xml` | `title`, `name`, `desc`, `category`, `parameter/description`, `permissions/permission/group`, `portlet-preference/name`, `portlet-preference/value` |
+| `uportal/user/fixture-zoe.user.xml` | the `sn`, `displayName` and `title` values |
+| `uportal/user/jose.mueller.user.xml` | the `displayName` value |
+
+`python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'` tests the conversion. The
+plan job of `migration-equivalence.yml` runs it.
+
 ## Reading a failure
 
 Each comparison writes a report in `build/db-equivalence/<run>/`. `reference-report.txt` compares
