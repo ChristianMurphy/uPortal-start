@@ -141,6 +141,16 @@ The conversion changes these fixture fields:
 `python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'` tests the conversion. The
 plan job of `migration-equivalence.yml` runs it.
 
+## Oracle: no 5.17 export
+
+uPortal 5.17's `dataExport` fails for every layout profile on Oracle (MOD-I200). Its
+`export-profile.crn` passes the profile's ids to Java methods that take a `long` or an `int`, and
+Oracle returns its `NUMBER` columns as `BigDecimal`, which Groovy doesn't convert. 6.0 converts
+them, but 5.17's export on Oracle can't be the comparison. When the 5.17 side of a run is Oracle
+(in place, or the source of a copy), `equivalence.sh` skips 5.17's export. The export of the build
+under test, masked like the reference, must then equal the reference, apart from
+`vendors/oracle.diff` if 5.17 stores the fixture differently on Oracle.
+
 ## Reading a failure
 
 Each comparison writes a report in `build/db-equivalence/<run>/`. `reference-report.txt` compares
