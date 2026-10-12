@@ -47,3 +47,5 @@ jobs:
         run: .github/scripts/gindex-changes.test.sh
       - name: Test the choice of the uPortal to build
         run: .github/scripts/choose-uportal.test.sh
+      - name: Test the wait for the portlets to register
+        run: .github/scripts/wait-for-portlets.test.sh

@@ -338,6 +338,120 @@ subprojects {
 }
 
 /*
+ * The bundled portlets that map their ids with Hibernate's "native" generator (and
+ * NotificationPortlet's JPA AUTO ids) draw them from one sequence, hibernate_sequence, on
+ * PostgreSQL and Oracle. The other databases give these tables identity columns. The schema
+ * export in the dataInit of Announcements, CalendarPortlet and NewsReaderPortlet drops and creates
+ * that sequence, so the sequence hands out again the ids that a portlet imported before it already
+ * uses. When Calendar's dataInit came last, Announcements' EMERGENCY topic took a used id and
+ * Announcements failed to start (MOD-I351, run 38160049629). After the dataInit tasks, this task
+ * moves the sequence past the highest id in every table that uses it. It never moves it back.
+ */
+Map<String, String> hibernateSequenceIds = [
+    // Announcements, CalendarPortlet, NewsReaderPortlet, BookmarksPortlet and FeedbackPortlet:
+    // <generator class="native"/> in their hibernate-mappings/*.hbm.xml
+    ANNOUNCEMENT: 'ANN_ID', TOPIC: 'TOPIC_ID', SUBSCRIPTION: 'SUB_ID',
+    CALENDAR_CONFIGURATION: 'CALENDAR_CONFIGURATION_ID', CALENDAR_STORE: 'CALENDAR_ID',
+    NEWS_CONFIGURATION: 'NEWS_CONFIGURATION_ID', NEWS_DEFINITION: 'NEWS_ID', NEWS_SET: 'SET_ID',
+    BOOKMARK_STORE: 'ENTRY_ID', BOOKMARK_PREFS: 'PREF_ID',
+    FEEDBACK_STORE: 'ITEM_ID',
+    // NotificationPortlet: @GeneratedValue(strategy = AUTO) on Hibernate 5
+    NOTICE_ACTION: 'ID', NOTICE_ADDRESSEE: 'ID', NOTICE_ATTRIBUTE: 'ID', NOTICE_ENTRY: 'ID',
+    NOTICE_EVENT: 'ID', NOTICE_RECIPIENT: 'ID',
+]
+
+task dataInitHibernateSequence {
+    group = 'Data'
+    description = 'PostgreSQL and Oracle: moves hibernate_sequence, which several bundled portlets share, past their highest id (MOD-I351)'
+    dependsOn portalProperties
+
+    doLast {
+        String serverBase = rootProject.ext['buildProperties'].getProperty('server.base')
+        String portalHome = rootProject.ext['buildProperties'].getProperty('portal.home')
+        Properties settings = new Properties()
+        file("${portalHome}/global.properties").withInputStream { settings.load(it) }
+        String url = settings.getProperty('hibernate.connection.url', '')
+        boolean postgres = url.startsWith('jdbc:postgresql:')
+        if (!postgres && !url.startsWith('jdbc:oracle:')) {
+            logger.lifecycle("hibernate_sequence: ${url} isn't PostgreSQL or Oracle, where the portlets share it; nothing to do")
+            return
+        }
+        // The JDBC driver the portal uses, from a deployed webapp (dataInit deploys first)
+        File lib = ['uPortal', 'Announcements', 'CalendarPortlet', 'NewsReaderPortlet']
+                .collect { file("${serverBase}/webapps/${it}/WEB-INF/lib") }.find { it.directory }
+        if (lib == null) {
+            throw new GradleException("No deployed webapp in ${serverBase}/webapps holds the JDBC driver; run tomcatDeploy first")
+        }
+        DbConnector connector = new DbConnector(lib.listFiles().findAll { it.name.endsWith('.jar') },
+                settings.getProperty('hibernate.connection.driver_class'), url,
+                settings.getProperty('hibernate.connection.username'), settings.getProperty('hibernate.connection.password'))
+        Connection c = connector.connect()
+        try {
+            Closure<Long> single = { String sql ->
+                c.createStatement().withCloseable { st ->
+                    st.executeQuery(sql).withCloseable { rs -> rs.next() ? rs.getObject(1) as Long : null }
+                }
+            }
+            Set<String> tables = new TreeSet<>(String.CASE_INSENSITIVE_ORDER)
+            c.metaData.getTables(null, c.schema, '%', ['TABLE'] as String[]).withCloseable { rs ->
+                while (rs.next()) tables << rs.getString('TABLE_NAME')
+            }
+            long highest = 0
+            String highestIn = 'none of the tables'
+            hibernateSequenceIds.each { String table, String column ->
+                if (!tables.contains(table)) return
+                Long max = single("select max(${column}) from ${table}")
+                if (max != null && max > highest) {
+                    highest = max
+                    highestIn = table
+                }
+            }
+            if (postgres) {
+                Long increment = single("select increment_by from pg_sequences where schemaname = current_schema() and sequencename = 'hibernate_sequence'")
+                if (increment == null) {
+                    logger.lifecycle('hibernate_sequence: no such sequence; nothing to do')
+                    return
+                }
+                // The value the next nextval() returns
+                Long next = single('select case when is_called then last_value + ' + increment + ' else last_value end from hibernate_sequence')
+                if (next > highest) {
+                    logger.lifecycle("hibernate_sequence: next value ${next}, above the highest id ${highest} (${highestIn})")
+                } else {
+                    // A pooled optimizer takes the value as the top of a block of 'increment' ids
+                    single("select setval('hibernate_sequence', ${highest + increment - 1})")
+                    logger.lifecycle("hibernate_sequence: moved from ${next} past the highest id ${highest} (${highestIn})")
+                }
+            } else {
+                Long increment = single("select increment_by from user_sequences where sequence_name = 'HIBERNATE_SEQUENCE'")
+                if (increment == null) {
+                    logger.lifecycle('hibernate_sequence: no such sequence; nothing to do')
+                    return
+                }
+                // Oracle hands out cached values below user_sequences.last_number, so take one
+                Long next = single('select hibernate_sequence.nextval from dual')
+                if (next > highest) {
+                    logger.lifecycle("hibernate_sequence: value ${next}, above the highest id ${highest} (${highestIn})")
+                } else {
+                    c.createStatement().withCloseable { it.execute("alter sequence hibernate_sequence restart start with ${highest + increment}") }
+                    logger.lifecycle("hibernate_sequence: moved from ${next} past the highest id ${highest} (${highestIn})")
+                }
+            }
+        } finally {
+            c.close()
+        }
+    }
+}
+
+// Every dataInit, uPortal's too: the harness runs only uPortal's, and the task's line in its log
+// shows that the task works on that database
+subprojects {
+    tasks.matching { it.name == 'dataInit' }.all { Task t ->
+        rootProject.tasks.dataInitHibernateSequence.mustRunAfter t
+        t.finalizedBy rootProject.tasks.dataInitHibernateSequence
+    }
+}
+
+/*
  * Copy migration (MOD-D11): copies a whole uPortal database into an empty uPortal schema, on the
  * same or another vendor, with uPortal's copy tool (org.jasig.portal:uPortal-db-migrate), then
  * positions the ID generators and verifies every table. See "Copy migration" in

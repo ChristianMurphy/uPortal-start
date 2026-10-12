@@ -102,19 +102,58 @@ stop_own_tomcat() {  # stop_own_tomcat <vendor>
 }
 
 start_portal() {  # start_portal <vendor>: start Tomcat on the vendor's database and wait for uPortal
-    local url="http://localhost:$HTTP_PORT/uPortal/"
+    local url="http://localhost:$HTTP_PORT/uPortal/" log="$ROOT/.gradle/tomcat/logs/portal/portal.log" offset=0
     use_vendor "$1"
+    [ ! -f "$log" ] || offset=$(wc -c < "$log" | tr -d ' ')
     gradle -PdbVendor="$1" tomcatStart || return 1
     for _ in $(seq 1 60); do
         if curl -s -o /dev/null -w "%{http_code}" "$url" | grep -qE "200|302"; then
             echo "uPortal is up at $url against $1"
-            return 0
+            # A page rendered before a portlet has registered breaks that portlet until Tomcat restarts
+            "$ROOT/.github/scripts/wait-for-portlets.sh" "$ROOT/.gradle/tomcat" "$offset" && return 0
+            stop_own_tomcat "$1"
+            return 1
         fi
         sleep 5
     done
     echo "uPortal did not answer at $url" >&2
     stop_own_tomcat "$1"
     return 1
+}
+
+# Database connections (MOD-I190): how many the portal and the bundled portlets hold at once, against
+# the server's max_connections less 10 for admin and monitoring tools (docs/connection-budget.md).
+# Report only: uPortal-start sets no connection budget yet.
+CONNECTION_LIMIT=
+
+start_connection_sampler() {  # start_connection_sampler <container> <file>: count client connections every second
+    local container="$1" file="$2" max
+    : > "$file"
+    max=$(docker exec "$container" psql -U uportal -d uportal -Atc "show max_connections" 2>/dev/null)
+    CONNECTION_LIMIT=
+    if [ -n "$max" ]; then CONNECTION_LIMIT=$((max - 10)); fi
+    (
+        while :; do
+            n=$(docker exec "$container" psql -U uportal -d uportal -Atc \
+                "select count(*) from pg_stat_activity where backend_type = 'client backend' and pid <> pg_backend_pid()" \
+                2>/dev/null) && echo "$(date -u +%H:%M:%S) $n" >> "$file"
+            sleep 1
+        done
+    ) &
+    SAMPLER_PID=$!
+}
+
+stop_connection_sampler() {  # stop_connection_sampler <file> <label>: report the peak
+    local file="$1" label="$2" peak samples
+    kill "$SAMPLER_PID" 2>/dev/null; wait "$SAMPLER_PID" 2>/dev/null
+    samples=$(wc -l < "$file")
+    peak=$(awk 'BEGIN { m = 0 } $2 > m { m = $2; t = $1 } END { print m " at " t }' "$file")
+    echo "Database connections ($label): peak ${peak:-0}, $samples samples," \
+        "server max_connections less 10: ${CONNECTION_LIMIT:-unknown}"
+    if [ -n "$CONNECTION_LIMIT" ] && [ "${peak%% *}" -gt "$CONNECTION_LIMIT" ]; then
+        github_annotation warning "$label: database connections near the server's limit" \
+            "Peak ${peak} connections, max_connections less 10 is $CONNECTION_LIMIT (docs/connection-budget.md)"
+    fi
 }
 
 github_annotation() {  # github_annotation <level> <title> <text>: on GitHub Actions only

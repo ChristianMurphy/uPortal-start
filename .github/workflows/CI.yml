@@ -159,6 +159,7 @@ jobs:
             echo "Portal did not become ready after 120s. Failing the build."
             exit 1
           fi
+          .github/scripts/wait-for-portlets.sh
       - name: Install npm dependencies
         run: npm ci
       - name: Find the Playwright version
