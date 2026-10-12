@@ -10,12 +10,28 @@ configurations {
     shared
 }
 
+/*
+ * Pluto's container API, container driver API and tag library go to Tomcat's shared/lib, where
+ * uPortal and every portlet webapp see them. uPortal builds them itself from the Apache Pluto
+ * 2.1.0-M3 sources (uPortal-pluto), with uPortal's fixes: a portlet requested before it has
+ * registered no longer stays out of service until Tomcat restarts (MOD-I350). A released uPortal
+ * 5.17 doesn't publish them, so with one of those shared/lib keeps Apache's 2.1.0-M3 jars.
+ * -PsharedPluto=uPortal or -PsharedPluto=apache chooses explicitly.
+ */
+String sharedPluto = findProperty('sharedPluto') ?: (uPortalVersion ==~ /5\.17\.\d+/ ? 'apache' : 'uPortal')
+List<String> sharedPlutoJars = [
+    uPortal: ['container-api', 'container-driver-api', 'taglib'].collect { "org.jasig.portal:uPortal-pluto-${it}:${uPortalVersion}" },
+    apache: ['container-api', 'container-driver-api', 'taglib'].collect { "org.apache.portals.pluto:pluto-${it}:${plutoVersion}" },
+][sharedPluto]
+if (sharedPlutoJars == null) {
+    throw new GradleException("sharedPluto is '${sharedPluto}'; use uPortal or apache")
+}
+
 dependencies {
     tomcat "org.apache.tomcat:tomcat:${tomcatVersion}@tar.gz"
     shared "javax.ccpp:ccpp:${ccppVersion}"
-    shared "org.apache.portals.pluto:pluto-container-api:${plutoVersion}"
-    shared "org.apache.portals.pluto:pluto-container-driver-api:${plutoVersion}"
-    shared "org.apache.portals.pluto:pluto-taglib:${plutoVersion}"
+    // Without their dependencies: the three jars depend only on each other, and uPortal's on JSpecify
+    sharedPlutoJars.each { shared(it) { transitive = false } }
     shared "org.apereo.service.persondir:person-directory-api:${personDirectoryVersion}"
     shared "${portletApiDependency}"
 }
@@ -101,7 +117,11 @@ task tomcatConfig() {
             filteringCharset = 'ISO-8859-1'  // Leaves every byte other than the tokens as-is
         }
 
-        // Add shared.loader dependencies
+        // Add shared.loader dependencies, after removing the Pluto jars an earlier tomcatConfig put
+        // there, Apache's or uPortal's, so that each Pluto class is there once (see sharedPluto)
+        delete fileTree("${serverHome}/shared/lib") {
+            include 'pluto-container-api-*.jar', 'pluto-container-driver-api-*.jar', 'pluto-taglib-*.jar', 'uPortal-pluto-*.jar'
+        }
         copy {
             from configurations.shared
             into "${serverHome}/shared/lib"
