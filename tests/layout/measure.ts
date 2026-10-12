@@ -169,11 +169,11 @@ function visibleBox(element: Element): Box {
     const contains = position !== "absolute" || style.position !== "static";
     if (contains) {
       const clip = clipBox(ancestor);
-      if (style.overflowX !== "visible") {
+      if (hides(style.overflowX)) {
         box.left = Math.max(box.left, clip.left);
         box.right = Math.min(box.right, clip.right);
       }
-      if (style.overflowY !== "visible") {
+      if (hides(style.overflowY)) {
         box.top = Math.max(box.top, clip.top);
         box.bottom = Math.min(box.bottom, clip.bottom);
       }
