@@ -758,7 +758,7 @@ jobs:
       - name: Download the uPortal build
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: uportal-maven-local
+          name: ${{ needs.uportal.outputs.artifact }}
           path: ~/.m2/repository/org/jasig/portal
       - name: Bootstrap gradle.properties for the uPortal build
         env:
