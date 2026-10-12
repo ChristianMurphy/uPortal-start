@@ -102,13 +102,17 @@ stop_own_tomcat() {  # stop_own_tomcat <vendor>
 }
 
 start_portal() {  # start_portal <vendor>: start Tomcat on the vendor's database and wait for uPortal
-    local url="http://localhost:$HTTP_PORT/uPortal/"
+    local url="http://localhost:$HTTP_PORT/uPortal/" log="$ROOT/.gradle/tomcat/logs/portal/portal.log" offset=0
     use_vendor "$1"
+    [ ! -f "$log" ] || offset=$(wc -c < "$log" | tr -d ' ')
     gradle -PdbVendor="$1" tomcatStart || return 1
     for _ in $(seq 1 60); do
         if curl -s -o /dev/null -w "%{http_code}" "$url" | grep -qE "200|302"; then
             echo "uPortal is up at $url against $1"
-            return 0
+            # A page rendered before a portlet has registered breaks that portlet until Tomcat restarts
+            "$ROOT/.github/scripts/wait-for-portlets.sh" "$ROOT/.gradle/tomcat" "$offset" && return 0
+            stop_own_tomcat "$1"
+            return 1
         fi
         sleep 5
     done
