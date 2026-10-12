@@ -8,13 +8,13 @@ import {
 
 /*
  * MOD-D50: web components come in English, Spanish and French. Each test
- * signs in as a user whose locale is Spanish or French, set through the User
- * Locales Selector portlet as a person would, and finds a translated text in
+ * signs in as a user whose locale is Spanish or French, saved through the
+ * locale API that the User Locales Selector uses, and finds a translated text in
  * <up-favorites> (/p/favorites) and <up-popular-portlets>
  * (/p/popular-portlets). The component renders its English defaults first,
  * then the texts /api/v6-0/messages returns in the user's locale.
  *
- * The selector stores the locale for the user, so the tests use an account of
+ * The portal stores the locale for the user, so the tests use an account of
  * their own: another spec signing in as a shared user while a locale is set
  * would see the portal in Spanish or French. The account is imported once
  * (re-importing replaces it), each test sets the locale and puts back the one
@@ -46,8 +46,6 @@ const LOCALE_USER_XML = `<?xml version="1.0" encoding="UTF-8"?>
     </attribute>
 </user>
 `;
-
-const SELECTOR_URL = `${config.url}p/user-locales-selector`;
 
 /* One translated text per component and locale */
 const CASES = [
@@ -94,9 +92,8 @@ async function asAdmin(
 }
 
 /**
- * The user's locale as the selector names it, such as "en_US". The selector
- * does not mark it, so this reads the locale attribute the portal gives a web
- * component ("en-US").
+ * The user's locale as the locale API names it, such as "en_US", read from
+ * the locale attribute the portal gives a web component ("en-US").
  */
 async function currentLocale(
   page: Page,
@@ -111,19 +108,16 @@ async function currentLocale(
   return (tag ?? "").replace("-", "_");
 }
 
-/** Chooses a locale in the User Locales Selector, in whatever language it shows. */
-async function chooseLocale(page: Page, locale: string): Promise<void> {
-  await waitForPortalRequestsToSettle(page);
-  await page.goto(SELECTOR_URL);
-  const form = page.locator(".loc-sel form");
-  await form.locator(`input[name="locale"][value="${locale}"]`).check();
-  await Promise.all([
-    page.waitForLoadState("load"),
-    form.locator('input[type="submit"][name="_eventId_updateLocale"]').click(),
-  ]);
-  await expect(
-    page.locator(`.loc-sel input[name="locale"][value="${locale}"]`),
-  ).toBeChecked();
+/** Saves the signed-in user's locale through the API the selector uses. */
+async function chooseLocale(page: Page, code: string): Promise<void> {
+  const response = await page.request.put<unknown>(
+    `${config.url}api/v6-0/locale`,
+    {
+      data: { code },
+      headers: await sessionCsrfHeaders(page.request),
+    },
+  );
+  expect(response.status(), `PUT /api/v6-0/locale ${code}`).toBe(200);
 }
 
 test.beforeAll(async ({ browser }) => {
