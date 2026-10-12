@@ -45,6 +45,15 @@ async function openChoices(page: Page): Promise<Locator> {
   if ((await customize.getAttribute("aria-expanded")) !== "true") {
     await customize.click();
   }
+  /*
+   * The theme slides the panel open over 300 ms, with overflow: hidden on it
+   * until the slide ends. Until then the button below is clipped and moving,
+   * and a click can miss it.
+   */
+  await expect(page.locator("#customizeOptions")).not.toHaveAttribute(
+    "style",
+    /overflow/,
+  );
   const content = channel(page);
   await content.getByText("Change Background Image").click();
   await expect(content.getByText("Mountain", { exact: true })).toBeVisible();
