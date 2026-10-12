@@ -290,12 +290,6 @@ jobs:
         env:
           UPORTAL_VERSION: ${{ needs.uportal.outputs.version }}
         run: ls -l ".gradle/tomcat/webapps/uPortal/WEB-INF/lib/uPortal-core-$UPORTAL_VERSION.jar"
-      # Diagnosis of MOD-I340, temporary (test-speed branch): the access log also records each
-      # request's milliseconds (%D), for the timings step below. Fails if the pattern didn't change.
-      - name: Time each request in the access log (diagnosis)
-        run: |
-          sed -i 's/&quot;%{User-Agent}i&quot;"/\&quot;%{User-Agent}i\&quot; %D"/' .gradle/tomcat/conf/server.xml
-          grep ' %D"' .gradle/tomcat/conf/server.xml
       - name: Start Tomcat
         run: ./gradlew -i tomcatStart
       - name: Wait for portal
@@ -324,10 +318,6 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
         run: npx playwright test --config=tests/uportal-pw.config.ts
-      # Diagnosis of MOD-I340, temporary (test-speed branch)
-      - name: Show the portletList timings (diagnosis)
-        if: ${{ !cancelled() }}
-        run: python3 .github/scripts/portlet-list-timings.py hsqldb
       - name: Show Tomcat startup errors
         if: failure()
         run: .github/scripts/tomcat-log-summary.sh
@@ -616,12 +606,6 @@ jobs:
         env:
           VENDOR: ${{ matrix.vendor }}
         run: tests/db/harness.sh --full-suite "$VENDOR" -- -PdbWaitSeconds=600
-      # Diagnosis of MOD-I340, temporary (test-speed branch)
-      - name: Show the portletList timings (diagnosis)
-        if: ${{ !cancelled() }}
-        env:
-          VENDOR: ${{ matrix.vendor }}
-        run: python3 .github/scripts/portlet-list-timings.py "$VENDOR"
       - name: Show Tomcat startup errors
         if: failure()
         run: .github/scripts/tomcat-log-summary.sh
