@@ -75,6 +75,29 @@ async function tabs(page: Page): Promise<Record<string, string>> {
   });
 }
 
+/*
+ * The calendar's mini view fetches its events after the page has loaded, from
+ * feeds on the internet. Where they answer (CI) its event list spills at phone
+ * widths; where they don't, the list says "No events". The feed is fixed here
+ * so the list is the same in every run: one all-day event tomorrow, as the
+ * quickstart's US holidays calendar gave in CI.
+ */
+const CALENDAR_EVENTS = {
+  dateMap: {
+    tomorrow: [
+      { event: { allDay: true, summary: "Columbus Day" }, colorIndex: 0 },
+    ],
+  },
+  dateNames: { tomorrow: "Tomorrow" },
+  errors: [],
+};
+
+async function serveCalendarEvents(page: Page): Promise<void> {
+  await page.route(/\/p\/calendar\.[^/?]+\/[^?]*\.resource\.uP/, (route) =>
+    route.fulfill({ json: CALENDAR_EVENTS }),
+  );
+}
+
 async function open(page: Page, url: string): Promise<void> {
   await page.goto(url);
   await waitForPortalRequestsToSettle(page);
@@ -97,6 +120,7 @@ for (const width of WIDTHS) {
     for (const visitor of VISITORS) {
       test(visitor.name, async ({ page }, testInfo) => {
         test.setTimeout(300_000);
+        await serveCalendarEvents(page);
         await arrive(page, visitor);
         const urls: Record<string, string> = { ...(await tabs(page)) };
         for (const [name, path] of Object.entries(visitor.pages)) {
