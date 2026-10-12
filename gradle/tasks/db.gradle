@@ -344,8 +344,8 @@ subprojects {
  * export in the dataInit of Announcements, CalendarPortlet and NewsReaderPortlet drops and creates
  * that sequence, so the sequence hands out again the ids that a portlet imported before it already
  * uses. When Calendar's dataInit came last, Announcements' EMERGENCY topic took a used id and
- * Announcements failed to start (MOD-I351, run 38160049629). After the portlets' dataInit, this
- * task moves the sequence past the highest id in every table that uses it. It never moves it back.
+ * Announcements failed to start (MOD-I351, run 38160049629). After the dataInit tasks, this task
+ * moves the sequence past the highest id in every table that uses it. It never moves it back.
  */
 Map<String, String> hibernateSequenceIds = [
     // Announcements, CalendarPortlet, NewsReaderPortlet, BookmarksPortlet and FeedbackPortlet:
@@ -442,12 +442,12 @@ task dataInitHibernateSequence {
     }
 }
 
+// Every dataInit, uPortal's too: the harness runs only uPortal's, and the task's line in its log
+// shows that the task works on that database
 subprojects {
     tasks.matching { it.name == 'dataInit' }.all { Task t ->
         rootProject.tasks.dataInitHibernateSequence.mustRunAfter t
-        if (t.project.name != 'uPortal') {
-            t.finalizedBy rootProject.tasks.dataInitHibernateSequence
-        }
+        t.finalizedBy rootProject.tasks.dataInitHibernateSequence
     }
 }
 
