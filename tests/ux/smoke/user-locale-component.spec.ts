@@ -56,7 +56,7 @@ async function restoreEnglish(page: Page): Promise<void> {
   await expect(element.getByRole("radio")).toHaveCount(8);
   const header = (await element.getAttribute("csrf-header")) ?? "";
   const token = (await element.getAttribute("csrf-token")) ?? "";
-  const restored = await page.request.put(API, {
+  const restored = await page.request.put<unknown>(API, {
     data: { code: "en_US" },
     headers: { [header]: token },
   });
