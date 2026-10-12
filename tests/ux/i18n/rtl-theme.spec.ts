@@ -1,7 +1,8 @@
-import { test, expect, Page } from "@playwright/test";
+import { test, expect, APIResponse, Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { config } from "../../general-config";
 import {
+  sessionCsrfHeaders,
   trackPortalRequests,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
@@ -23,7 +24,8 @@ import {
  * English; only the direction changes.
  *
  * The visitor is a guest, whose locale lasts for the browser session, so
- * the test changes nothing for other specs.
+ * the test changes nothing for other specs. ar-XB is a test locale, which
+ * the portal offers only when deployed with -PtestPortalLocales=ar_XB.
  */
 
 const WELCOME = `${config.url}f/welcome/normal/render.uP`;
@@ -35,21 +37,27 @@ const LOCALES = [
 ] as const;
 
 /*
- * The locale selector offers the portal's locales (portal_locales). A test
- * locale is chosen by giving one of its choices the test locale's code; the
- * flow takes any locale code.
+ * The locale API (PUT /api/v6-0/locale) takes the portal's locales only
+ * (portal_locales). The release doesn't offer ar-XB: CI's portals add it with
+ * -PtestPortalLocales=ar_XB (gradle/tasks/tomcat.gradle). Elsewhere the spec
+ * skips and says so.
  */
 async function chooseLocale(page: Page, code: string): Promise<void> {
-  await page.goto(`${config.url}p/user-locales-selector/max/render.uP`);
-  await page
-    .locator('input[name="locale"]')
-    .first()
-    .evaluate((input: HTMLInputElement, value) => {
-      input.value = value;
-      input.checked = true;
-    }, code);
-  await page.locator('input[name="_eventId_updateLocale"]').click();
-  await page.waitForLoadState("load");
+  const api = `${config.url}api/v6-0/locale`;
+  await page.request.get(config.url);
+  const offered: APIResponse<{ locales: { code: string }[] }> =
+    await page.request.get(api);
+  const { locales } = await offered.json();
+  const codes = locales.map((locale) => locale.code);
+  test.skip(
+    !codes.includes(code),
+    `The portal doesn't offer ${code}; deploy it with -PtestPortalLocales=${code}`,
+  );
+  const response = await page.request.put<unknown>(api, {
+    data: { code },
+    headers: await sessionCsrfHeaders(page.request),
+  });
+  expect(response.status(), `PUT ${api} ${code}`).toBe(200);
 }
 
 async function open(page: Page, url: string): Promise<void> {
@@ -121,7 +129,11 @@ for (const { code, lang, rtl } of LOCALES) {
       const skins = await page
         .locator('link[rel="stylesheet"][href*="/skins/respondr/defaultSkin"]')
         .evaluateAll((links) =>
-          links.map((link) => new URL((link as HTMLLinkElement).href).pathname),
+          links.map(
+            (link) =>
+              new URL(link.getAttribute("href") ?? "", document.baseURI)
+                .pathname,
+          ),
         );
       expect(skins).toEqual([
         `/uPortal/media/skins/respondr/defaultSkin${rtl ? "-rtl" : ""}.css`,
