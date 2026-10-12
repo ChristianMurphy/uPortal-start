@@ -1,4 +1,5 @@
 import { test, expect, Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 import { config } from "../../general-config";
 import {
   trackPortalRequests,
@@ -184,4 +185,35 @@ test.describe("Respondr in ar-XB, layout", () => {
       expect(added, `checks: ${CHECKS.join(", ")}`).toEqual([]);
     });
   }
+});
+
+/** axe's violations (WCAG 2.1 A and AA, as in tests/a11y) as "rule: node" */
+async function violations(page: Page): Promise<string[]> {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  return results.violations.flatMap((violation) =>
+    violation.nodes.map(
+      (node) =>
+        `${violation.id}: ${node.target.join(" > ").replaceAll(/\d+/g, "#")}`,
+    ),
+  );
+}
+
+/*
+ * axe on the mirrored page: it has no violation that the same page doesn't
+ * have in en-US (the axe baseline in tests/a11y covers en-US).
+ */
+test("Respondr in ar-XB has no accessibility violation that en-US lacks", async ({
+  page,
+}) => {
+  await open(page, WELCOME);
+  const leftToRight = new Set(await violations(page));
+
+  await chooseLocale(page, "ar_XB");
+  await open(page, WELCOME);
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  const rightToLeft = await violations(page);
+  const added = rightToLeft.filter((violation) => !leftToRight.has(violation));
+  expect(added).toEqual([]);
 });
