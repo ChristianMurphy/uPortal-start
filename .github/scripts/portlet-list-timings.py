@@ -23,8 +23,8 @@ def summary(values):
     values = sorted(values)
     p90 = values[min(len(values) - 1, int(len(values) * 0.9))]
     over = sum(1 for v in values if v > 3000)
-    return (f"n={len(values)} median={statistics.median(values):.0f} p90={p90} "
-            f"max={values[-1]} over3s={over}")
+    return (f"n={len(values)} total={sum(values)} median={statistics.median(values):.0f} "
+            f"p90={p90} max={values[-1]} over3s={over}")
 
 
 lines = []

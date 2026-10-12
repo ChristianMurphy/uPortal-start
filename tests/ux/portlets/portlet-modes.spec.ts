@@ -171,20 +171,60 @@ const IN_FLIGHT_NOTE = "requests still in flight";
  */
 function trackScriptRequests(page: Page): () => string[] {
   const inFlight = new Set<Request>();
+  const allToPortal = new Set<Request>();
+  allPortalRequests.set(page, allToPortal);
   page.on("request", (request) => {
-    if (
-      ["xhr", "fetch"].includes(request.resourceType()) &&
-      new URL(request.url()).origin === PORTAL_ORIGIN
-    ) {
+    if (new URL(request.url()).origin !== PORTAL_ORIGIN) return;
+    allToPortal.add(request);
+    if (["xhr", "fetch"].includes(request.resourceType())) {
       inFlight.add(request);
     }
   });
   const finished = (request: Request): void => {
     inFlight.delete(request);
+    allToPortal.delete(request);
   };
-  page.on("requestfinished", finished);
+  page.on("requestfinished", (request) => {
+    finished(request);
+    noteSlowPortletList(request);
+  });
   page.on("requestfailed", finished);
   return () => [...inFlight].map((request) => request.url());
+}
+
+/*
+ * Diagnosis of MOD-I340, temporary (test-speed branch): every request to the portal that a
+ * page has in flight, of any type, and for each /api/portletList that took over 3 s, when the
+ * browser sent it and when the answer began, from Playwright's timing.
+ */
+const allPortalRequests = new WeakMap<Page, Set<Request>>();
+
+function noteSlowPortletList(request: Request): void {
+  if (!request.url().endsWith("/api/portletList")) return;
+  const timing = request.timing();
+  if (timing.responseEnd < 3000) return;
+  test.info().annotations.push({
+    type: "MOD-I340 slow portletList",
+    description:
+      `sent after ${Math.round(timing.requestStart)} ms, first byte after ` +
+      `${Math.round(timing.responseStart)} ms, done after ${Math.round(timing.responseEnd)} ms`,
+  });
+}
+
+function otherPortalRequests(page: Page): string {
+  const others = [...(allPortalRequests.get(page) ?? [])].filter(
+    (request) => !["xhr", "fetch"].includes(request.resourceType()),
+  );
+  return (
+    `${others.length} other requests to the portal in flight: ` +
+    others
+      .slice(0, 8)
+      .map(
+        (request) =>
+          `${request.resourceType()} ${new URL(request.url()).pathname}`,
+      )
+      .join(", ")
+  );
 }
 
 /*
@@ -206,7 +246,7 @@ async function settle(
     const pending = scriptRequests().join(" ");
     test.info().annotations.push({
       type: IN_FLIGHT_NOTE,
-      description: `after 3 s on ${page.url()}: ${pending}`,
+      description: `after 3 s on ${page.url()}: ${pending} (${otherPortalRequests(page)})`,
     });
   }
 }
