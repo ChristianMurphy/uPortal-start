@@ -55,6 +55,14 @@ configurations {
 
 dataInit {
     /*
+     * The portlets' dataInit tasks run one at a time (GradleImportExportPlugin). This fixes their
+     * order, CalendarPortlet, NewsReaderPortlet, Announcements, so that every run gives the same
+     * ids (MOD-I351). On PostgreSQL and Oracle the schema export of each of the three drops and
+     * creates the hibernate_sequence they share, and the root task dataInitHibernateSequence then
+     * moves it past their ids.
+     */
+    mustRunAfter ':overlays:NewsReaderPortlet:dataInit'
+    /*
      * Drop (if present) then create the Hibernate-managed schema.
      */
     doLast {
