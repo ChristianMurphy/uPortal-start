@@ -382,6 +382,16 @@
             "visible": false
         },
         {
+            "id": "entity-type-and-id-hash-escapes",
+            "path": "/uPortal/api/*",
+            "field": "body",
+            "detail": "^\\$\\.[A-Za-z0-9_.\\[\\]]*\\.typeAndIdHash: \"(group|person)_[^\"]*\" -> \"(group|person)_([A-Za-z0-9]|_[0-9a-f]+_)*\"$",
+            "reason": "uPortal a939af93 gives each principal its own permission key: JsonEntityBean.getTypeAndIdHash used to turn every character outside ASCII letters, digits and _ into \"__\", so \"pags.Café\" and \"pags.Cafè\", or \"a.b\" and \"a_b\", got the same key. It now writes each such character, _ included, as _<hex code point>_: \"group_pags__Authenticated__Users\" becomes \"group_pags_2e_Authenticated_20_Users\" and \"person_admin__lo\" becomes \"person_admin_2d_lo\". /api/entities.json, /api/entities/group/*.json and /api/permissions/principals.json return the field.",
+            "log": "uPortal a939af93",
+            "visible": true,
+            "upgrading": "Entity keys (typeAndIdHash) spell out every character"
+        },
+        {
             "id": "skin-css-pinned-compilers",
             "path": "/uPortal/media/skins/respondr/*.css",
             "field": "body",
