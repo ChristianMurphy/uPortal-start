@@ -1,6 +1,10 @@
 import { test, expect, Page } from "@playwright/test";
 import { config } from "../../general-config";
-import { loginViaUrl, logout } from "../utils/ux-general-utils";
+import {
+  loginViaUrl,
+  logout,
+  sessionCsrfHeaders,
+} from "../utils/ux-general-utils";
 
 /*
  * Search as web components (uPortal MOD-D18): the header's search-launcher
@@ -33,16 +37,18 @@ async function openSearch(page: Page, query: string): Promise<void> {
 const UNICODE_QUERY = "Zoë Ñandú 李小龍 😀";
 
 /**
- * Stores the signed-in user's locale (es_ES, fr_FR, en_US) through the locale
- * selector channel, as a user would.
+ * Stores the signed-in user's locale (es_ES, fr_FR, en_US) through the API
+ * the User Locales Selector saves it with (PUT /api/v6-0/locale).
  */
 async function setUserLocale(page: Page, code: string): Promise<void> {
-  await page.goto(`${config.url}p/user-locales-selector/max`);
-  await page.locator(`input[name="locale"][value="${code}"]`).check();
-  await Promise.all([
-    page.waitForLoadState("load"),
-    page.locator('input[name="_eventId_updateLocale"]').click(),
-  ]);
+  const response = await page.request.put<unknown>(
+    `${config.url}api/v6-0/locale`,
+    {
+      data: { code },
+      headers: await sessionCsrfHeaders(page.request),
+    },
+  );
+  expect(response.status(), `PUT /api/v6-0/locale ${code}`).toBe(200);
 }
 
 test.describe("Search web components", () => {
