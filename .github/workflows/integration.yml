@@ -259,7 +259,9 @@ jobs:
         run: |
           cp gradle.properties.example gradle.properties
           sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
-          grep '^uPortalVersion=' gradle.properties
+          # The ar-XB test locale for the right-to-left spec (tests/ux/i18n/rtl-theme.spec.ts)
+          echo "testPortalLocales=ar_XB" >> gradle.properties
+          grep -E '^(uPortalVersion|testPortalLocales)=' gradle.properties
       - name: Setup Java
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -565,7 +567,9 @@ jobs:
         run: |
           cp gradle.properties.example gradle.properties
           sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
-          grep '^uPortalVersion=' gradle.properties
+          # The ar-XB test locale for the right-to-left spec (tests/ux/i18n/rtl-theme.spec.ts)
+          echo "testPortalLocales=ar_XB" >> gradle.properties
+          grep -E '^(uPortalVersion|testPortalLocales)=' gradle.properties
       - name: Setup Java
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -828,7 +832,9 @@ jobs:
         run: |
           cp gradle.properties.example gradle.properties
           sed -i "s/^uPortalVersion=.*/uPortalVersion=$UPORTAL_VERSION/" gradle.properties
-          grep '^uPortalVersion=' gradle.properties
+          # The ar-XB test locale for the right-to-left spec (tests/ux/i18n/rtl-theme.spec.ts)
+          echo "testPortalLocales=ar_XB" >> gradle.properties
+          grep -E '^(uPortalVersion|testPortalLocales)=' gradle.properties
       - name: Setup Java
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:

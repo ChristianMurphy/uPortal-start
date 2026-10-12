@@ -69,6 +69,11 @@ waroverlayPluginVersion=0.9.3
 #casServerUrl=https://cas.example.edu/cas
 #casHttpPort=8090
 
+# Test locales that users may choose besides uPortal's own, for the Playwright specs:  ar_XB
+# is the right-to-left pseudo-locale of tests/i18n (tests/ux/i18n/rtl-theme.spec.ts).  Not for
+# production.  tomcatConfig (and so portalInit) appends them to portal_locales in portal.home.
+#testPortalLocales=ar_XB
+
 org.gradle.parallel=true
 
 # These properties control image & version settings of Docker images built by the CLI.

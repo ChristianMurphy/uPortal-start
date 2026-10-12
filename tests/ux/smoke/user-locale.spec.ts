@@ -4,6 +4,7 @@ import {
   loginViaUrl,
   logout,
   waitForPortalRequestsToSettle,
+  offeredTestLocales,
 } from "../utils/ux-general-utils";
 
 /*
@@ -86,7 +87,10 @@ test.describe("User locale selector", () => {
         page.getByRole("heading", { name: "Set Language Preference" }),
       ).toBeVisible();
       const radios = page.getByRole("radio");
-      await expect(radios).toHaveCount(ENGLISH_LABELS.length);
+      const testLocales = await offeredTestLocales(page.request);
+      await expect(radios).toHaveCount(
+        ENGLISH_LABELS.length + testLocales.length,
+      );
       for (const label of ENGLISH_LABELS) {
         await expect(page.getByRole("radio", { name: label })).toBeVisible();
       }
@@ -129,7 +133,10 @@ test.describe("User locale selector", () => {
 
   test("a guest's choice lasts only the session", async ({ page, browser }) => {
     await openSelector(page);
-    await expect(page.getByRole("radio")).toHaveCount(ENGLISH_LABELS.length);
+    const testLocales = await offeredTestLocales(page.request);
+    await expect(page.getByRole("radio")).toHaveCount(
+      ENGLISH_LABELS.length + testLocales.length,
+    );
     // A new session has no chosen language, so the language the page is in
     // is checked (the 5.17 portlet checked nothing, MOD-I322)
     await expect(page.getByRole("radio", { checked: true })).toHaveCount(1);

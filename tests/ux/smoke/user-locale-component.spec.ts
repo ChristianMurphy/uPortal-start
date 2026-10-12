@@ -4,6 +4,7 @@ import {
   loginViaUrl,
   logout,
   waitForPortalRequestsToSettle,
+  offeredTestLocales,
 } from "../utils/ux-general-utils";
 
 /*
@@ -14,6 +15,14 @@ import {
  */
 const URL = `${config.url}p/user-locales-selector`;
 const API = `${config.url}api/v6-0/locale`;
+// The release's locales (uPortal's portal_locales)
+const RELEASE_LOCALES = 8;
+
+/** The test locales the portal offers too, such as ar_XB on CI's portals */
+async function testLocaleCount(page: Page): Promise<number> {
+  const testLocales = await offeredTestLocales(page.request);
+  return testLocales.length;
+}
 const MODULE_SCRIPT =
   'script[type="module"][src*="/webcomponents/assets/up-user-locale-"]';
 
@@ -53,7 +62,9 @@ async function restoreEnglish(page: Page): Promise<void> {
   await page.unrouteAll({ behavior: "wait" });
   await page.goto(URL);
   const element = page.locator("up-user-locale");
-  await expect(element.getByRole("radio")).toHaveCount(8);
+  await expect(element.getByRole("radio")).toHaveCount(
+    RELEASE_LOCALES + (await testLocaleCount(page)),
+  );
   const header = (await element.getAttribute("csrf-header")) ?? "";
   const token = (await element.getAttribute("csrf-token")) ?? "";
   const restored = await page.request.put<unknown>(API, {
@@ -85,7 +96,9 @@ test.describe("User locale web component", () => {
     await expect(
       page.locator(".up-portlet-titlebar .portlet-title"),
     ).toContainText("User Locales Selector");
-    await expect(element.getByRole("radio")).toHaveCount(8);
+    await expect(element.getByRole("radio")).toHaveCount(
+      RELEASE_LOCALES + (await testLocaleCount(page)),
+    );
   });
 
   test("its API needs the CSRF token and takes only the portal's locales", async ({
@@ -93,7 +106,9 @@ test.describe("User locale web component", () => {
   }) => {
     await page.goto(URL);
     const element = page.locator("up-user-locale");
-    await expect(element.getByRole("radio")).toHaveCount(8);
+    await expect(element.getByRole("radio")).toHaveCount(
+      RELEASE_LOCALES + (await testLocaleCount(page)),
+    );
     const header = (await element.getAttribute("csrf-header")) ?? "";
     const token = (await element.getAttribute("csrf-token")) ?? "";
 

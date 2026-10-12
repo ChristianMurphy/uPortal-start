@@ -141,6 +141,28 @@ task tomcatConfig() {
             }
             filteringCharset = 'ISO-8859-1'
         }
+
+        /*
+         * Test locales:  -PtestPortalLocales=ar_XB lets users choose locales that the release
+         * doesn't offer, such as the right-to-left pseudo-locale ar-XB (MOD-D51, MOD-I234).  It
+         * appends them to uPortal's portal_locales in ${portal.home}/uPortal.properties, whose
+         * later lines win.  Off unless the property is set:  CI's Playwright jobs set it, and the
+         * quickstart and production don't.
+         */
+        String testLocales = findProperty('testPortalLocales')
+        if (testLocales) {
+            // uPortal's own list (portal.properties); the test locales come after it
+            String portalLocales = 'en_US,fr_FR,es_ES,ja_JP,sv_SE,de_DE,mk_MK,lv_LV'
+            File uPortalProperties = file("${portalHomeDir}/uPortal.properties")
+            uPortalProperties.append("""
+
+##
+## Test locales (-PtestPortalLocales=${testLocales}); not for production.
+##
+org.apereo.portal.i18n.LocaleManager.portal_locales=${portalLocales},${testLocales}
+""", 'ISO-8859-1')
+            logger.lifecycle("Added the test locales ${testLocales} to portal_locales in ${uPortalProperties}")
+        }
     }
 }
 

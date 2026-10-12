@@ -1,5 +1,6 @@
 import { expect, Page, APIRequestContext, Locator } from "@playwright/test";
 import { config } from "../../general-config";
+import { PSEUDO_LOCALES } from "../../i18n/pseudo-locales";
 
 interface BootstrapDropdownInstance {
   show(): void;
@@ -395,4 +396,24 @@ export async function openDropdown(toggle: Locator): Promise<void> {
     bs.Dropdown.getOrCreateInstance(element).show();
   });
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
+
+/**
+ * The pseudo-locales of tests/i18n that the portal offers besides the
+ * release's locales, as locale codes (ar_XB).  A portal deployed with
+ * -PtestPortalLocales=ar_XB offers ar_XB; the quickstart offers none.  Specs
+ * that count the portal's locales add these.
+ */
+export async function offeredTestLocales(
+  request: APIRequestContext
+): Promise<string[]> {
+  const response = await request.get<{ locales: { code: string }[] }>(
+    `${config.url}api/v6-0/locale`
+  );
+  expect(response.status()).toEqual(200);
+  const { locales } = await response.json();
+  const pseudo = new Set(PSEUDO_LOCALES.map((tag) => tag.replace("-", "_")));
+  return locales
+    .map((locale) => locale.code)
+    .filter((code) => pseudo.has(code));
 }
