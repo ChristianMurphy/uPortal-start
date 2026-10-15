@@ -42,8 +42,19 @@ export const config = {
       password: "student",
       displayName: "Steven Student",
     },
-    // Only the language tests sign in as the developer, since they change the
-    // user's saved language, which a parallel spec would see at its sign-in
+    // A student whose layout only the Reset My Layout UX spec changes: every
+    // sign-in of a user lets the user's other sessions reload the layout
+    riley: {
+      id: "xx",
+      username: "riley",
+      // eslint-disable-next-line sonarjs/no-hardcoded-credentials
+      password: "riley",
+      displayName: "Riley Reset",
+    },
+    // The language tests sign in as the developer, since they change the
+    // user's saved language, which a parallel spec would see at its sign-in.
+    // The Reset My Layout API spec changes only the developer's layout and
+    // checks nothing that depends on the language.
     developer: {
       id: "xx",
       username: "developer",
