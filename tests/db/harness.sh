@@ -209,7 +209,7 @@ run_portal() {
     local specs=(tests/api) log="$out/playwright-api.log" what="the API specs"
     if [ "$FULL_SUITE" = true ]; then specs=(); log="$out/playwright.log"; what="the whole suite"; fi
     phase_begin "Playwright: $what"
-    PORTAL_BASE_URL="$url" npx playwright test --config=tests/uportal-pw.config.ts \
+    PORTAL_BASE_URL="$url" UPORTAL_DB_VENDOR="$vendor" npx playwright test --config=tests/uportal-pw.config.ts \
         "${specs[@]+"${specs[@]}"}" "$(playwright_reporter)" --output="$out/playwright" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
     phase_end "$status"
