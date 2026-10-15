@@ -27,6 +27,24 @@ const NAMES_IN_ANY_SCRIPT = [
   `收藏列表`,
   `قائمة`,
 ];
+/*
+ * SQL Server keeps the 5.17 schema's varchar columns until the 6.0 schema step
+ * (MOD-D44, "Items for the 6.0 schema step" in uPortal's persistence-fixes
+ * note), so it stores only names that fit windows-1252. It changes the other
+ * names, and the test checks that it still does: once the column is nvarchar
+ * the check fails, and every name must come back unchanged on SQL Server too.
+ */
+const WINDOWS_1252 = new Set(
+  new TextDecoder("windows-1252").decode(
+    Uint8Array.from({ length: 256 }, (_, byte) => byte)
+  )
+);
+function isStoredExactly(name: string): boolean {
+  return (
+    config.database !== "sqlserver" ||
+    [...name].every((character) => WINDOWS_1252.has(character))
+  );
+}
 const NOT_NAMES = [`TEST\u0007bell`, `TEST\nnewline`, `TEST\ttab`, "x".repeat(256)];
 // An owner is a user name: no whitespace or control characters (MOD-I270).
 const USER_NAME_RULE = "must have 1 to 100 characters and no spaces.";
@@ -250,7 +268,9 @@ test("POST accepts names in any script", async ({ request }) => {
     const name = `${valueToTest} POST ${suffix}`;
     const listId = await createPortletList(request, name, [{ entityId: "fname1" }]);
     const list = await getPortletList(request, listId);
-    expect(list.name).toEqual(name);
+    expect(list.name === name, `stored "${list.name}" for "${name}"`).toBe(
+      isStoredExactly(name)
+    );
     await removePortletList(request, listId);
   }
 });
@@ -371,7 +391,9 @@ test("PUT accepts names in any script", async ({ request }) => {
     const name = `${valueToTest} PUT ${suffix}`;
     await updatePortletList(request, listId, name, [{ entityId: "fname1" }]);
     const list = await getPortletList(request, listId);
-    expect(list.name).toEqual(name);
+    expect(list.name === name, `stored "${list.name}" for "${name}"`).toBe(
+      isStoredExactly(name)
+    );
   }
   await removePortletList(request, listId);
 });
