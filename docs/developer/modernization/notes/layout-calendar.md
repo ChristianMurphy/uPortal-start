@@ -108,8 +108,8 @@ Push runs at uPortal `301e49f3a9` and uPortal-start `6ae427a3c`:
 | ID | Area | Finding | Resolution |
 | --- | --- | --- | --- |
 | MOD-I286 (update) | Tests | (unchanged) | **Fixed** (uPortal `301e49f3a9`, uPortal-start `6ae427a3c`): `visibleBox()` in both copies of the checks clips only where an ancestor hides overflow. `pages.spec.ts` answers the calendar with a fixed feed, and the baseline records 21 new entries on 8 pages. `pages.spec.ts` passed 150 of 150 with `--repeat-each 5`. |
-| MOD-I? | Tests | On this machine, `chrome-headless-shell` 1248 (Playwright 1.64) crashes with SIGSEGV in `pages.spec.ts` at 768 pixels, on the staff and faculty tabs, with one worker too. Chromium 1208 ran the same 150 tests without a crash. The integration tip's specs crash the same way. | **Open.** Watch whether CI's runners crash too. Not caused by the layout checks. |
-| MOD-I? | Tests | `layout-checks.spec.ts` builds its pages with `page.setContent`, which has no doctype, so they render in quirks mode and the portal's pages don't. A fault that depends on `<html>`'s size behaves differently there than in the portal or in Vitest. | **Open.** The new fault avoids it. Whether the fixture pages get `<!doctype html>` is for the test owner. It can change what the other faults measure. |
+| MOD-I373 | Tests | On this machine, `chrome-headless-shell` 1248 (Playwright 1.64) crashes with SIGSEGV in `pages.spec.ts` at 768 pixels, on the staff and faculty tabs, with one worker too. Chromium 1208 ran the same 150 tests without a crash. The integration tip's specs crash the same way. | **Open.** Watch whether CI's runners crash too. Not caused by the layout checks. |
+| MOD-I374 | Tests | `layout-checks.spec.ts` builds its pages with `page.setContent`, which has no doctype, so they render in quirks mode and the portal's pages don't. A fault that depends on `<html>`'s size behaves differently there than in the portal or in Vitest. | **Open.** The new fault avoids it. Whether the fixture pages get `<!doctype html>` is for the test owner. It can change what the other faults measure. |
 
 ## What's left
 
