@@ -62,6 +62,7 @@ dataInit {
 
         ant.setLifecycleLogLevel('INFO')
         ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.jasig.portlet.attachment.util.SchemaCreator') {
+            rootProject.ext.portalJvmArgs.each { jvmarg(value: it) }
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")

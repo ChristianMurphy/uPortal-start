@@ -39,6 +39,7 @@ class PortalShellInvoker {
         project.ant.setLifecycleLogLevel('INFO')
         try {
             project.ant.java(fork: true, failonerror: true, jvm: project.rootProject.ext['portalJava'], dir: project.rootProject.projectDir, classname: 'org.apereo.portal.shell.PortalShell') {
+                project.rootProject.ext['portalJvmArgs'].each { jvmarg(value: it) }
                 classpath {
                     pathelement(location: "${deployDir}/WEB-INF/classes")
                     pathelement(location: "${deployDir}/WEB-INF/lib/*")

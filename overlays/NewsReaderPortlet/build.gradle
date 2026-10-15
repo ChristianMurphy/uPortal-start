@@ -82,6 +82,7 @@ dataInit {
          */
         ant.setLifecycleLogLevel('INFO')
         ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: false, dir: rootProject.projectDir, classname: 'org.jasig.portlet.newsreader.util.SchemaCreator') {
+            rootProject.ext.portalJvmArgs.each { jvmarg(value: it) }
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
@@ -104,6 +105,7 @@ dataInit {
 
         ant.setLifecycleLogLevel('INFO')
         ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.danann.cernunnos.runtime.Main') {
+            rootProject.ext.portalJvmArgs.each { jvmarg(value: it) }
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
@@ -131,6 +133,7 @@ dataImport {
 
         ant.setLifecycleLogLevel('INFO')
         ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.danann.cernunnos.runtime.Main') {
+            rootProject.ext.portalJvmArgs.each { jvmarg(value: it) }
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
@@ -158,6 +161,7 @@ dataExport {
 
         ant.setLifecycleLogLevel('INFO')
         ant.java(fork: true, jvm: rootProject.ext.portalJava, failonerror: true, dir: rootProject.projectDir, classname: 'org.danann.cernunnos.runtime.Main') {
+            rootProject.ext.portalJvmArgs.each { jvmarg(value: it) }
             classpath {
                 pathelement(location: "${deployDir}/WEB-INF/classes")
                 pathelement(location: "${deployDir}/WEB-INF/lib/*")
