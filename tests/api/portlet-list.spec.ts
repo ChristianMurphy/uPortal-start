@@ -268,7 +268,7 @@ test("POST accepts names in any script", async ({ request }) => {
     const name = `${valueToTest} POST ${suffix}`;
     const listId = await createPortletList(request, name, [{ entityId: "fname1" }]);
     const list = await getPortletList(request, listId);
-    expect(list.name === name, `stored "${list.name}" for "${name}"`).toBe(
+    expect(list.name === name, `stored "${String(list.name)}" for "${name}"`).toBe(
       isStoredExactly(name)
     );
     await removePortletList(request, listId);
@@ -391,7 +391,7 @@ test("PUT accepts names in any script", async ({ request }) => {
     const name = `${valueToTest} PUT ${suffix}`;
     await updatePortletList(request, listId, name, [{ entityId: "fname1" }]);
     const list = await getPortletList(request, listId);
-    expect(list.name === name, `stored "${list.name}" for "${name}"`).toBe(
+    expect(list.name === name, `stored "${String(list.name)}" for "${name}"`).toBe(
       isStoredExactly(name)
     );
   }
