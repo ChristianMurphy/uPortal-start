@@ -59,6 +59,12 @@ const FAULTS: [Check, string, string, string][] = [
   ],
   [
     "spill",
+    "content wider than its box below the fold of a box that scrolls",
+    "div",
+    `<div style="overflow-x: hidden; height: 300px"><div style="height: 2000px"></div><div style="width: 100px"><span style="display: inline-block; width: 150px">x</span></div></div>`,
+  ],
+  [
+    "spill",
     "overlapping buttons",
     "button",
     `<div style="position: relative; height: 40px"><button style="position: absolute; left: 0">One</button><button style="position: absolute; left: 10px">Two</button></div>`,
