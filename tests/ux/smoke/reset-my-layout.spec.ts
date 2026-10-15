@@ -135,6 +135,10 @@ async function expectStartView(content: Locator): Promise<void> {
 }
 
 test.describe("Reset My Layout", () => {
+  // The tests reset the student's layout: one at a time, and a retry runs
+  // them all again from the first
+  test.describe.configure({ mode: "serial" });
+
   // Each test owns a tab name, so a test's leftovers cannot pass another test
   let tab: string;
 
