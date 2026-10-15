@@ -1,61 +1,107 @@
 # Handoff: layout-calendar (the layout checks below the first screen)
 
-The layout checks of MOD-D52 (`tests/layout`) failed in CI on pages that pass locally. The
-coordinator decided to leave this as a known flake in `pages.spec.ts:98` for the pause. This branch
-(`ccr-43ba0785-hzlrj5-layout-calendar`, from `c562f35`) keeps the fix and doesn't land.
+The layout checks of MOD-D52 (`tests/layout`) now measure the whole page, not only the first
+screen, and the baseline records what they find there. The branch is
+`ccr-43ba0785-hzlrj5-layout-calendar` in both repositories. It fixes MOD-I286 and makes
+`pages.spec.ts` deterministic. It doesn't fix the layout problems it finds, and it doesn't decide
+MOD-I283 (Respondr's body `overflow-x: hidden`), which is the skin owner's.
 
 ## Root cause
 
-Search's Integration 38187096335 (hsqldb job 114616166227) failed "Layout at 320px" and "Layout at
-390px" for student, staff and faculty: a spill of `div.upcal-event-list` (its `.row.day` child,
-margin -7.5px from `--bs-gutter-x`, reaches 8px past it) at 320, and a cut-off and a spacing
-problem on `#file-uploader div.qq-upload-button.enabled_upload` (15px taller than its box) at 390.
+Search's Integration 38187096335 (hsqldb job 114616166227) and the integration branch's Integration
+38204127794 (hsqldb job 114669441371) failed "Layout at 320px" in `pages.spec.ts` for the student.
+The 320 failure is a spill of `div.upcal-event-list`: its `.row.day` child has a margin of -7.5px
+from `--bs-gutter-x` and reaches 8px past it. At 390, `#file-uploader
+div.qq-upload-button.enabled_upload` is 15px taller than its box, which counts as a cut-off and a
+spacing problem.
 
 Respondr's `<html>` has `overflow-x: hidden`, so its `overflow-y` computes to `auto`.
 `visibleBox()` in `measure.ts` clipped a box at each ancestor whose overflow isn't `visible` on
-that axis, so `<html>`'s client height, the viewport (568px at 320, 844px at 390), cut off every
-box below the first screen. `isShown()` then counted those boxes as hidden, and no check measured
-them, on any page at any width. On a local portal the student's welcome page at 320 has the event
-list at y=623, below the line; in CI the portlets above it are shorter, and the list is measured.
-The calendar's events (the quickstart's US holidays calendar, fetched from Google over the
-internet after load) changed the list from run to run as well.
+that axis. `<html>`'s client height is the viewport (568px at 320, 844px at 390), so every box
+below the first screen counted as hidden, and no check measured it. On a local portal the
+student's welcome page at 320 has the event list at y=623, below that line. In CI the portlets
+above it are shorter, so CI measured the list and local runs didn't. The calendar's events came from
+the quickstart's US holidays feed on the internet, fetched after load, so the list also changed
+between runs.
 
-## The fix on this branch
+## The fix
 
-* `measure.ts`: `visibleBox()` clips on an axis only where the ancestor hides overflow
-  (`hidden` or `clip`, the existing `hides()`). A box that scrolls doesn't hide what is below its
-  fold.
-* `pages.spec.ts`: `page.route` answers the calendar's resource requests
-  (`/p/calendar.<id>/.../*.resource.uP`) with a fixed feed: one all-day "Columbus Day" tomorrow,
-  as CI's trace showed. The list is then the same in every run, and it doesn't depend on the
-  internet. With the feed alone, the 6 tests at 320 and 390 pass locally, and CI would still fail,
-  because the list's position against the first screen differs.
-* uPortal: `uPortal-webcomponents/src/test-support/layout.ts` (lines 155 to 159) has the same
-  clip and is meant to change with `measure.ts`. The matching change is the same 2 lines
-  (`hides(style.overflowX)` and `hides(style.overflowY)` in its `visibleBox`), and the component
-  tests would need a run. It isn't on any uPortal branch.
+uPortal-start:
 
-## The baseline after the fix
+* `tests/layout/measure.ts`: `visibleBox()` clips on an axis only where the ancestor hides
+  overflow (`hidden` or `clip`, the existing `hides()`). A box that scrolls doesn't hide what is
+  below its fold.
+* `tests/layout/pages.spec.ts`: `page.route` answers the calendar's resource requests
+  (`/p/calendar.<id>/.../*.resource.uP`) with a fixed feed, one all-day event tomorrow. The list
+  is the same in every run and doesn't depend on the internet.
+* `tests/layout/layout-checks.spec.ts`: a new seeded fault puts a spill below the fold of a box
+  that hides `overflow-x` and has a fixed height.
+* `tests/layout/baseline.ts`: re-recorded (next section).
 
-Not re-recorded. A local run of all of `pages.spec.ts` (30 tests) with the fix and the feed:
-21 passed and 9 failed, on these 23 new entries on 9 pages, and 1 entry is gone. They include
-CI's failures.
+uPortal:
+
+* `uPortal-webcomponents/src/test-support/layout.ts`: the same change to `visibleBox()`.
+* `layout.browser.test.ts`: the same seeded fault as uPortal-start.
+
+The seeded fault doesn't use `<html>`'s overflow. `page.setContent` in uPortal-start writes a page
+without a doctype, and in quirks mode `<html>`'s client height is the content height (2018px in the
+fault page), not the viewport. A fault built on `html { overflow-x: hidden }` passed with the old
+clip there, and failed only in Vitest. A box that scrolls behaves the same in both modes.
+
+## The baseline
+
+`tests/layout/baseline.ts` went from 241 to 261 entries: 21 new entries on 8 pages, and 1 entry
+removed. Run 1 below found them.
 
 | Page | New entries |
 | --- | --- |
-| student, staff and faculty tab welcome 320 (each) | spill `div.upcal-event-list` (8px), spill `div.portlet-section-body` (8px), cut-off and spacing `#file-uploader div.qq-upload-button.enabled_upload` (15px) |
-| student, staff and faculty tab welcome 390 (each) | cut-off and spacing `#file-uploader div.qq-upload-button.enabled_upload` (15px) |
-| admin portlet-admin 320 | spill of `portletsList_wrapper` (8px) and of its `div.d-md-flex.justify-content-between.align-items-center` (161px) |
-| guest login 320 | spill `#Pluto_#_ctf#_#_search.portlet-section div.col-sm-#` (13px) |
-| admin tab development 1920 | spill `div.content` of a portlet (227px) |
+| student, staff and faculty tab welcome 320 (each) | spill `div.upcal-event-list`, spill `div.portlet-section-body`, cut-off and spacing `#file-uploader div.qq-upload-button.enabled_upload` |
+| student, staff and faculty tab welcome 390 (each) | cut-off and spacing `#file-uploader div.qq-upload-button.enabled_upload` |
+| admin portlet-admin 320 | spill of `portletsList_wrapper` and of its `div.d-md-flex.justify-content-between.align-items-center` |
+| admin tab development 1920 | spill `div.content` of a portlet |
 
-Gone: admin permissionsmanager 768, spill of `#portletContent_ctf#... a`.
+Removed: `admin permissionsmanager 768`, spill of `#portletContent_ctf#... a`.
 
-To finish: apply the uPortal change, re-record these pages from the attached "observed" JSON
-(`docs/layout-tests.md`), and run `pages.spec.ts` with `--repeat-each 5` at every width.
+The earlier version of this note also listed a spill of `#Pluto_#_ctf#_#_search.portlet-section
+div.col-sm-#` on `guest login 320`. On the integration tip the branch now merges (uPortal-start
+`fork/ccr-43ba0785-hzlrj5`), the local runs don't find it, so it isn't recorded.
 
-## Proposed LOG row
+The baseline was written by a script outside the repository. It reads the `observed=` JSON of each
+failed page and the `no longer seen` lines from the run's output, and sorts the result as the
+file does. It reproduced the old file byte for byte before it applied run 1.
+
+## Evidence
+
+Local portal built from uPortal `ccr-43ba0785-hzlrj5-layout-calendar` (`./gradlew install`,
+`uPortalVersion=5.17.10-SNAPSHOT`), on ports 9080, 9005 and 9887, with JDK 11.0.29 for the portal.
+
+| Check | Result |
+| --- | --- |
+| Vitest `layout.browser.test.ts`, with the fix | 16 passed (Chromium 1248, also 1208) |
+| Same, seeded with the old clip | 1 failed: "spill finds content wider than its box below the fold of a box that scrolls", `expected [] to include 'spill div'` |
+| Vitest, every web component test (`npm run test`) | 50 files and 1528 tests passed. A first run with the portal up lost its browser connection in `up-self-edit-account.model.browser.test.ts`. The rerun passed |
+| `vp check` | passed |
+| uPortal-start `npm run lint` (`tsc`, type coverage, ESLint) | 0 errors. The `expect-expect` warning on `pages.spec.ts` is on the integration branch too |
+| `layout-checks.spec.ts`, with the fix | 16 passed (Chromium 1248) |
+| Same, seeded with the old clip in `measure.ts` | 1 failed, the new fault only: `Expected value: "spill div"` |
+| `pages.spec.ts` run 1, new clip, old baseline | 8 failed, 22 passed. The 8 are the pages in the table above |
+| `pages.spec.ts --repeat-each 5 --retries 0`, new baseline | 150 passed (9.8m), no `no longer seen` lines (Chromium 1208 under the 1248 name) |
+| `pages.spec.ts --repeat-each 3 --retries 0`, new baseline, Chromium 1248 | 88 passed and 2 failed. Both failures are browser crashes at 768 (`Page crashed`, `Target crashed`), and no layout problem was reported |
+| Same at 768 only, one worker | 13 passed and 2 failed. `chrome-headless-shell` 1248 logged `Received signal 11 SEGV_MAPERR` after loading a staff or faculty tab |
+| The integration tip's `tests/layout` at 768, one worker, Chromium 1248 | 7 passed and 8 failed, all crashes. The crash happens without this branch |
+
+Push runs: RUNS_PLACEHOLDER
+
+## Proposed LOG rows
 
 | ID | Area | Finding | Resolution |
 | --- | --- | --- | --- |
-| (coordinator) | Tests | The layout checks (MOD-D52) measured only the first screen of each page, because `<html>`'s `overflow-y` computes to `auto`. The calendar's spill at 320 and the uploader's at 390 showed in CI only. | **Open.** Fix on uPortal-start `ccr-43ba0785-hzlrj5-layout-calendar`, plus the same change in uPortal's web component `layout.ts`, and a new baseline. |
+| MOD-I286 (update) | Tests | (unchanged) | **Fixed** (uPortal `301e49f3a9`, uPortal-start START_SHA): `visibleBox()` in both copies of the checks clips only where an ancestor hides overflow. `pages.spec.ts` answers the calendar with a fixed feed, and the baseline records 21 new entries on 8 pages. `pages.spec.ts` passed 150 of 150 with `--repeat-each 5`. |
+| MOD-I? | Tests | On this machine, `chrome-headless-shell` 1248 (Playwright 1.64) crashes with SIGSEGV in `pages.spec.ts` at 768 pixels, on the staff and faculty tabs, with one worker too. Chromium 1208 ran the same 150 tests without a crash. The integration tip's specs crash the same way. | **Open.** Watch whether CI's runners crash too. Not caused by the layout checks. |
+| MOD-I? | Tests | `layout-checks.spec.ts` builds its pages with `page.setContent`, which has no doctype, so they render in quirks mode and the portal's pages don't. A fault that depends on `<html>`'s size behaves differently there than in the portal or in Vitest. | **Open.** The new fault avoids it. Whether the fixture pages get `<!doctype html>` is for the test owner. It can change what the other faults measure. |
+
+## What's left
+
+* The 21 new entries are layout problems for the skin and portlet owners to fix. Each fix
+  removes its entries (MOD-D52).
+* MOD-I283 is still open, for the owner to decide.
