@@ -44,6 +44,26 @@ ext {
      * gradle/gradle-daemon-jvm.properties).
      */
     portalJava = System.getenv('JAVA_HOME') ? new File(System.getenv('JAVA_HOME'), 'bin/java').path : 'java'
+    /*
+     * The JVM options of the data import/export tools.  Tomcat's catalina.sh opens these packages
+     * itself, and these JVMs start without them.  Without them, on JDK 17 and later, the steps
+     * below fail with InaccessibleObjectException (spike B10).  JDK 11 accepts the options too.
+     */
+    portalJvmArgs = [
+        /*
+         * Released uPortal 5.17's dataInit, where Spring 4.3's cglib (ConfigurationClassEnhancer)
+         * calls ClassLoader.defineClass;  the CalendarPortlet and NewsReaderPortlet schema steps,
+         * where Hibernate 3's javassist proxies call it;  the Announcements import, where Spring's
+         * cglib (CglibAopProxy) calls it;  and the CalendarPortlet and NewsReaderPortlet imports,
+         * where the Groovy engine of the Cernunnos scripts opens a private String constructor.
+         */
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        /*
+         * The CalendarPortlet and NewsReaderPortlet imports, where that Groovy engine opens a
+         * HashSet constructor.
+         */
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+    ]
 }
 
 node {
