@@ -13,13 +13,12 @@ import { setUserLocale } from "../utils/user-locale";
  * The quickstart data places it in no layout, so the tests open it at
  * /p/reset-my-layout.
  *
- * The channel explains what it does and that the user must sign in again to
- * see the change, with a Reset Now button. Reset Now asks for confirmation,
- * naming the user; Cancel goes back without changing anything. Reset Layout
- * resets the signed-in user's own layout and says so; Continue goes back to
- * the start. The page the user is on keeps the old layout: the default tabs
- * and portlets come back at the next sign-in. Other users' layouts do not
- * change.
+ * The channel explains what it does and that the default layout shows the
+ * next time a page loads, with a Reset Now button. Reset Now asks for
+ * confirmation, naming the user; Cancel goes back without changing anything.
+ * Reset Layout resets the signed-in user's own layout and says so; Continue
+ * goes back to the start. Every page of the user shows the default tabs and
+ * portlets at its next load. Other users' layouts do not change.
  *
  * Every test makes its own starting point: it adds a tab of its own to the
  * user's layout through the layout API, so a layout that is still customized
@@ -124,7 +123,7 @@ async function expectStartView(content: Locator): Promise<void> {
     "Use this portlet to reset your portal layout to the defaults.",
   );
   await expect(content).toContainText(
-    "NOTE: You must sign on again to see the changes.",
+    "NOTE: The default layout shows the next time a page loads.",
   );
   await expect(
     content.getByRole("button", { name: "Reset Now" }),
@@ -139,18 +138,22 @@ test.describe("Reset My Layout", () => {
   // them all again from the first
   test.describe.configure({ mode: "serial" });
 
+  // A student whose layout no other spec changes: another spec's sign-in as
+  // the same user would let its session reload the layout in the middle
+  const USER = config.users.riley;
+
   // Each test owns a tab name, so a test's leftovers cannot pass another test
   let tab: string;
 
   test.beforeEach(async ({ page }, testInfo) => {
     // Tab names hold at most 35 characters
     tab = `Reset test ${testInfo.testId.slice(-8)}`;
-    await loginViaUrl(page, config.users.student);
+    await loginViaUrl(page, USER);
   });
 
   test.afterEach(async ({ page }) => {
-    // A new session: the old one may still hold the layout from before a reset
-    await signInAgain(page, config.users.student);
+    // A new session, so every test cleans up the layout as stored
+    await signInAgain(page, USER);
     await removeTabs(page, tab);
     await logout(page);
   });
@@ -174,7 +177,7 @@ test.describe("Reset My Layout", () => {
       "Resetting a user's layout is irreversible.",
     );
     await expect(content).toContainText(
-      `Are you sure you want to reset the layout for ${config.users.student.username}?`,
+      `Are you sure you want to reset the layout for ${USER.username}?`,
     );
     await expect(content.getByRole("button", { name: "Cancel" })).toBeVisible();
     await expect(
@@ -189,7 +192,7 @@ test.describe("Reset My Layout", () => {
     await content.getByRole("button", { name: "Cancel" }).click();
 
     await expectStartView(content);
-    await signInAgain(page, config.users.student);
+    await signInAgain(page, USER);
     expect(await tabNames(page)).toContain(tab);
   });
 
@@ -203,7 +206,7 @@ test.describe("Reset My Layout", () => {
 
     await expect(content).toContainText("Success");
     await expect(content).toContainText(
-      `Layout for ${config.users.student.username} has been reset`,
+      `Layout for ${USER.username} has been reset`,
     );
     await expect(
       content.getByRole("button", { name: "Reset Layout" }),
@@ -220,10 +223,10 @@ test.describe("Reset My Layout", () => {
     await content.getByRole("button", { name: "Reset Layout" }).click();
     await expect(content).toContainText("Success");
 
-    // The page keeps the layout the user signed in with
-    expect(await tabNames(page)).toContain(tab);
+    // The page shows the default layout at its next load
+    expect(await tabNames(page)).toEqual(STUDENT_TABS);
 
-    await signInAgain(page, config.users.student);
+    await signInAgain(page, USER);
     expect(await tabNames(page)).toEqual(STUDENT_TABS);
     for (const title of STUDENT_WELCOME_PORTLETS) {
       await expect(
@@ -237,7 +240,7 @@ test.describe("Reset My Layout", () => {
     await signInAgain(page, config.users.staff);
     try {
       await addTab(page, tab);
-      await signInAgain(page, config.users.student);
+      await signInAgain(page, USER);
       const content = await startReset(page);
       await content.getByRole("button", { name: "Reset Layout" }).click();
       await expect(content).toContainText("Success");
@@ -248,7 +251,7 @@ test.describe("Reset My Layout", () => {
       await signInAgain(page, config.users.staff);
       await removeTabs(page, tab);
       expect(await tabNames(page)).toEqual(STAFF_TABS);
-      await signInAgain(page, config.users.student);
+      await signInAgain(page, USER);
     }
   });
 });
