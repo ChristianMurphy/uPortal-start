@@ -1,6 +1,9 @@
 import { test, expect, Page } from "@playwright/test";
 import { config } from "../../general-config";
-import { loginViaUrl } from "../utils/ux-general-utils";
+import {
+  loginViaUrl,
+  waitForPortalRequestsToSettle,
+} from "../utils/ux-general-utils";
 
 /*
  * Visual smoke for the resource-server consolidation:
@@ -187,8 +190,9 @@ test.describe("Visual resource-server smoke", () => {
     await page.goto(config.url + "p/chronicle-wired/max/render.uP", {
       waitUntil: "load",
     });
-    // Allow the news-feeds AJAX to settle.
-    await page.waitForTimeout(3000);
+    // Wait for the news-feeds AJAX (a *.uP resource request) and the rendering
+    // in its callbacks to finish, instead of a fixed 3 seconds (MOD-I345).
+    await waitForPortalRequestsToSettle(page);
     // innerText excludes <script type="text/template"> bodies; textContent would
     // include the template source (which legitimately contains {{var}} syntax)
     // and trigger a false positive in the assertion below.
