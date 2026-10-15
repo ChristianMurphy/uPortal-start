@@ -6,16 +6,15 @@ import type { Baseline } from "./layout-checks";
  * a fix removes its entries in the same commit. Keep it sorted.
  */
 export const baseline: Baseline = {
-  "admin permissionsmanager 768": {
-    spill: [
-      "#portletContent_ctf#.fl-widget-content.fl-fix.up-portlet-content-wrapper a",
-    ],
-  },
   "admin portlet-admin 320": {
     "cut-off": [
       "#portletContent_ctf#.fl-widget-content.fl-fix.up-portlet-content-wrapper",
     ],
-    spill: ["#Pluto_#_ctf#_#_pagingRow.dt-paging-row"],
+    spill: [
+      "#Pluto_#_ctf#_#_pagingRow.dt-paging-row",
+      "#Pluto_#_ctf#_#_portletsList_wrapper.dt-container.dt-bootstrap#.dt-empty-footer",
+      "#Pluto_#_ctf#_#_portletsList_wrapper.dt-container.dt-bootstrap#.dt-empty-footer div.d-md-flex.justify-content-between.align-items-center",
+    ],
     spacing: [
       "#portletContent_ctf#.fl-widget-content.fl-fix.up-portlet-content-wrapper",
     ],
@@ -189,6 +188,7 @@ export const baseline: Baseline = {
     ],
     spill: [
       "#portalNavigation_u#l#s#.portal-navigation.movable.editable a.nav-tab-controls.portal-navigation-delete",
+      "#portletContent_u#l#n#.fl-widget-content.fl-fix.up-portlet-content-wrapper div.content",
       "#tabLink_u#l#s#.portal-navigation-link",
       "#tabLink_u#l#s#.portal-navigation-link.flc-inlineEditable",
     ],
@@ -301,16 +301,22 @@ export const baseline: Baseline = {
     ],
   },
   "faculty tab welcome 320": {
-    spill: [
-      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
-    ],
-  },
-  "faculty tab welcome 390": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
+  },
+  "faculty tab welcome 390": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
+    spill: [
+      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
+      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
+      "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
+    ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "faculty tab welcome 768": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
@@ -414,16 +420,22 @@ export const baseline: Baseline = {
     spill: ["#tabLink_u#l#s#.portal-navigation-link.flc-inlineEditable"],
   },
   "staff tab welcome 320": {
-    spill: [
-      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
-    ],
-  },
-  "staff tab welcome 390": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
+  },
+  "staff tab welcome 390": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
+    spill: [
+      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
+      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
+      "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
+    ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "staff tab welcome 768": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
@@ -546,16 +558,22 @@ export const baseline: Baseline = {
     ],
   },
   "student tab welcome 320": {
-    spill: [
-      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
-    ],
-  },
-  "student tab welcome 390": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
     spill: [
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
       "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
       "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
     ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
+  },
+  "student tab welcome 390": {
+    "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
+    spill: [
+      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-list",
+      "#Pluto_#_u#l#n#_#_container.Pluto_#_u#l#n#_#_upcal-miniview.upcal-portlet.upcal-narrowview div.upcal-event-view",
+      "#Pluto_#_u#l#n#_#_container.container.container-fluid.bootstrap-styles div.portlet-section-body",
+    ],
+    spacing: ["#file-uploader div.qq-upload-button.enabled_upload"],
   },
   "student tab welcome 768": {
     "cut-off": ["#file-uploader div.qq-upload-button.enabled_upload"],
