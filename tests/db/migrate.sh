@@ -99,7 +99,7 @@ run_specs() {  # run_specs <vendor> <output dir> [spec paths]: Playwright agains
     local vendor="$1" output="$2" status
     shift 2
     start_portal "$vendor" || return 1
-    PORTAL_BASE_URL="http://localhost:$HTTP_PORT/uPortal/" npx playwright test \
+    PORTAL_BASE_URL="http://localhost:$HTTP_PORT/uPortal/" UPORTAL_DB_VENDOR="$vendor" npx playwright test \
         --config=tests/uportal-pw.config.ts "$@" "$(playwright_reporter)" --output="$output"
     status=$?
     stop_own_tomcat "$vendor"

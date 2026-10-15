@@ -8,11 +8,39 @@ export type AuthMode = "local" | "cas";
 // server on port 8090 (docs/authentication.md).
 const authMode: AuthMode = process.env.AUTH_MODE === "cas" ? "cas" : "local";
 
+const DATABASES = [
+  "hsqldb",
+  "mariadb",
+  "mysql",
+  "oracle",
+  "postgres",
+  "sqlserver",
+] as const;
+export type Database = (typeof DATABASES)[number];
+
+/**
+ * The database the portal under test runs on, from UPORTAL_DB_VENDOR: a name
+ * from tests/db/vendors such as sqlserver-2025 or oracle-xe-21. The DB
+ * harness and G-migrate set it; elsewhere it is unset and the result is
+ * undefined. An unknown name throws, so a new vendor can't pass unnoticed.
+ */
+function parseDatabase(vendor: string | undefined): Database | undefined {
+  if (vendor === undefined || vendor === "") return undefined;
+  const database = DATABASES.find((name) =>
+    new RegExp(`^${name}(-xe)?(-[0-9.]+)?$`).test(vendor),
+  );
+  if (database === undefined) {
+    throw new Error(`Unknown UPORTAL_DB_VENDOR '${vendor}'`);
+  }
+  return database;
+}
+
 export const config = {
   // Set PORTAL_BASE_URL (with a trailing slash) to test a portal on another port or host.
   url: process.env.PORTAL_BASE_URL ?? "http://localhost:8080/uPortal/",
   authMode,
   casUrl: process.env.CAS_BASE_URL ?? "http://localhost:8090/cas/",
+  database: parseDatabase(process.env.UPORTAL_DB_VENDOR),
   users: {
     admin: {
       id: "13",
