@@ -90,13 +90,24 @@ Local portal built from uPortal `ccr-43ba0785-hzlrj5-layout-calendar` (`./gradle
 | Same at 768 only, one worker | 13 passed and 2 failed. `chrome-headless-shell` 1248 logged `Received signal 11 SEGV_MAPERR` after loading a staff or faculty tab |
 | The integration tip's `tests/layout` at 768, one worker, Chromium 1248 | 7 passed and 8 failed, all crashes. The crash happens without this branch |
 
-Push runs: RUNS_PLACEHOLDER
+Push runs at uPortal `301e49f3a9` and uPortal-start `6ae427a3c`:
+
+* uPortal CI 38673998115, DB integration 38673998129 and DB copy tool 38673998134 passed.
+* uPortal-start CI 38674004353, Migration equivalence 38674004357, HTTP replay 38674004404,
+  Workflow lint 38674004427 and G-index 38674004403 passed.
+* uPortal-start Integration 38674004447 failed in three jobs, each for a cause on the integration
+  branch. "Playwright: hsqldb" and "Playwright: postgres-18" failed `rtl-theme.spec.ts:123` in
+  both locales, which the `-fix-tip` branch fixes. Both jobs also had a flaky test in
+  `reset-my-layout.spec.ts` (line 338 on HSQLDB, line 282 on PostgreSQL), which
+  `-mariadb-layout-store` isolates, and HSQLDB had `visual-resource-server.spec.ts:153`. "Cluster:
+  two nodes" couldn't download `uportal-maven-local`, which `-fix-tip` fixes. No layout test
+  failed.
 
 ## Proposed LOG rows
 
 | ID | Area | Finding | Resolution |
 | --- | --- | --- | --- |
-| MOD-I286 (update) | Tests | (unchanged) | **Fixed** (uPortal `301e49f3a9`, uPortal-start START_SHA): `visibleBox()` in both copies of the checks clips only where an ancestor hides overflow. `pages.spec.ts` answers the calendar with a fixed feed, and the baseline records 21 new entries on 8 pages. `pages.spec.ts` passed 150 of 150 with `--repeat-each 5`. |
+| MOD-I286 (update) | Tests | (unchanged) | **Fixed** (uPortal `301e49f3a9`, uPortal-start `6ae427a3c`): `visibleBox()` in both copies of the checks clips only where an ancestor hides overflow. `pages.spec.ts` answers the calendar with a fixed feed, and the baseline records 21 new entries on 8 pages. `pages.spec.ts` passed 150 of 150 with `--repeat-each 5`. |
 | MOD-I? | Tests | On this machine, `chrome-headless-shell` 1248 (Playwright 1.64) crashes with SIGSEGV in `pages.spec.ts` at 768 pixels, on the staff and faculty tabs, with one worker too. Chromium 1208 ran the same 150 tests without a crash. The integration tip's specs crash the same way. | **Open.** Watch whether CI's runners crash too. Not caused by the layout checks. |
 | MOD-I? | Tests | `layout-checks.spec.ts` builds its pages with `page.setContent`, which has no doctype, so they render in quirks mode and the portal's pages don't. A fault that depends on `<html>`'s size behaves differently there than in the portal or in Vitest. | **Open.** The new fault avoids it. Whether the fixture pages get `<!doctype html>` is for the test owner. It can change what the other faults measure. |
 
