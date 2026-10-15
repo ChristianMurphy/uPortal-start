@@ -51,3 +51,7 @@ jobs:
         run: .github/scripts/wait-for-portlets.test.sh
       - name: Test the search for an earlier uPortal build
         run: .github/scripts/find-uportal-build.test.sh
+      - name: Check that every job downloads the uPortal build by its commit name
+        run: .github/scripts/check-uportal-downloads.py
+      - name: Test the check of the uPortal build downloads
+        run: .github/scripts/check-uportal-downloads.test.sh
