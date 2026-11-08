@@ -10,7 +10,8 @@ red jobs of Integration run 42485157612 on the integration tips after landing 4 
 | Playwright: mariadb-12.3, 128746222969 | `tests/api/portlet-list.spec.ts:401` passed only on a retry: the admin's page answered 500 when the spec read its CSRF token | A portal bug that doesn't depend on the database. Every page render copies the skin's head elements from one cached DOM fragment, and the JDK's DOM isn't safe to read from two threads. A render read `null` for an element and failed in `respondr.xsl`'s `skinResources` | uPortal, `fix(web)`: each render gets its own copy |
 
 Landing 4's changes caused neither failure. The cluster check could miss a takeover since it was
-written (2026-10-10), and the render race has been in uPortal's code since before 5.17.
+written (2026-10-10), and the render race is in code that landing 4 didn't touch
+(`ResourcesElementsXsltcHelper` and resource-server-utils 1.5.3).
 
 ## 1. Cluster: `failover-takeover`
 
@@ -57,7 +58,7 @@ In the passing runs the test saw node B 0.17 s to 1.09 s after it took the lock 
 artifacts were read: the time from "acquired db lock" to node B's next test login). The reads
 come about 1.1 s apart, so the check depended on node B's first run being longer than that. The
 aggregation runs of this job's runner were the fastest of the 9 runs compared: node A's last run
-before the failover lasted 0.80 s here, and 1.00 s to 1.67 s in the 8 passing runs. Node B's
+before the failover lasted 0.80 s here, and 0.94 s to 1.67 s in the 8 passing runs. Node B's
 first run after the takeover was 0.86 s, shorter than a read's interval.
 
 ### Landing 4's cluster test change
@@ -98,15 +99,18 @@ failing run, each trial with a random phase against the reads:
 | The same with a 200 ms first run | missed it in 13 of 20 | 0 of 20 | PASS |
 | No node takes the lock | FAIL in 5 of 5 | FAIL in 5 of 5 | FAIL |
 | Node B takes the lock 5 s after the last update | FAIL in 10 of 10, 3 of them for the wrong reason ("did not take over") | FAIL in 10 of 10, each "before it counted as abandoned" | FAIL |
-| Node B takes a live holder's lock for 300 ms (as `lock-ignored` would) | caught in 10 of 20, then 7 of 20 | caught in 19 of 20, then 20 of 20 | FAIL |
+| Node B takes a live holder's lock for 300 ms | caught in 10 of 20, then 7 of 20 | caught in 19 of 20, then 20 of 20 | FAIL |
 
 The one live-hold trial the new check missed ran while a Gradle test build loaded the machine.
 The second batch printed the row at the end of the loop and caught all 20. The replay's scripts
 are in the scratchpad (`tipreds4/replay`), not in the repository.
 
-The `lock-ignored` seeded fault runs only in the nightly set. In the replay the new check catches
-a stolen lock more often than the old one, and under `lock-ignored` node B's run waits on the
-same table lock as node A's, so it holds the lock for many reads.
+The `lock-ignored` seeded fault runs only in the nightly set. While node A updates the lock, node
+B skips each run ("db lock last run less than 6650ms ago"), also under that fault. After the kill
+it takes the lock once the server bias has passed: 28.3 s to 34.7 s after node A's last update in
+the fault jobs of runs 38110056978 to 38160754871, which `failover-takeover` reported as "before
+it counted as abandoned". That is the replay's case of a takeover after 5 s, which the new check
+reports for the right reason in 10 of 10.
 
 ## 2. Playwright mariadb-12.3: `portlet-list.spec.ts:401`
 
@@ -175,10 +179,53 @@ A replay with the JDK 11 XSLTC itself (4 threads, a stylesheet with the same `xs
 transforms) threw the CI log's `NullPointerException` 10 to 18 times in each of 3 runs with the
 shared list, and 0 times in 2 runs with the copy. That program isn't in the repository.
 
+A local portal on HSQLDB (ports 8380, 8305 and 8387, through `portal-slot.sh`) with this
+branch's uPortal build in a private Maven repository, and the same portal with the tip's
+`uPortal-web` jar in its place:
+
+* The guest Welcome page from each jar has the same 24 `<link>` and `<script>` elements in its
+  head. Apart from the analytics timings the two pages are equal.
+* 3200 guest renders from 8 parallel `curl` loops, each in a new session (so each runs the theme
+  transform): 3200 answered 200 with each jar, and neither portal log has the
+  `NullPointerException`. On a real page the copy is a small part of a render, and in CI the race
+  hit about once in 50 suites, so this count doesn't show the race. It shows the fix renders the
+  page under load.
+* `portlet-list.spec.ts` and `csrf.spec.ts` with `--repeat-each 3 --workers 4` on this branch's
+  build (Chromium 1194, 9874 MB available): 151 passed and 2 passed on a retry,
+  `portlet-list.spec.ts:727` and `:853`. Each is a copy of the same test running next to another
+  one: `:727` gives the admin's list the reserved name `favorites`, and `:853` compares all of the
+  student's lists. Neither had a 500, and CI runs each test once.
+
+Since `dc9f4c90f` (2026-10-11) the session's CSRF token is part of the theme's cache key, so the
+first page of every session runs the theme transform and copies the skin's elements. That makes
+renders that copy them at the same moment more likely than before.
+
 ## Push runs
 
-Next step: push uPortal first and uPortal-start after it, then read the push runs. A topic push
-runs Playwright on HSQLDB and PostgreSQL 18 and the Cluster job, not MariaDB.
+uPortal `0f9be2274` (the fix) and uPortal-start `f610b6a9d`, pushed in that order. The Integration
+run's `Build uPortal` job (128772873946) says "ChristianMurphy/uPortal
+ccr-43ba0785-hzlrj5-tip-reds-4 at 0f9be2274". The uPortal-start runs tested the fix. All passed:
+
+| Repository | Workflow | Run |
+| --- | --- | --- |
+| uPortal | CI | 42494205094 |
+| uPortal | DB integration | 42494205167 |
+| uPortal | DB copy tool | 42494205063 |
+| uPortal-start | Integration | 42494211483 |
+| uPortal-start | CI | 42494211488 |
+| uPortal-start | HTTP replay | 42494211482 |
+| uPortal-start | Migration equivalence | 42494211574 |
+| uPortal-start | G-index | 42494211484 |
+
+Integration 42494211483 ran the Cluster job (128773904935), Playwright on HSQLDB (128773904953),
+on HSQLDB with CAS (128773904945) and on PostgreSQL 18 (128773904996), the DB harness on
+PostgreSQL 18 and the G-migrate pair from MariaDB 11.4 to PostgreSQL 18.
+
+The Cluster job passed every check: `failover-takeover` saw node B 66.4 s after node A's last
+update. Its logs show the test saw node B 0.58 s into a first run of 1.39 s, so that run didn't
+need the new reading of the row. The replay above is the evidence for the case the old check
+missed. A topic push doesn't run Playwright on MariaDB, and the render race doesn't depend on the
+database.
 
 ## Proposed LOG rows
 
