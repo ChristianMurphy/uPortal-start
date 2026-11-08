@@ -913,8 +913,12 @@ check_jobs_once() {
     compare_counts jobs-once "$OUT/jobs-once-aggregates-before.txt" "$since"
 }
 
-mutex_row() {  # server_id|locked|lock_start|lock_update of the aggregation lock
-    sql "select server_id, locked, (extract(epoch from lock_start) * 1000)::bigint,
+# The node that locked it last is the holder also after it released the lock: uPortal then moves
+# SERVER_ID to PREV_SERVER_ID and keeps LOCK_START. A run with little to aggregate holds the lock
+# for less than the second between two reads, so SERVER_ID alone can miss a takeover
+mutex_row() {  # holder|locked|lock_start|lock_update of the aggregation lock
+    sql "select case when locked then server_id else prev_server_id end, locked,
+             (extract(epoch from lock_start) * 1000)::bigint,
              (extract(epoch from lock_update) * 1000)::bigint from up_mutex where mutex_name = '$AGGREGATION_MUTEX'"
 }
 
@@ -979,7 +983,8 @@ check_failover() {
     deadline=$(( last_update / 1000 + (ABANDONED_LOCK_AGE_MS + SERVER_BIAS_MS) / 1000 + 60 ))
     took=
     while [ "$stolen" = false ] && [ "$(date +%s)" -lt "$deadline" ]; do
-        IFS='|' read -r server locked start _ <<< "$(mutex_row)"
+        row=$(mutex_row)
+        IFS='|' read -r server locked start _ <<< "$row"
         if [ "${server%%_*}" = "node-$survivor" ] && [ "$start" -gt "$last_update" ]; then
             took=$start
             break
@@ -989,7 +994,7 @@ check_failover() {
     if [ "$stolen" = true ]; then
         :  # already recorded
     elif [ -z "$took" ]; then
-        record failover-takeover FAIL "node $survivor did not take $AGGREGATION_MUTEX over within $(( deadline - last_update / 1000 )) s of node $KILLED_NODE's last lock update"
+        record failover-takeover FAIL "node $survivor did not take $AGGREGATION_MUTEX over within $(( deadline - last_update / 1000 )) s of node $KILLED_NODE's last lock update (last row: $row)"
     elif [ $(( took - last_update )) -lt "$ABANDONED_LOCK_AGE_MS" ]; then
         record failover-takeover FAIL "node $survivor took the lock $(( took - last_update )) ms after node $KILLED_NODE's last update, before it counted as abandoned (${ABANDONED_LOCK_AGE_MS} ms)"
     else
