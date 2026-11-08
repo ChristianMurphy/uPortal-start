@@ -254,7 +254,19 @@ The downloads worked again by 10:49. The second push, uPortal `285e7a7bc` with t
 commits and uPortal-start with this note, started new runs, and DB integration 42473494660 was
 started by hand on uPortal `285e7a7bc`.
 
-RUNS_PLACEHOLDER
+| Run | Attempts | Result |
+| --- | --- | --- |
+| uPortal CI 42473478227 | 1 | passed |
+| uPortal DB integration 42473494660, started by hand | 1 | passed. uPortal-webapp's 469 tests, the new ones included, pass on PostgreSQL 18, MariaDB 12.3, MySQL 9.7, SQL Server 2025 and Oracle 23. The canaries for MySQL 26 and PostgreSQL 19 passed, and the one for MariaDB 13 failed on the Gradle download. The push run 42473478229 was cancelled by this one, as they share a group |
+| uPortal DB copy tool 42473478292 | 2 | passed. Attempt 1 failed on the Gradle download |
+| uPortal-start Integration 42473540480 | 2 | passed. Build uPortal built uPortal `285e7a7bc` from this branch (notice of the job). Playwright on HSQLDB and on postgres-18 passed 512 tests each, with no test that passed only on a retry. Playwright with CAS, the postgres-18 DB harness and Cluster passed in attempt 1. G-migrate mariadb-11.4 to postgres-18 failed on the Gradle download in attempt 1 and passed in attempt 2 |
+| uPortal-start CI 42473540558 | 1 | passed |
+| uPortal-start HTTP replay 42473540536 | 1 | passed. "Replay against 5.17" was skipped, as on every topic push that doesn't change `tests/replay`. Apart from the 500s, the fixes leave every response as it was |
+| uPortal-start Migration equivalence 42473540463 | 2 | passed. Attempt 1 failed on the Gradle download |
+| uPortal-start G-index 42473540482 | 2 | passed. Attempt 1 failed on the Gradle download |
+
+The MariaDB Playwright job and the postgres-15 and postgres-16 G-migrate pairs, where the red
+tip's failures were, run only in the full matrix of a batch.
 
 ## Proposed LOG rows
 
@@ -263,7 +275,7 @@ The coordinator gave MOD-I391, MOD-I392 and MOD-I394 at landing 2. These rows re
 
 | ID | Area | Issue | Status |
 | --- | --- | --- | --- |
-| MOD-I391 | i18n | `PUT /api/v6-0/locale` answers 500 when two sessions of one user save the language at the same moment: `RDBMLocaleStore.updateUserLocales` deletes, then inserts, and the second insert violates `UP_USER_LOCALE`'s primary key. With two different locales PostgreSQL keeps both rows. | **Fixed** (uPortal `fix(i18n): save one user's language from two sessions in turn`): a save locks the user's `UP_USER` row first and runs under READ COMMITTED. `RDBMLocaleStoreConcurrencyTest` fails on the old code on HSQLDB, PostgreSQL 16 and MariaDB 10.11 (`notes/portal-races.md`). |
+| MOD-I391 | i18n | `PUT /api/v6-0/locale` answers 500 when two sessions of one user save the language at the same moment: `RDBMLocaleStore.updateUserLocales` deletes, then inserts, and the second insert violates `UP_USER_LOCALE`'s primary key. With two different locales PostgreSQL keeps both rows. | **Fixed** (uPortal `fix(i18n): save one user's language from two sessions in turn`): a save locks the user's `UP_USER` row first and runs under READ COMMITTED. `RDBMLocaleStoreConcurrencyTest` fails on the old code on HSQLDB, PostgreSQL 16 and MariaDB 10.11, and on HSQLDB without the READ COMMITTED line. A user id without an `UP_USER` row logs a warning and saves as before (`notes/portal-races.md`). |
 | MOD-I392 | Security | `EntityTypes.getEntityIDFromType`'s cache key `#type.Name` fails on Spring 5.3 on the first call and after the garbage collector clears an entry of `ClassUtils`' interface method cache: SpEL calls `Principal.getName()` on `IPerson.class`. A sign-in then fails with "Invalid username or password", and a render or REST call answers 500. Cause of MOD-I383's `reset-my-layout.spec.ts:238`, and of the three tests that passed only on a retry in landing 2's tip run 42463431999 (jobs 128678268222, 128678268220, 128678268241). | **Fixed** (uPortal `fix(core): key the entity type id cache by the class`): the `Class` is the key. `EntityTypesCacheTest` fails on the old key. No other key or expression in uPortal has the fault. |
-| MOD-I394 | Persistence | Overlapping imports of new users deadlock on MariaDB (1213): `UserImporterExporter.importData` updates, then inserts, under REPEATABLE READ, and InnoDB's gap locks on `UPU_USER_NAME` block both inserts. `self-edit-account.spec.ts:256` was flaky in job 116563567479. | **Fixed** (uPortal `fix(io): import users under read committed`): the import runs under READ COMMITTED. `UserImporterExporterConcurrencyTest` fails on the old code on MariaDB 10.11 with 1213. |
+| MOD-I394 | Persistence | Overlapping imports of new users deadlock on MariaDB (1213): `UserImporterExporter.importData` updates, then inserts, under REPEATABLE READ, and InnoDB's gap locks on `UPU_USER_NAME` block both inserts. `self-edit-account.spec.ts:256` was flaky in job 116563567479. | **Fixed** (uPortal `fix(io): import users under read committed`): the import runs under READ COMMITTED. `UserImporterExporterConcurrencyTest` fails on the old code on MariaDB 10.11 with 1213, and on every database, HSQLDB included, when the import doesn't ask for READ COMMITTED. |
 | MOD-I? | Layout | Saves of one user's layout that overlap fail on PostgreSQL with `DuplicateKeyException` on `up_layout_param_pkey`: `setUserLayout` deletes, then inserts, and the second save's delete doesn't see the rows the first one committed. Parallel sign-ins of one user each save the merged layout. `background-preference.spec.ts:124` failed at the student's sign-in in job 116563567769 (run 38775913145). Reproduced on a local PostgreSQL 16. | **Open.** Lock the user's `UP_USER` row at the start of the save, as MOD-I391 does. MOD-I360's test needs to run its second save in a thread (`notes/portal-races.md`). |
