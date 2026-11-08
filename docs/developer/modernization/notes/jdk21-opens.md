@@ -4,7 +4,8 @@ Branch `ccr-43ba0785-hzlrj5-jdk21-opens`, in uPortal-start only. uPortal is unch
 push runs build the uPortal integration branch.
 
 The branch makes uPortal-start's JVMs work on JDK 21 while the portal still runs on JDK 11. The
-data tools that Gradle forks get `--add-opens` for `java.lang` and `java.util`. Tomcat's
+data tools that Gradle forks get `--add-opens` for `java.lang`, `java.util` and, since the review
+of 2026-11-08, `java.io`. Tomcat's
 `setenv.sh` adds the `java.lang` opens for `daemon.sh`. Both options also work on JDK 11. The
 runtime switch to JDK 21 (P4-2 commits 3 to 7) comes later.
 
@@ -14,6 +15,8 @@ runtime switch to JDK 21 (P4-2 commits 3 to 7) comes later.
 | --- | --- |
 | `build: open java.lang and java.util to the portal's data tools` | `build.gradle` defines `portalJvmArgs`. `PortalShellInvoker` and every `ant.java` call in the Announcements, CalendarPortlet, NewsReaderPortlet and SimpleContentPortlet overlays pass it as `jvmarg` |
 | `build: add the module opens to tomcat's setenv scripts` | `etc/tomcat/bin/setenv.sh` adds the `java.lang` opens to `CATALINA_OPTS`, for `daemon.sh` (jsvc). `setenv.bat` is unchanged, for the reasons below |
+| `build: let the portal shell start without the module opens property` (review) | `PortalShellInvoker` reads `portalJvmArgs` with `findProperty` and passes no options when it is missing |
+| `build: open java.io to the data tools for the newsreader export` (review) | `portalJvmArgs` also opens `java.io` |
 
 ## Measurement 1: data steps on JDK 21 at the integration tip
 
@@ -144,7 +147,8 @@ tree, put back with `git checkout -- build.gradle` after each run.
 | `dataInit`, without | 11.0.32 | passes | 0 | 7 JVMs print "An illegal reflective access operation has occurred", from javassist `defineClass` (Calendar and NewsReader schema), Groovy's `String` constructor (Calendar and NewsReader imports), Spring 4.3's `ReflectionUtils` to `MethodHandles$Lookup` (2) and dom4j to a Xerces class (1) |
 | `dataInit`, with | 11.0.32 | passes | 0 | 3 JVMs, from Spring 4.3's `ReflectionUtils` (2) and dom4j (1) |
 
-So both opens are needed on JDK 21, and they are enough for every data step. On JDK 11, which CI
+So both opens are needed on JDK 21, and they are enough for every `dataInit` step. NewsReader's
+`dataExport` needs `java.io` as well (review, below). On JDK 11, which CI
 runs, the steps passed before and pass now. The opens remove four of the seven warning blocks.
 The other three come from `java.lang.invoke` and the JDK's Xerces, which the branch doesn't open,
 and those calls don't fail on JDK 21. "JVM warnings" counts `WARNING:` lines without Hibernate's
@@ -189,6 +193,44 @@ The CI job "ubuntu-latest with Java temurin version 11" runs `dataInit` with `-i
 and 7 on the integration tip `9c20dbaf6` (job 128745328118, run 42485157594), as in the local
 JDK 11 runs. Neither log has an `InaccessibleObjectException`.
 
+## Review of 2026-11-08
+
+The oss-review of `49c21aa65` against the tip asked for three things.
+
+* **O2.** `PortalShellInvoker` read `project.rootProject.ext['portalJvmArgs']` without a fallback.
+  A build without the property failed every PortalShell task. It now reads
+  `findProperty('portalJvmArgs') ?: []` (`bb1647dad`).
+* **O3.** `dataImport`, `dataExport` and `dataDelete` on JDK 21, without and with the opens. uPortal
+  `4b5d266ad` (5.17.10-SNAPSHOT), only uPortal and NewsReaderPortlet deployed and initialised,
+  HSQLDB, ports 8680, 8605 and 8687, Tomcat not started. Each run is one Gradle command. "Without"
+  is `portalJvmArgs = []` in the working tree, put back after the run.
+
+  | Task | Tool | Without the opens | With `java.lang` and `java.util` | With `java.lang`, `java.util` and `java.io` |
+  | --- | --- | --- | --- | --- |
+  | `:overlays:uPortal:dataExport` (every type) | PortalShell | passes, 238 files | passes, 238 files | not run again |
+  | `:overlays:uPortal:dataDelete -Dtype=user -Dsysid=staff` | PortalShell | passes | passes | not run again |
+  | `:overlays:uPortal:dataImport` of that export | PortalShell | fails on 8 permission sets, with 0 `InaccessibleObjectException` | the same | not run again. On JDK 11 it fails on the same 8, see below |
+  | `:overlays:NewsReaderPortlet:dataExport` | Cernunnos | fails: 6 `defineClass` and 2 `java.io.File(String,File)` | fails: 2 `java.io.File(String,File)` | passes, 14 files |
+  | `:overlays:NewsReaderPortlet:dataImport` of that export | Cernunnos | fails: `String(char[],int,int,Void)` | not measured, since the export failed | passes |
+  | `:overlays:NewsReaderPortlet:dataInit` | Cernunnos | (measurement 3) | (measurement 3) | passes |
+
+  So NewsReader's export needs `java.io` too. `portalJvmArgs` opens it since `3c07e50d5`. The
+  three opens are enough for each data tool measured here. uPortal's PortalShell tasks don't throw
+  `InaccessibleObjectException` without them. NewsReader has no `dataDelete`, and CalendarPortlet
+  and Announcements have only `dataInit`.
+* **O1.** CI runs the data tools on JDK 11, where a missing opens option prints an illegal
+  reflective access warning and the step passes. Until P4-2 moves CI's data tools to JDK 21, no CI
+  check fails when an `ant.java(fork: true` call leaves out `portalJvmArgs`. The review accepts
+  that gap until then.
+
+The permission-set failure of uPortal's `dataImport` doesn't depend on the JDK or the opens.
+uPortal's export writes each permission set with
+`script="classpath://org/apereo/portal/io/import-permission_set_v5-0.crn"`.
+`PermissionSetPortalDataType` lists that key, but `importExportContext.xml` defines a Cernunnos
+bean for `import-permission_set_v3-1` only. The import answers "has no registered importer or
+upgrader support" for each of the 8 files. The same import on JDK 11 with the opens fails on the
+same 8. The proposed row is below.
+
 ## Next step
 
 None on this branch. The coordinator reviews it against the tip.
@@ -197,8 +239,9 @@ None on this branch. The coordinator reviews it against the tip.
 
 | ID | Area | Finding | Status |
 | --- | --- | --- | --- |
-| MOD-I365 | JDK 21 | At the integration tip (Hibernate 5.2.18, javassist 3.30.2, Spring 5.3), uPortal's `dataInit` and SimpleContentPortlet pass on JDK 21 without opens. The CalendarPortlet, NewsReaderPortlet and Announcements data steps fail with `InaccessibleObjectException`, because Hibernate 3's javassist and Spring's cglib call `ClassLoader.defineClass`, and the Cernunnos scripts' Groovy engine opens `String` and `HashSet` constructors. The Calendar and NewsReader schema steps hide their failure (`failonerror: false`) | **Fixed** (uPortal-start, commit 1): `portalJvmArgs` opens `java.lang` and `java.util` to every forked data tool. Measured again on 2026-11-08 at uPortal `0cf02679f`: without them the three data steps fail on JDK 21, with them every step passes. On JDK 11 they remove four of seven illegal reflective access warnings |
+| MOD-I365 | JDK 21 | At the integration tip (Hibernate 5.2.18, javassist 3.30.2, Spring 5.3), uPortal's `dataInit` and SimpleContentPortlet pass on JDK 21 without opens. The CalendarPortlet, NewsReaderPortlet and Announcements data steps fail with `InaccessibleObjectException`, because Hibernate 3's javassist and Spring's cglib call `ClassLoader.defineClass`, and the Cernunnos scripts' Groovy engine opens `String` and `HashSet` constructors. The Calendar and NewsReader schema steps hide their failure (`failonerror: false`) | **Fixed** (uPortal-start, commit 1 and `3c07e50d5`): `portalJvmArgs` opens `java.lang`, `java.util` and `java.io` to every forked data tool. NewsReader's `dataExport` needs `java.io`. Measured again on 2026-11-08 at uPortal `0cf02679f`: without them the three data steps fail on JDK 21, with them every step passes. On JDK 11 they remove four of seven illegal reflective access warnings |
 | MOD-I366 | JDK 21 | Released uPortal 5.17.9's `dataInit` fails on JDK 21 without the `java.lang` opens (Spring 4.3's `ConfigurationClassEnhancer`). 5.17.9 with commit 1 imports its data and its portal starts on JDK 21 and Tomcat 9.0.122, so the equivalence job's 5.17.9 side can move to 21 | **Fixed** by commit 1. The workflow change belongs to P4-2 commit 4 |
 | MOD-I367 | CI | The replay job's reference, uPortal-start `master`, uses Gradle 6.9.4, which can't run on JDK 21 (`Unsupported class file major version 65`). Its Tomcat 8.5.100 runs 5.17.9 on JDK 21 when Gradle and the data tools stay on JDK 11 | **Open**: decide for P4-2 commit 4. Either two JDKs in that job (11 for Gradle, 21 as `JAVA_HOME`) or a newer reference checkout |
 | MOD-I368 | Tomcat | Tomcat 9's `daemon.sh` (jsvc) reads `setenv.sh` but doesn't add any module opens, and jsvc ignores `JDK_JAVA_OPTIONS`. On JDK 21, Announcements, NewsReaderPortlet and NotificationPortlet then fail to start. `catalina.sh` and `catalina.bat` add the opens | **Fixed** (uPortal-start, commit 2): `setenv.sh` adds the `java.lang` opens. `setenv.bat` isn't changed, because procrun doesn't read it |
 | MOD-I369 | Process | A local probe of `master` hung for an hour. A stop that checked the wrong port left a Tomcat running, and its HSQLDB locks blocked the next `portalInit`. SIGTERM didn't stop that Tomcat (JGroups `JDBC_PING` shutdown hook). Changing the ports of an old checkout must cover `verifyTomcatState` too, and a probe should check that its ports are free before `portalInit` | **Lesson** |
+| MOD-I? | Import/export | uPortal's `dataImport` of its own `dataExport` fails on every permission set: the exporter writes `import-permission_set_v5-0.crn` as the script, and `importExportContext.xml` defines an importer bean for `import-permission_set_v3-1` only ("has no registered importer or upgrader support"). 8 of 238 exported files on the quickstart data, on JDK 11 and 21 alike. Found by the jdk21-opens review measurements | **Open.** Not checked on released 5.17.9 here |
