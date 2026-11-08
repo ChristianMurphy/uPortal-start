@@ -48,14 +48,21 @@ async function openSelector(page: Page): Promise<void> {
   await waitForPortalRequestsToSettle(page);
 }
 
-/** Choose a language by its name in the user's language and press Update. */
+/**
+ * Choose a language by its name in the user's language and press Update.
+ * Update saves the choice and then reloads the page, also when the language
+ * stays the same, so this waits for the reloaded page: a navigation that
+ * starts during the reload ends with net::ERR_ABORTED.
+ */
 async function chooseLanguage(
   page: Page,
   label: string,
   update: string,
 ): Promise<void> {
   await page.getByRole("radio", { name: label }).check();
+  const reloaded = page.waitForEvent("load");
   await page.getByRole("button", { name: update, exact: true }).click();
+  await reloaded;
   await waitForPortalRequestsToSettle(page);
 }
 
