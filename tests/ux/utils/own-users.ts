@@ -25,6 +25,7 @@ const OWN_USERS = {
   channel: "Cora",
   search: "Sol",
   timeout: "Tess",
+  bystander: "Bea",
 } as const;
 
 export type OwnUser = keyof typeof OWN_USERS;
