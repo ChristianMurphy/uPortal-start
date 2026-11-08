@@ -268,11 +268,38 @@ passed, the ones that got the file on the first attempt. With the new settings 1
 them on attempt 7. The other 8 got 504 on every attempt.
 
 
-**Third push (`820b8b501`, `540aa9b79` and this note).** Next step: read its runs. The
-`Build uPortal` jobs build the uPortal branch `86f85fcbb`. Their logs should show uPortal's
-wrapper with `retrying 6 times`. The new key starts without an entry. Look for whether Playwright:
-postgres-18 runs `Let setup-gradle save the Gradle cache` and then logs `Basic caching saved
-entry`, or fails and logs that the cache was read-only.
+**Third push, `036ad983a` (`820b8b501`, `540aa9b79` and a note commit).** uPortal-start's runs
+built the uPortal branch `86f85fcbb` (the `uPortal under test` annotation of jobs 128708170430
+and 128708170396), and its wrapper logged `Fetching distribution (retrying 6 times, with an
+initial back off of 5000 ms).` and got the file at once. The new key started without an entry,
+so all 11 Gradle jobs fetched the distribution. Each one got it:
+
+| Job | Attempts |
+| --- | --- |
+| In place: postgres-18 (Migration equivalence 42473067060), 128708980609 | 4 read timeouts of 30 s, then the file at 10:57:01 on attempt 5 |
+| Copy: mariadb-11.4 to postgres-18 (Migration equivalence), 128708980522 | a 502, a read timeout, then the file at 10:54:40 |
+| Playwright: postgres-18 (Integration 42473067055), 128709049966 | a read timeout, then the file on attempt 2 |
+| the other 8 | the file on the first attempt |
+
+With the tip's settings 3 of them would have failed, and with `retries=3` In place: postgres-18
+would have failed.
+
+The saving job, Playwright: postgres-18 (128709049966), then failed on two specs that passed
+only on a retry, `portlet-options.spec.ts:54` and `user-locale.spec.ts:121`. Its step `Let
+setup-gradle save the Gradle cache` was skipped, and its post step logged `Cache was
+read-only` and saved nothing ("0 restored, 0 saved"). Before `820b8b501` that job would have
+saved its key. Playwright: hsqldb (128709049999) failed on `visual-resource-server.spec.ts:153`,
+a known flake of the red tip. This branch changes neither spec. CI (Vale, commit messages and
+the Linux leg), Migration equivalence, Workflow lint (actionlint and zizmor), HTTP replay and
+G-index passed. In uPortal, run 42472918619 (CI) built and tested `86f85fcbb` (`BUILD
+SUCCESSFUL`, after a read timeout on attempt 1 of the distribution) and then failed in the
+Coveralls step, whose download from GitHub releases got `504 Gateway Time-out`. DB integration
+(42472918520) and DB copy tool (42472918678) passed.
+
+**Fourth push (this note).** Next step: read its saving job. The key of the third push still
+has no entry. Its jobs fetch the distribution again. If Playwright: postgres-18 passes, its
+post step must log `Basic caching saved entry`, which shows that the post step read the input
+again. A later push with the same build files then restores that entry and doesn't download.
 
 ## An empty cache entry after a failed job
 
