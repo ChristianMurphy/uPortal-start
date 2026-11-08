@@ -123,7 +123,7 @@ reset API spec saves the layout. No failure of this kind is in the runs looked a
 ## The fix
 
 `tests/ux/utils/own-users.ts` lists the users of a spec's own: `favorites`, `options`, `language`,
-`channel`, `search`, `timeout`, `locale` and `bystander`. `global-setup.ts` imports each of them
+`channel`, `search`, `timeout`, `locale`, `bystander` and, since landing batch 1, `background`. `global-setup.ts` imports each of them
 once for every worker slot, named `e2e-<name>-<slot>`, before the first test, and logs each in once,
 as it does for the users in `general-config.ts`. A spec calls `ownUser("<name>")` in a hook or test
 and gets the account of its worker's slot (`test.info().parallelIndex`). Within one Playwright run
@@ -155,6 +155,7 @@ quickstart data as it is.
 | `session-timeout.spec.ts`, the two language tests | `e2e-timeout-<slot>`, Tess |
 | `web-components-locale.spec.ts` | `e2e-locale-<slot>`, Lou |
 | `reset-my-layout.spec.ts`, "leaves other users' layouts alone", as the other user | `e2e-bystander-<slot>`, Bea |
+| `background-preference.spec.ts`, the two language tests (landing batch 1, `600593474`) | `e2e-background-<slot>`, Nina |
 
 The people search specs look for "steven", which these names don't contain. The other tests of
 these specs still sign in as the student. The integration tip (`a0a125fee`, landing 2) has no
