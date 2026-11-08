@@ -1,10 +1,11 @@
-import { test, expect, Browser, Page } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 import { config } from "../../general-config";
 import {
   loginViaUrl,
   sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
 
 /*
  * MOD-D50: web components come in English, Spanish and French. Each test
@@ -15,37 +16,10 @@ import {
  * then the texts /api/v6-0/messages returns in the user's locale.
  *
  * The portal stores the locale for the user, so the tests use an account of
- * their own: another spec signing in as a shared user while a locale is set
- * would see the portal in Spanish or French. The account is imported once
- * (re-importing replaces it), each test sets the locale and puts back the one
- * the account had, and afterAll removes the account's portal records.
+ * their own (own-users.ts): another spec signing in as a shared user while a
+ * locale is set would see the portal in Spanish or French. Each test sets the
+ * locale and puts back the one the account had.
  */
-const LOCALE_USER = {
-  username: "e2e-locale",
-  // The same password hash as the quickstart student account
-  // eslint-disable-next-line sonarjs/no-hardcoded-credentials
-  password: "student",
-  displayName: "Locale Tester",
-};
-
-const LOCALE_USER_XML = `<?xml version="1.0" encoding="UTF-8"?>
-<user xmlns="https://source.jasig.org/schemas/uportal/io/user" version="4.0" username="${LOCALE_USER.username}">
-    <default-user>defaultTemplateUser</default-user>
-    <password>(MD5)mhmjKvf2F3gPizS9DrA+CsFmqj74oTSb</password>
-    <attribute>
-        <name>givenName</name>
-        <value>Locale</value>
-    </attribute>
-    <attribute>
-        <name>sn</name>
-        <value>Tester</value>
-    </attribute>
-    <attribute>
-        <name>displayName</name>
-        <value>${LOCALE_USER.displayName}</value>
-    </attribute>
-</user>
-`;
 
 /* One translated text per component and locale */
 const CASES = [
@@ -77,20 +51,6 @@ const CASES = [
   },
 ];
 
-async function asAdmin(
-  browser: Browser,
-  action: (page: Page) => Promise<void>,
-): Promise<void> {
-  const context = await browser.newContext();
-  try {
-    const page = await context.newPage();
-    await loginViaUrl(page, config.users.admin);
-    await action(page);
-  } finally {
-    await context.close();
-  }
-}
-
 /**
  * The user's locale as the locale API names it, such as "en_US", read from
  * the locale attribute the portal gives a web component ("en-US").
@@ -120,46 +80,11 @@ async function chooseLocale(page: Page, code: string): Promise<void> {
   expect(response.status(), `PUT /api/v6-0/locale ${code}`).toBe(200);
 }
 
-test.beforeAll(async ({ browser }) => {
-  await asAdmin(browser, async (page) => {
-    const headers = await sessionCsrfHeaders(page.request);
-    const status = await page.evaluate(
-      async ({ body, url, csrf }) => {
-        const data = new window.FormData();
-        data.append(
-          "file",
-          new window.File([body], "e2e-locale.user.xml", { type: "text/xml" }),
-        );
-        const response = await window.fetch(`${url}api/import`, {
-          method: "POST",
-          headers: csrf,
-          body: data,
-        });
-        return response.status;
-      },
-      { body: LOCALE_USER_XML, url: config.url, csrf: headers },
-    );
-    expect(status, "import the e2e-locale account").toEqual(200);
-  });
-});
-
-test.afterAll(async ({ browser }) => {
-  // Removes the portal's records of the account (layout, locale); the local
-  // account itself stays, and the next import replaces it
-  await asAdmin(browser, async (page) => {
-    const response = await page.request.delete<unknown>(
-      `${config.url}api/entity/user/${LOCALE_USER.username}`,
-      { headers: await sessionCsrfHeaders(page.request) },
-    );
-    expect(response.status()).toEqual(204);
-  });
-});
-
 for (const { locale, component, url, text } of CASES) {
   test(`${component} shows ${locale} text to a user whose locale is ${locale}`, async ({
     page,
   }) => {
-    await loginViaUrl(page, LOCALE_USER);
+    await loginViaUrl(page, ownUser("locale"));
     const previous = await currentLocale(page, url, component);
     try {
       await chooseLocale(page, locale);

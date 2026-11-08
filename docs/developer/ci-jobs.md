@@ -15,7 +15,8 @@ schedule. Its nightly set runs only from a manual run.
 | `Migration equivalence` | PostgreSQL 18 in place and one copy | HSQLDB, PostgreSQL 18 and MariaDB 12.3 in place, two copies | Every runtime server in place, a copy from and into every vendor |
 | `HTTP replay` | Only when the push changes `tests/replay` or the workflow | Every push | Not scheduled |
 
-The `CI` workflow's `commits` and `prose` jobs run on every push.
+The `CI` workflow's `commits`, `prose` and `lint` jobs run on every push. `lint` runs
+`npm run lint`: tsc, type coverage and ESLint over the tests.
 
 ## Which uPortal a run tests
 
@@ -55,6 +56,15 @@ The job summary and a notice annotation list the files that matched, or say
 Then the uPortal build and the G-index job are skipped. When the script can't fetch a branch or tell,
 G-index runs. `.github/scripts/gindex-changes.test.sh` checks the rule with a table of example
 pushes, and the workflow lint job runs it.
+
+## Workflow lint
+
+`Workflow lint` runs on a push that changes `.github`. Besides zizmor and actionlint, it runs the
+tests of the scripts in `.github/scripts`: `gindex-changes.test.sh`, `choose-uportal.test.sh`,
+`wait-for-portlets.test.sh`, `find-uportal-build.test.sh`, `check-uportal-downloads.test.sh` and
+`check-placeholders.test.sh`. It also runs `check-uportal-downloads.py` on the workflows (MOD-I371).
+That check fails when a job downloads the uPortal build under a name other than
+`needs.uportal.outputs.artifact`, or `steps.reuse.outputs.artifact` in the `uportal` job.
 
 ## Time per phase
 

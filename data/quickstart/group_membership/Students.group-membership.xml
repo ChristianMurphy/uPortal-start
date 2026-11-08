@@ -26,6 +26,7 @@
   <description>All students</description>
   <children>
     <literal>student</literal>
+    <literal>riley</literal>
     <literal>student-lo</literal>
   </children>
 </group>

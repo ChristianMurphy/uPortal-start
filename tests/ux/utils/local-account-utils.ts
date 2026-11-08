@@ -1,4 +1,4 @@
-import { expect, APIRequestContext } from "@playwright/test";
+import { expect, test, APIRequestContext } from "@playwright/test";
 import { config } from "../../general-config";
 import { sessionCsrfHeaders } from "./ux-general-utils";
 
@@ -44,9 +44,12 @@ export async function importXml(
 }
 
 /**
- * A new local account named "<prefix>-<time>-<n>" with the password
+ * A new local account named "<prefix>-<time>-<worker>-<n>" with the password
  * "student", the given name `givenName`, the mail address
- * "<username>@example.org" and the extra attributes given.
+ * "<username>@example.org" and the extra attributes given. Each worker counts
+ * its own accounts, so the name holds the worker's index: two workers that
+ * import their nth account in the same millisecond would otherwise ask for
+ * the same user.
  */
 export async function importLocalAccount(
   admin: APIRequestContext,
@@ -55,7 +58,24 @@ export async function importLocalAccount(
   attributes: Record<string, string> = {},
 ): Promise<Account> {
   accountCount += 1;
-  const username = `${prefix}-${Date.now()}-${accountCount}`;
+  return importNamedAccount(
+    admin,
+    `${prefix}-${Date.now()}-${test.info().workerIndex}-${accountCount}`,
+    givenName,
+    attributes,
+  );
+}
+
+/**
+ * The local account of that name, as importLocalAccount() makes it; a second
+ * import replaces the account's attributes and password.
+ */
+export async function importNamedAccount(
+  admin: APIRequestContext,
+  username: string,
+  givenName: string,
+  attributes: Record<string, string> = {},
+): Promise<Account> {
   const attributeXml = Object.entries(attributes)
     .map(
       ([name, value]) =>

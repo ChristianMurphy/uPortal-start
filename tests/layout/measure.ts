@@ -169,11 +169,11 @@ function visibleBox(element: Element): Box {
     const contains = position !== "absolute" || style.position !== "static";
     if (contains) {
       const clip = clipBox(ancestor);
-      if (style.overflowX !== "visible") {
+      if (hides(style.overflowX)) {
         box.left = Math.max(box.left, clip.left);
         box.right = Math.min(box.right, clip.right);
       }
-      if (style.overflowY !== "visible") {
+      if (hides(style.overflowY)) {
         box.top = Math.max(box.top, clip.top);
         box.bottom = Math.min(box.bottom, clip.bottom);
       }
@@ -339,6 +339,39 @@ function overlap(a: Box, b: Box): [number, number] {
   ];
 }
 
+/*
+ * The boxes of the element's lines, each cut to its visible box. A link in
+ * running text that wraps has one box per line. Its bounding box covers both
+ * lines from edge to edge, so it overlaps the links beside it on those lines.
+ */
+function lineBoxes(element: Element): Box[] {
+  const clip = visibleBox(element);
+  const lines = [...element.getClientRects()]
+    .map((rect) => ({
+      left: Math.max(rect.left, clip.left),
+      top: Math.max(rect.top, clip.top),
+      right: Math.min(rect.right, clip.right),
+      bottom: Math.min(rect.bottom, clip.bottom),
+    }))
+    .filter((box) => box.right > box.left && box.bottom > box.top);
+  return lines.length > 0 ? lines : [clip];
+}
+
+/*
+ * The largest overlap, over 2 pixels each way, of a line of one control
+ * with one of the other
+ */
+function linesOverlap(a: Box[], b: Box[]): [number, number] {
+  let largest: [number, number] = [0, 0];
+  for (const one of a) {
+    for (const other of b) {
+      const [x, y] = overlap(one, other);
+      if (x > 2 && y > 2 && x * y > largest[0] * largest[1]) largest = [x, y];
+    }
+  }
+  return largest;
+}
+
 /* The topmost element at a point of the viewport, inside shadow roots too */
 function topmostAt(x: number, y: number): Element | undefined {
   let found = document.elementFromPoint(x, y) ?? undefined;
@@ -405,7 +438,7 @@ function overlapProblems(visible: Element[]): Problem[] {
   );
   const items = controls.map((element) => ({
     element,
-    box: visibleBox(element),
+    lines: lineBoxes(element),
   }));
   const problems: Problem[] = [];
   for (const [first, a] of items.entries()) {
@@ -416,7 +449,7 @@ function overlapProblems(visible: Element[]): Problem[] {
         within(b.element, a.element)
       )
         continue;
-      const [x, y] = overlap(a.box, b.box);
+      const [x, y] = linesOverlap(a.lines, b.lines);
       if (x > 2 && y > 2) {
         const size = `${Math.round(x)}x${Math.round(y)}px`;
         problems.push(
@@ -629,6 +662,8 @@ export function layoutScript(): string {
     spillWidth,
     spillProblems,
     overlap,
+    lineBoxes,
+    linesOverlap,
     topmostAt,
     samplePoints,
     uncovered,

@@ -18,3 +18,10 @@ UP_PORTLET_PREF_VALUES rows -8 MOD-I134
 # name of the entity's @SequenceGenerator, are removed. Hibernate always used the sequence
 # definition, and no database ever had a hibernate_sequences table (MOD-D33, ADR 0006).
 generators declared -table(hibernate_sequences) MOD-D33
+# riley, a quickstart student whose layout only the Reset My Layout UX spec changes: the user, the
+# local account with its four attributes and their values, and the Students membership.
+UP_USER rows +1 MOD-I363
+UP_PERSON_DIR rows +1 MOD-I363
+UP_PERSON_ATTR rows +4 MOD-I363
+UP_PERSON_ATTR_VALUES rows +4 MOD-I363
+UP_GROUP_MEMBERSHIP rows +1 MOD-I363
