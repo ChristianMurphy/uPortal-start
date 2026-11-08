@@ -5,6 +5,7 @@ import {
   logout,
   sessionCsrfHeaders,
 } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
 
 /*
  * Search as web components (uPortal MOD-D18): the header's search-launcher
@@ -184,13 +185,14 @@ test.describe("Search web components", () => {
 
 /*
  * The portal saves the language for the user, and a session that signs in
- * while it is saved renders in it. These tests sign in as the developer, the
- * account the language tests use, not as the student, whom other specs
- * expect in English (general-config.ts).
+ * while it is saved renders in it. These tests sign in as a user of their
+ * own (own-users.ts), not as the student, whom other specs expect in English.
+ * Two specs that save one user's language at the same moment can get a 500
+ * from the locale API (MOD-I391), so they don't share the developer either.
  */
 test.describe("Search web components in the user's language", () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaUrl(page, config.users.developer);
+    await loginViaUrl(page, ownUser("search"));
   });
 
   test.afterEach(async ({ page }) => {

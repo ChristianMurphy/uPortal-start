@@ -79,10 +79,12 @@ export const config = {
       password: "riley",
       displayName: "Riley Reset",
     },
-    // The language tests sign in as the developer, since they change the
-    // user's saved language, which a parallel spec would see at its sign-in.
-    // The Reset My Layout API spec changes only the developer's layout and
-    // checks nothing that depends on the language.
+    // The Reset My Layout tests in Spanish and French sign in as the
+    // developer, since they change the user's saved language, which a
+    // parallel spec would see at its sign-in. The other language tests have
+    // users of their own (ux/utils/own-users.ts). The Reset My Layout API spec
+    // changes only the developer's layout and checks nothing that depends on
+    // the language.
     developer: {
       id: "xx",
       username: "developer",

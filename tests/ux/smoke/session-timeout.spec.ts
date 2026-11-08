@@ -5,6 +5,7 @@ import {
   logout,
   sessionCsrfHeaders,
 } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
 
 /*
  * Session Timeout (fname session-timeout) sits in the header region of the
@@ -311,15 +312,10 @@ test.describe("Session timeout web component", () => {
  * The warning in the user's own locale. The renderer passes the user's chosen
  * locale (PUT /api/v6-0/locale, as the User Locales Selector saves it) to the
  * element, which asks the portal for its messages in that locale. The locale is stored for the user,
- * so these tests sign in as developer, whom no other spec uses, and set it
- * back to en_US at the end of each test.
+ * so these tests sign in as a user of their own (own-users.ts), and set it
+ * back to en_US at the end of each test. Two specs that save one user's
+ * language at the same moment can get a 500 from the locale API (MOD-I391).
  */
-const developer = {
-  username: "developer",
-  // eslint-disable-next-line sonarjs/no-hardcoded-credentials
-  password: "developer",
-  displayName: "Developer User",
-};
 
 /** Saves the signed-in user's locale through the API the selector uses. */
 async function chooseLocale(page: Page, code: string): Promise<void> {
@@ -343,7 +339,7 @@ for (const { code, title, remaining } of [
   },
 ]) {
   test(`Session timeout warning in ${code}`, async ({ page }) => {
-    await loginViaUrl(page, developer);
+    await loginViaUrl(page, ownUser("timeout"));
     try {
       await chooseLocale(page, code);
       await page.clock.install();

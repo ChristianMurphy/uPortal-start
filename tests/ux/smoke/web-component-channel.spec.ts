@@ -6,6 +6,7 @@ import {
   sessionCsrfHeaders,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
 
 /*
  * The "Web Component" channel type (uPortal MOD-D18): a portlet definition of
@@ -14,10 +15,12 @@ import {
  * API with the session cookie and the CSRF token the portal put on it.
  *
  * The quickstart's Favorites channel is one (<up-favorites>). These tests put
- * it on faculty's Welcome tab twice, through the layout API, so that they also
+ * it on the Welcome tab twice, through the layout API, so that they also
  * see that a page loads the module once however many channels use it, and
- * remove it again afterwards. Other specs only look for faculty's tabs and
- * named portlets, which stay as they were.
+ * remove it again afterwards. That changes the user's layout, so they sign in
+ * as a user of their own (own-users.ts). As the shared faculty user, they
+ * changed the layout that faculty's other specs loaded and measured at the
+ * same time (MOD-I380).
  */
 const FNAME = "favorites";
 const LAYOUT_API = `${config.url}api/layout`;
@@ -82,7 +85,7 @@ async function expectFavoritesRendered(
 
 test.describe("Web component channel", () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaUrl(page, config.users.faculty);
+    await loginViaUrl(page, ownUser("channel"));
     await removeChannels(page);
     await addChannel(page);
     await addChannel(page);
