@@ -5,13 +5,14 @@ self-edit flakes of the integration tip's Integration run 38775913145 (uPortal-s
 uPortal `498252acd`), the rest of MOD-I385, and MOD-I383 and MOD-I387. uPortal has no branch of
 this name. Its runs build the uPortal integration branch.
 
-The causes, one in the tests and two in the portal:
+The causes, two in the tests and two in the portal:
 
 | Failure | Cause | State |
 | --- | --- | --- |
 | `reset-my-layout.spec.ts:289` (postgres-18 job 116563567668), `:308` (G-migrate jobs 116563567769 and 116563568282) | The search spec saved Spanish and French for the shared student (cause 1) | Fixed on this branch |
 | `self-edit-account.spec.ts:256` (MariaDB job 116563567479) | Account imports that overlap deadlock on MariaDB (cause 3) | Portal bug, proposed fix below |
 | `reset-my-layout.spec.ts:238` (postgres-18, run 38689486418, MOD-I383) | Staff's sign-in failed in a cache key expression (cause 2) | Portal bug, proposed fix below |
+| `self-edit-account-component.spec.ts:255` (HSQLDB job 128653803621 of this branch's run 42455427048) | Workers imported accounts with the same name (cause 4) | Fixed on this branch |
 
 ## Cause 1: the search language tests changed the student's language
 
@@ -91,11 +92,13 @@ Evidence:
   `#type.getName()` fails the same way on the first call. `#type` never fails. Spring 4.3.30 (the
   5.17 release) and 7.0.9 don't fail.
 * Every portal log in the downloaded artifacts has the failure at the first request, the guest
-  login of `global-setup.ts`: run 38775913145 (postgres-18, MariaDB, both G-migrate pairs) and run
-  38689486418 (postgres-18). The tests don't notice that one.
-* Later failures appear in three of those five logs: run 38775913145 postgres-18 at 17:38:22 (a guest
-  render of `/f/welcome/normal/render.uP` answered 500), its postgres-16 to postgres-18 pair at
-  17:45:29 (`/api/v5-1/userinfo` answered 500), and run 38689486418 postgres-18 at 06:16:07.
+  login of `global-setup.ts`: run 38775913145 (postgres-18, MariaDB, both G-migrate pairs), run
+  38689486418 (postgres-18) and this branch's run 42455427048 (HSQLDB, postgres-18). The tests
+  don't notice that one.
+* Later failures appear in four of those seven logs: run 38775913145 postgres-18 at 17:38:22 (a
+  guest render of `/f/welcome/normal/render.uP` answered 500), its postgres-16 to postgres-18 pair
+  at 17:45:29 (`/api/v5-1/userinfo` answered 500), run 42455427048 HSQLDB at 06:54:52
+  (`/api/v4-3/dlm/layout.json` answered 500), and run 38689486418 postgres-18 at 06:16:07.
 * That last one is MOD-I383's `reset-my-layout.spec.ts:238` ("leaves other users' layouts
   alone"). The trace shows `Login?userName=staff` redirected to `/p/login`, whose snapshot says
   "Unable to log in . . . Invalid username or password", and the portal log has `Exception
@@ -130,6 +133,23 @@ MOD-I360 did for the layout store, or insert first and update when the key exist
 pattern can deadlock a bulk user import on MariaDB or MySQL, since the import runs files of one
 type in parallel threads. It belongs with MOD-I382.
 
+## Cause 4: workers imported accounts with the same name
+
+This branch's first Integration run (42455427048, HSQLDB job 128653803621) had one flaky test,
+`self-edit-account-component.spec.ts:255`. Its `beforeEach` failed like `:256` on MariaDB: the
+import of `selfedit-1794120895472-11` answered 500. Here the portal log has a unique key violation
+on `UPU_USER_NAME` 3 ms after it logged `Imported : selfedit-1794120895472-11.user.xml` for
+another request, and a session of another test signed in as that user 100 ms later.
+
+`importLocalAccount` (`tests/ux/utils/local-account-utils.ts`) named each account
+`<prefix>-<time>-<n>`, where `n` counts the accounts of one worker. `self-edit-account.spec.ts`
+and `self-edit-account-component.spec.ts` run on two workers and import one account per test, so
+their counts stay in step. When both imported their nth account in the same millisecond, they
+asked for the same user, and the second `INSERT` failed.
+
+The fix (`deb4ac860`) adds the worker's index (`test.info().workerIndex`) to the name. Cause 3 is
+separate: on MariaDB the two names differed (`-14` and `-13`).
+
 ## What isn't attributed
 
 * MOD-I383's local failures (`popular-portlets.spec.ts:226`, `favorites.spec.ts:314`,
@@ -147,13 +167,34 @@ type in parallel threads. It belongs with MOD-I382.
 ## Evidence still to collect
 
 * Local runs before and after the fix with `--repeat-each`, together with
-  `search-web-component.spec.ts`: not run. The shared uPortal build in `.m2-tip` failed, because
-  Maven Central answered 429 to this machine (2026-11-08), so no local portal could start.
+  `search-web-component.spec.ts`: not run. The shared uPortal build in `.m2-tip` was ready at
+  06:49 UTC, but this worktree's `portalInit` got 429 from Maven Central at 06:57 for
+  SimpleContentPortlet 3.4.4's POM, so no local portal started. A script for the run is ready:
+  the reset web component tests, the reset language tests and the search language tests with
+  `--repeat-each 30 --workers 4 --retries 0`, once with the integration tip's search spec and
+  once with this branch's.
 * The push runs of this branch: see the next section.
 
 ## Push runs
 
-RUNS_PLACEHOLDER
+First push, uPortal-start `d0a90ccec` (the search fix and this note). Every run built uPortal
+`498252acd`, the integration branch, since uPortal has no branch of this name (notice of the
+`Build uPortal` jobs).
+
+* Integration 42455427048: failed on one flaky test in the HSQLDB job,
+  `self-edit-account-component.spec.ts:255` (cause 4). Playwright postgres-18, HSQLDB with CAS,
+  DB harness postgres-18, G-migrate mariadb-11.4 to postgres-18 and Cluster passed. In the
+  postgres-18 job, `reset-my-layout.spec.ts` passed on its first run. This push profile doesn't
+  run MariaDB Playwright or the postgres-15 and postgres-16 pairs.
+* CI 42455427046 and G-index 42455427009 passed.
+* HTTP replay 42455427011 failed in "Replay against 5.17" on 12 exchanges that this branch
+  doesn't touch. In the health checks, `health-check?detail=ALL` returns
+  `Sun, 8 Nov 2026 06:43:24 GMT`, and the replay's `HTTP_DATE` pattern (`tests/replay/lib.mjs`)
+  wants a two-digit day, so it fails on days 1 to 9 of every month. The entity type id in
+  principal strings came out as `13` where the recording has `14` (`14.admin` against
+  `13.admin`). The integration branch's replay 38775913401 passed on 2026-10-15.
+
+Second push: RUNS_PLACEHOLDER
 
 ## Proposed LOG rows
 
@@ -161,4 +202,5 @@ RUNS_PLACEHOLDER
 | --- | --- | --- | --- |
 | MOD-I? | Tests | `search-web-component.spec.ts` saved Spanish and French for the shared student. A spec that signed in as the student meanwhile got Spanish pages: `reset-my-layout.spec.ts:289` and `:308` were flaky in Integration 38775913145 (jobs 116563567668, 116563567769, 116563568282). | **Fixed** (uPortal-start `dd63f3f46`): the language tests sign in as the developer (`notes/retry-flakes.md`). |
 | MOD-I? | Security | `EntityTypes.getEntityIDFromType`'s cache key `#type.Name` fails on Spring 5.3 on the first call and after the garbage collector clears an entry of `ClassUtils`' interface method cache: SpEL calls `Principal.getName()` on `IPerson.class`. A sign-in then fails with "Invalid username or password", and a render or REST call answers 500. Spring 4.3 (5.17) doesn't fail. Cause of MOD-I383's `reset-my-layout.spec.ts:238` in run 38689486418. | **Open.** Drop the `key` attribute so the `Class` is the key (`notes/retry-flakes.md`). |
+| MOD-I? | Tests | `importLocalAccount` named accounts `<prefix>-<time>-<n>` with a count per worker. The self-edit specs keep their counts in step and could ask for the same user in the same millisecond. The second import answered 500 (unique key on `UPU_USER_NAME`). `self-edit-account-component.spec.ts:255` was flaky in run 42455427048 (job 128653803621). | **Fixed** (uPortal-start `deb4ac860`): the name contains the worker's index (`notes/retry-flakes.md`). |
 | MOD-I? | Persistence | Overlapping imports of new users deadlock on MariaDB (1213): `UserImporterExporter.importData` updates, then inserts, under REPEATABLE READ, and InnoDB's gap locks on `UPU_USER_NAME` block both inserts. `self-edit-account.spec.ts:256` was flaky in job 116563567479. | **Open.** Run the import under READ COMMITTED, as MOD-I360 did. Related to MOD-I382. |
