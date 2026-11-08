@@ -139,8 +139,20 @@ No portal ran for this topic.
 
 ## Push runs
 
-To be filled in after the push: the HTTP replay push run, with "Replay against 5.17", which
-runs because the push changes `tests/replay`.
+Push of `f8f10f9ba` (the new branch, so the replay ran). The `Build uPortal` job's annotation
+says it built the uPortal integration branch at `498252acd` (the build of run 42457215984,
+reused), because uPortal has no `-replay-date` branch.
+
+* HTTP replay 42461119467: passed. "Replay rules" (job 128670422457, Node 24) passed 16 of 16,
+  with the three new checks. "Replay against 5.17" (job 128670532617) ran on runner image
+  ubuntu24/20261101.360.1 on 2026-11-08, so it met both causes. Its `dataInit` listed
+  `calendar/Lunar_Phases.pcd.xml` first, as the failing runs did. It reported 0 unexplained
+  differences, 1570 intended differences applied (`entity-type-and-id-hash-escapes` 5 times), 0
+  unexplained matrix cells and 0 unexplained security changes. Its `actual.json` holds
+  `"Current Time": "{http-date}"` five times and `"principalString": "{type}.admin"` six times.
+* CI 42461119496 and G-index 42461119525 passed. Integration 42461119502 and Migration
+  equivalence 42461119548 were still running when this note was written. This branch doesn't
+  change what they test.
 
 ## Left open
 
