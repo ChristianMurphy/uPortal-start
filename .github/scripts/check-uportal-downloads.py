@@ -16,14 +16,36 @@ import glob
 import re
 import sys
 
-ALLOWED = (
-    "${{ needs.uportal.outputs.artifact }}",
-    "${{ steps.reuse.outputs.artifact }}",
-)
+NEEDS = "${{ needs.uportal.outputs.artifact }}"
+# The uportal job's own reuse step sets this output, so only that job may use it.
+REUSE = "${{ steps.reuse.outputs.artifact }}"
+
+
+def depth(line):
+    return len(line) - len(line.lstrip())
+
+
+def job(lines, start):
+    """The id of the job that holds line `start`: the nearest key above it that is indented like
+    the first key under `jobs:`."""
+    top = max((i for i in range(start) if lines[i].rstrip() == "jobs:"), default=None)
+    if top is None:
+        return ""
+    keys = [
+        line
+        for line in lines[top + 1 : start]
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    first = keys[0] if keys else ""
+    for line in reversed(lines[top + 1 : start]):
+        match = re.match(r"\s*([A-Za-z0-9_-]+):\s*(#.*)?$", line)
+        if match and depth(line) == depth(first):
+            return match.group(1)
+    return ""
 
 
 def steps(lines):
-    """Yield (line number, step lines) for every download-artifact step."""
+    """Yield (line number, job id, step lines) for every download-artifact step."""
     for number, line in enumerate(lines):
         if "uses: actions/download-artifact@" not in line:
             continue
@@ -38,16 +60,19 @@ def steps(lines):
             if text.strip() and len(text) - len(text.lstrip()) <= indent:
                 break
             end += 1
-        yield start + 1, lines[start:end]
+        yield start + 1, job(lines, start), lines[start:end]
 
 
 def value(step, key):
-    """The value of `key` under the step's `with:`."""
+    """The value of `key` under the step's `with:`, without quotes or a trailing comment."""
     inputs = next((i for i, line in enumerate(step) if line.strip() == "with:"), len(step))
     for line in step[inputs + 1 :]:
         match = re.match(rf"\s*{key}:\s*(.*?)\s*$", line)
         if match:
-            return match.group(1)
+            text = match.group(1)
+            if text[:1] in ("'", '"') and text.find(text[0], 1) > 0:
+                return text[1 : text.find(text[0], 1)]
+            return re.sub(r"\s+#.*$", "", text)
     return ""
 
 
@@ -57,13 +82,13 @@ def main(files):
     for path in files:
         with open(path, encoding="utf-8") as handle:
             lines = handle.read().splitlines()
-        for number, step in steps(lines):
+        for number, job_id, step in steps(lines):
             name = value(step, "name")
             target = value(step, "path")
             if ".m2" not in target and "uportal" not in name.lower():
                 continue
             checked += 1
-            if name not in ALLOWED:
+            if name != NEEDS and not (job_id == "uportal" and name == REUSE):
                 problems += 1
                 print(
                     f"::error file={path},line={number},title=uPortal build download::"
