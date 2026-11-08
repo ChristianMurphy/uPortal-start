@@ -55,7 +55,24 @@ export async function importLocalAccount(
   attributes: Record<string, string> = {},
 ): Promise<Account> {
   accountCount += 1;
-  const username = `${prefix}-${Date.now()}-${accountCount}`;
+  return importNamedAccount(
+    admin,
+    `${prefix}-${Date.now()}-${accountCount}`,
+    givenName,
+    attributes,
+  );
+}
+
+/**
+ * The local account of that name, as importLocalAccount() makes it; a second
+ * import replaces the account's attributes and password.
+ */
+export async function importNamedAccount(
+  admin: APIRequestContext,
+  username: string,
+  givenName: string,
+  attributes: Record<string, string> = {},
+): Promise<Account> {
   const attributeXml = Object.entries(attributes)
     .map(
       ([name, value]) =>
