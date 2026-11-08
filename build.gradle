@@ -63,6 +63,11 @@ ext {
          * HashSet constructor.
          */
         '--add-opens=java.base/java.util=ALL-UNNAMED',
+        /*
+         * The NewsReaderPortlet export (dataExport), where that Groovy engine opens a private File
+         * constructor.
+         */
+        '--add-opens=java.base/java.io=ALL-UNNAMED',
     ]
 }
 
