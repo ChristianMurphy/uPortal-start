@@ -180,6 +180,22 @@ test.describe("Search web components", () => {
         .getByRole("searchbox", { name: "Search Terms" }),
     ).toHaveValue(UNICODE_QUERY);
   });
+});
+
+/*
+ * The portal saves the language for the user, and a session that signs in
+ * while it is saved renders in it. These tests sign in as the developer, the
+ * account the language tests use, not as the student, whom other specs
+ * expect in English (general-config.ts).
+ */
+test.describe("Search web components in the user's language", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, config.users.developer);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await logout(page);
+  });
 
   for (const [code, people, noResults] of [
     ["es_ES", "Personas", "No hay resultados"],

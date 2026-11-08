@@ -191,6 +191,12 @@ const STRING_MASKS = [
 // self-check across midnight on 2026-10-11.
 const DATE_TIME = /\b\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?\b/g;
 const HTTP_DATE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT\b/g;
+// In JSON, an RFC 1123 date may also have a one-digit day: java.time's RFC_1123_DATE_TIME writes
+// the day without a leading zero. The health check's "Current Time" (HealthCheckController) uses
+// it, in 5.17.9 and in 6.0. Header fields keep HTTP_DATE, because RFC 9110 requires IMF-fixdate
+// there. Seen: "Sun, 8 Nov 2026 06:43:24 GMT" in CI run 42455427011, on the first replay on one
+// of the days 1 to 9 of a month.
+const RFC_1123_DATE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{1,2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT\b/g;
 const shape = (text) => text.replaceAll(/\d/g, '9');
 
 export function maskString(text) {
@@ -458,6 +464,12 @@ const MEASUREMENT = /Response Time|Memory|^sessionKey$|^serverName$/;
 // Keys whose numeric values are generated ids (see the generated ids in STRING_MASKS)
 // Seen: portlet id 80 and type id 3 in the CI recording, 69 and 4 on the stand-in.
 const ID_KEYS = /^(id|chanID|channelId|typeId|typeID|fragment|portletId|entityTypeId)$/;
+// Keys whose values are principal keys: the entity type id, a dot, and the key (13.admin,
+// 12.local.3). STRING_MASKS can mask the type of a group's key by its service; a person's key
+// has none, so it is masked by the field's name. Seen: 14.admin in the recording (CI run
+// 38107388398, runner image ubuntu24/20261004.327) and in CI run 38775913401 (ubuntu24/20261012.334),
+// 13.admin in CI run 42455427011 (ubuntu24/20261101.360). Both replays ran uPortal 498252acd.
+const PRINCIPAL_KEYS = /^principalString$/;
 
 export function maskJson(value, origin) {
     if (Array.isArray(value)) {
@@ -477,6 +489,7 @@ export function maskJson(value, origin) {
             if (typeof v === 'string' && /^\{(measured|id):/.test(v)) sorted[key] = v;
             else if (MEASUREMENT.test(key) && (typeof v === 'number' || typeof v === 'string')) sorted[key] = `{measured:${typeof v}}`;
             else if (ID_KEYS.test(key) && (typeof v === 'number' || (typeof v === 'string' && /^\d+$/.test(v)))) sorted[key] = `{id:${typeof v}}`;
+            else if (PRINCIPAL_KEYS.test(key) && typeof v === 'string') sorted[key] = maskJson(v.replace(/^\d+\./, '{type}.'), origin);
             else sorted[key] = maskJson(v, origin);
         }
         return sorted;
@@ -484,7 +497,10 @@ export function maskJson(value, origin) {
     if (typeof value === 'number' && Number.isInteger(value) && value >= EPOCH_MS_MIN && value <= EPOCH_MS_MAX) {
         return '{epoch-ms:number}';
     }
-    if (typeof value === 'string') return origin ? normaliseUrl(value, origin).replaceAll(origin, '{origin}') : maskString(value);
+    if (typeof value === 'string') {
+        const masked = origin ? normaliseUrl(value, origin).replaceAll(origin, '{origin}') : maskString(value);
+        return masked.replace(RFC_1123_DATE, '{http-date}');
+    }
     return value;
 }
 
