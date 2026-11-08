@@ -5,6 +5,7 @@ import {
   logout,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
 import { setUserLocale } from "../utils/user-locale";
 
 /*
@@ -291,13 +292,16 @@ test.describe("Background Preference web component", () => {
 });
 
 /*
- * The component in the user's language (MOD-D49): its texts come from the
- * portal's Spanish and French messages. The channel is opened on its own at
- * /p/background-preference, so the developer needs no Customize panel.
+ * The component in the user's language (MOD-D50): its texts come from the
+ * portal's Spanish and French messages. The portal saves the language for
+ * the user, and a session that signs in while it is saved renders in it, so
+ * these tests sign in as a user of their own (own-users.ts), not as a user
+ * that other specs share. The channel is opened on its own at
+ * /p/background-preference, so the user needs no Customize panel.
  */
 test.describe("Background Preference in Spanish and French", () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaUrl(page, config.users.developer);
+    await loginViaUrl(page, ownUser("background"));
   });
 
   test.afterEach(async ({ page }) => {
