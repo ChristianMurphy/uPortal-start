@@ -7,6 +7,7 @@ import {
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 import { setUserLocale } from "../utils/user-locale";
+import { ownUser } from "../utils/own-users";
 
 /*
  * What the Reset My Layout channel (fname reset-my-layout) does for users.
@@ -34,7 +35,8 @@ const LAYOUT_API = `${config.url}api/layout`;
 
 const STUDENT_TABS = ["Welcome", "Academics", "LMS", "Campus"];
 const STUDENT_WELCOME_PORTLETS = ["Bookmarks", "Calendar", "My Drives"];
-const STAFF_TABS = ["Welcome", "Main Staff Tab"];
+// The tabs of a user of a spec's own (own-users.ts), who is in no group
+const OWN_USER_TABS = ["Welcome"];
 
 /** The channel, which the theme marks with its fname. */
 function channel(page: Page): Locator {
@@ -236,8 +238,12 @@ test.describe("Reset My Layout", () => {
   });
 
   test("leaves other users' layouts alone", async ({ page }) => {
-    // Staff customize their layout, then the student resets theirs
-    await signInAgain(page, config.users.staff);
+    // Another user customizes their layout, then the student resets theirs.
+    // The other user is one of this spec's own (own-users.ts), not staff,
+    // whose tabs per-role-pages.spec.ts and layout/pages.spec.ts check and
+    // measure in parallel.
+    const other = ownUser("bystander");
+    await signInAgain(page, other);
     try {
       await addTab(page, tab);
       await signInAgain(page, USER);
@@ -245,12 +251,12 @@ test.describe("Reset My Layout", () => {
       await content.getByRole("button", { name: "Reset Layout" }).click();
       await expect(content).toContainText("Success");
 
-      await signInAgain(page, config.users.staff);
-      expect(await tabNames(page)).toEqual([...STAFF_TABS, tab]);
+      await signInAgain(page, other);
+      expect(await tabNames(page)).toEqual([...OWN_USER_TABS, tab]);
     } finally {
-      await signInAgain(page, config.users.staff);
+      await signInAgain(page, other);
       await removeTabs(page, tab);
-      expect(await tabNames(page)).toEqual(STAFF_TABS);
+      expect(await tabNames(page)).toEqual(OWN_USER_TABS);
       await signInAgain(page, USER);
     }
   });
