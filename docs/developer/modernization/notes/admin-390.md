@@ -22,8 +22,8 @@ postgres-15 to MariaDB pair passed the same test.
 
 ## Cause
 
-The links on the page don't overlap. The overlap check compared bounding boxes, and a
-link that wraps has a bounding box over the links beside it.
+The links on the page don't overlap. The overlap check compared bounding boxes, and a link that
+wraps has a bounding box over the links beside it.
 
 The page came from the network log of the failed test's `trace.zip`. I rendered that HTML with its
 CSS and scripts from the same log, offline, at 390x844 (Chromium 1194). The Permissions portlet
@@ -43,25 +43,25 @@ Why only this pair: the order of the links.
   `data/base` files. The source isn't 5.17.9 data.
 * `PermissionOwnerImpl.activities` is a `HashSet`, hashed on the activity's fname, and the JSP
   prints it as it iterates. Names in different buckets always come in the same order. Names that
-  share a bucket come in the order the database returned their rows, and the query
-  (`JpaPermissionOwnerDao.findAllPermissionOwners`) has no `ORDER BY`. The copy tool reads each
-  table without `ORDER BY` too (`TableCopier.selectSql`). The target gets the rows in the order
-  the source returned them.
-* For `UP_USERS`, bucket 9 holds `VIEW_OWN_USER_ATTRIBUTE`, `VIEW_USER` and `EDIT_USER`. On the
-  migrated database the page listed "View user, Edit users, View own attribute", so "View own
-  attribute" came right before "View user attribute". The data file has "View own attribute" first
-  of the three. The other owners' shared buckets kept the file order.
-* With "View own attribute" moved back to first in its bucket, the same render passes the old
-  check at 390.
+  share a bucket come in the order the database returned their rows. The owners come in row order
+  too. The query (`JpaPermissionOwnerDao.findAllPermissionOwners`) has no `ORDER BY`, and the copy
+  tool reads each table without one (`TableCopier.selectSql`).
+* On a fresh HSQLDB portal the activity ids follow the set's order at the import's flush, and the
+  rows come back by id. `UP_USERS` lists "Edit user attribute, Impersonate users, Delete users, View
+  own attribute, View user, Edit users, View user attribute", and the owners come in id order
+  (Groups first).
+* On the migrated PostgreSQL 18 database the page listed "..., Delete users, View user, Edit users,
+  View own attribute, View user attribute". `VIEW_OWN_USER_ATTRIBUTE`, `VIEW_USER` and `EDIT_USER`
+  share bucket 9, and PostgreSQL returned `VIEW_OWN_USER_ATTRIBUTE` last of the three. The owners
+  came in another order too (Users first). "View own attribute" and "View user attribute" then
+  wrap one after the other.
+* With the runners' fonts, the fresh order passed and this order failed. With this machine's fonts
+  the old check fails at 390 in both orders. The baseline history shows the same: this node was
+  recorded at 390 and 768 pixels (a4e9ddb83), dropped at 390 because only local fonts showed it
+  (64e14399b), and dropped at 768 (efc04f4e9).
 
-I couldn't see the order on a fresh CI database. Playwright keeps a trace only of a test that fails,
-and the exports of the migration equivalence job sort the activities by name. I didn't find why the PostgreSQL 16 source returns
-`VIEW_OWN_USER_ATTRIBUTE` after the other two. It needs a PostgreSQL portal, and this machine has
-no Docker.
-
-The same node came and went in the baseline before: recorded at 390 and 768 pixels (a4e9ddb83),
-dropped at 390 because only local fonts showed it (64e14399b), and dropped at 768 (efc04f4e9).
-Whether two wrapped links meet depends on fonts, width and order.
+I didn't find why PostgreSQL returns the rows in that order. It needs a PostgreSQL portal, and
+this machine has no Docker.
 
 ## The fix
 
@@ -79,8 +79,9 @@ Whether two wrapped links meet depends on fonts, width and order.
 ## Evidence
 
 Local runs used Chromium 1194 (uPortal-start through an untracked config that sets
-`executablePath`, Vitest through a symlink tree under the 1248 name) with 12.5 to 15 GB of memory
-available.
+`executablePath`, Vitest through a symlink tree under the 1248 name) with 9 to 15 GB of memory
+available. The local portal ran uPortal-start at `de9e7e42b` with the shared uPortal tip build
+(`498252acd`, `.m2-tip`) on HSQLDB, ports 8580, 8505 and 8587, JDK 11 for the portal.
 
 | Check | Result |
 | --- | --- |
@@ -95,12 +96,32 @@ available.
 | `npm run lint` in uPortal-start | 0 errors. The `expect-expect` warning on `pages.spec.ts` is on the integration branch too |
 | CI page of the failed test, rendered offline, old check | spill at 320 (61x17) and 390 (64x17), none at 768 |
 | Same page, new check | no problem in the portlet at 320, 390 or 768 |
-| Same page with "View own attribute" first in its bucket, old check | none at 390, one at 320 (local fonts) |
+| Local portal, fresh data, `pages.spec.ts --retries 0`, old check | 28 passed, 2 failed: "390px › admin" (the MOD-I386 node, 67x17) and "320px › guest" |
+| Same, new check | 29 passed, 1 failed: "320px › guest". No `no longer seen` line |
+| Local portal, `VIEW_OWN_USER_ATTRIBUTE` given the highest id (the page then shows the migrated database's `UP_USERS` order), "390px › admin", old check | failed, the MOD-I386 node (67x17) |
+| Same, new check | passed |
 
-Not run: `pages.spec.ts` against a local portal. The shared tip build in `.m2-tip` failed with 429
-from Maven Central, so no portal could start. CI's Playwright jobs on this branch run it.
+"320px › guest" is the search portlet's `div.col-sm-#` spilling 13 pixels, which only this
+machine's fonts show (64e14399b). It fails with both checks.
 
 ## CI
+
+Push runs on uPortal `6961c5f27` and uPortal-start `397e40df6`:
+
+* uPortal CI 42455676981, DB integration 42455676931 and DB copy tool 42455676875 passed.
+* uPortal-start Integration 42455714441 built uPortal `ccr-43ba0785-hzlrj5-admin-390` at
+  `6961c5f27` (the `uPortal under test` notice). Its set is `workstream`. "Playwright: hsqldb" and
+  "Playwright: postgres-18" passed all 30 `pages.spec.ts` tests and printed no `no longer seen`
+  line. The baseline stays as it is. Both jobs are red for a test that passed only on a retry,
+  outside this branch's scope: `reset-my-layout.spec.ts:289` on HSQLDB (job 128654963408) and
+  `favorites.spec.ts:120` on PostgreSQL 18 (job 128654963369). The other jobs passed.
+* uPortal-start CI 42455714403, Migration equivalence 42455714393 and G-index 42455714416 passed.
+* uPortal-start HTTP replay 42455714380 failed in "Replay against 5.17" with 12 differences. The
+  push runs of `-test-users` (42456118615) and `-retry-flakes` (42455427011) show the same ones,
+  and this branch changes only test code. One cause is the date. The health check prints "Sun, 8
+  Nov 2026", and `HTTP_DATE` in `tests/replay/lib.mjs` wants a two-digit day. It fails from the
+  1st to the 9th of a month. The other differences are principal keys ("14.admin" to "13.admin")
+  and entity search results, cause not looked at.
 
 The G-migrate postgres-16 to postgres-18 job can't run on this branch without the full matrix.
 
@@ -111,16 +132,15 @@ The G-migrate postgres-16 to postgres-18 job can't run on this branch without th
   (section 1) leaves that run to the coordinator. The command:
   `gh workflow run integration.yml -R ChristianMurphy/uPortal-start --ref ccr-43ba0785-hzlrj5-admin-390`
 
-Push runs: RUNS_PLACEHOLDER
-
 ## Proposed LOG rows
 
 | ID | Area | Finding | Resolution |
 | --- | --- | --- | --- |
-| MOD-I386 (update) | Tests | (unchanged) | **Fixed** (uPortal 6961c5f27, uPortal-start de9e7e42b): the overlap check compares each line of a control, not its bounding box. A link that wraps in running text overlapped the links beside it. The order of the Permissions portlet's links on the migrated database put two wrapped links next to each other. `notes/admin-390.md` in uPortal-start. |
-| MOD-I? | Portlets | The Permissions portlet lists each owner's activities in `HashSet` order (`PermissionOwnerImpl`). Names that share a hash bucket come in the order the database returns their rows. The order differs between databases and after a copy. Found by MOD-I386. | **Open**, small. Sorting by name changes the markup. The replay then needs an intended difference. |
+| MOD-I386 (update) | Tests | (unchanged) | **Fixed** (uPortal 6961c5f27, uPortal-start de9e7e42b): the overlap check compares each line of a control, not its bounding box. A link that wraps in running text overlapped the links beside it. The order of the Permissions portlet's links on the migrated database put two wrapped links next to each other. Reproduced and fixed on a local HSQLDB portal with that order. The postgres-16 pair itself runs only in a full Integration run, not yet started (`notes/admin-390.md` in uPortal-start). |
+| MOD-I? | Portlets | The Permissions portlet lists the owners in row order and each owner's activities in `HashSet` order (`PermissionOwnerImpl`). Names that share a hash bucket come in the order the database returns their rows. The page differs between databases and after a copy. Found by MOD-I386. | **Open**, small. Sorting by name changes the markup. The replay then needs an intended difference. |
+| MOD-I? | Tests | HTTP replay's `HTTP_DATE` mask (`tests/replay/lib.mjs`) wants a two-digit day. The health check prints "Sun, 8 Nov 2026", and "Replay against 5.17" fails from the 1st to the 9th of a month (push runs 42455714380, 42456118615, 42455427011). The same runs show principal keys "14.admin" to "13.admin". | **Open.** |
 
 ## Next step
 
-Read the push runs. If a Playwright job prints `layout ... no longer seen` lines, remove those
-entries from `tests/layout/baseline.ts`.
+Starting the full Integration run above is for the coordinator. In that run, the G-migrate
+postgres-16 to postgres-18 job must pass "Layout at 390px › admin".
