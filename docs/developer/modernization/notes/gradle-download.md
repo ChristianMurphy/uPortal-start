@@ -307,11 +307,26 @@ Its post step logged `Cache was read-only`, "0 restored, 0 saved". That was the 
 version, where the input was true from the start, so this result doesn't show that the post
 step read it again.
 
-**Fifth push (`3d6f3fd6e` and this note).** Next step: read its saving job. If Playwright:
-postgres-18 fails again, its `Setup Gradle` step must log `cache-read-only: false`. After its
-last step has run, the post step must log `Cache was read-only` and save nothing. If it passes, it
-must log `Basic caching saved entry`, and the next push with the same build files must restore
-the entry without a download.
+**Fifth push, `d18a23ce8` (`3d6f3fd6e` and a note commit).** The saving job, Playwright:
+postgres-18 (128717358239), shows the cache fix at work:
+
+* its `Setup Gradle` step logged `cache-read-only: false`;
+* it got the distribution on attempt 3, after two 30 s read timeouts;
+* it failed on `background-preference.spec.ts:108` and `user-locale.spec.ts:121`, specs that
+  passed only on a retry and that this branch doesn't change;
+* its last step ran (`echo "GRADLE_CACHE_JOB_FAILED=true" >> "$GITHUB_ENV"`);
+* its post step reported `Gradle State Caching - Basic (read-only)` and `Cache was read-only`,
+  "0 restored, 0 saved".
+
+So the post step read the input again, and a failed job no longer saves. A passing job doesn't
+set the variable, and its input keeps the value it had before this topic. Every other job
+of that push passed. That covers the other 6 jobs of Integration 42475960827, and the runs CI
+42475960834, Migration equivalence 42475960836, Workflow lint 42475960887 (actionlint and
+zizmor), HTTP replay 42475960826 and G-index 42475960818. The key still has no entry, because every saving job on
+it failed. The first passing one saves it.
+
+**Sixth push (this note).** The branch head. Its runs weren't finished when this note was
+written.
 
 ## An empty cache entry after a failed job
 
@@ -386,10 +401,18 @@ jobs.
 * `vale.sh` downloads Vale and the ai-tells styles from GitHub releases in every "Prose (Vale)"
   and "Commit messages" job, with `curl --retry 3` (1, 2 and 4 s apart), in both repositories.
   It has the same exposure as the distribution: GitHub releases, a fresh runner every time, no
-  cache. The 504s of 2026-11-08 failed both jobs on both pushes. Not changed in this topic, as
-  the coordinator decided.
+  cache. The 504s of 2026-11-08 failed both jobs on the first and second pushes. Not changed in
+  this topic, as the coordinator decided.
 * uPortal's CI.yml saves its Gradle cache the same way (one saving job per key), so it has the
   same empty-entry exposure. This topic changes only uPortal's wrapper there.
+* uPortal's run 42472918619 (CI) failed in the Coveralls step, which downloads its reporter
+  from GitHub releases (`504 Gateway Time-out`), after the build and tests passed. Same
+  exposure as Vale's download, not changed here.
+* Playwright: postgres-18 failed on specs that passed only on a retry on every push of this
+  branch: `background-preference.spec.ts:108` (first and fifth), `portlet-options.spec.ts:54`
+  and `user-locale.spec.ts:121` (third and fifth), `simple-content.spec.ts:149` and
+  `user-locale.spec.ts:82` (fourth). Playwright: hsqldb failed on `visual-resource-server.spec.ts:153`
+  (third and fourth), a flake of the red tip. They're outside this topic.
 * An outage longer than about 5 minutes still fails a job, as on the second push. Re-run such a
   job once, as the guide says for a job that stopped before any test ran.
 * This branch's entry `setup-java-Linux-x64-gradle-4c008b23...` is the empty one. The caches API
