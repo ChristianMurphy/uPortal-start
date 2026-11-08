@@ -29,6 +29,7 @@ const OWN_USERS = {
   timeout: "Tess",
   locale: "Lou",
   bystander: "Bea",
+  background: "Nina",
 } as const;
 
 export type OwnUser = keyof typeof OWN_USERS;
