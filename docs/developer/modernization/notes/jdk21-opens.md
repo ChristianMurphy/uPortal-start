@@ -115,6 +115,68 @@ java.lang.ClassLoader.defineClass` lines and 4 for `private java.lang.String`. A
 
 The logs of these runs have no `InaccessibleObjectException`. `:buildSrc:test` passes.
 
+## Since mid-October: the merge of 2026-11-08
+
+The branch was written on 2026-10-15 at uPortal-start `644875432` and wasn't merged. On
+2026-11-08 the integration branch was merged into it twice: `4f3c51353` (tip `09ccc9cbb`, 62
+commits) and `77c918f17` (tip `9c20dbaf6`, landing 4). Neither merge had a conflict, and
+`git show --remerge-diff` of each is empty. uPortal moved from `47d6333e2c` to `0cf02679f` without
+a change to its dependency versions.
+
+| Landed change | Effect on this branch |
+| --- | --- |
+| Gradle wrapper retries and the cache fix (MOD-I397, MOD-I398) | The branch changes `build.gradle`, three overlay build files and `buildSrc`, so its first push runs have no Gradle cache entry and download the distribution, with the new retries. Nothing else |
+| test-users, the replay masks, the layout and locale fixes, permission-race | They change specs, the replay, uPortal's Java code and the cluster test. Their diffs don't touch the files of this branch, add a forked JVM or start Tomcat another way |
+| Forked JVMs on the tip | The same nine `ant.java` calls and `PortalShellInvoker` as in October. `dbMigrate` (the copy tool) runs on the JDK 21 toolchain and doesn't load the portlets' cglib or javassist. HSQLDB runs on `portalJava` and doesn't need the opens |
+| CI | The jobs of `CI.yml`, `integration.yml`, `db-harness.yml`, `g-index.yml`, `migration-equivalence.yml` and `replay.yml` that start a portal list 11 last in `setup-java`, so `JAVA_HOME` (Tomcat, HSQLDB and the data tools) is 11, and Gradle runs on 21 |
+
+### Measurement 3: the data tools at the new tips
+
+uPortal `4b5d266ad` (the uPortal tip `0cf02679f` with landing batch 1, which doesn't change Java
+runtime code), installed as 5.17.10-SNAPSHOT into a private Maven repository. This branch at
+`77c918f17`, HSQLDB, ports 8680, 8605 and 8687. "Without" is `portalJvmArgs = []` in the working
+tree, put back with `git checkout -- build.gradle` after each run.
+
+| Run | JDK | Result | `InaccessibleObjectException` | JVM warnings |
+| --- | --- | --- | --- | --- |
+| `portalInit --continue`, without | 21.0.12 | fails: `:overlays:Announcements:dataInit`, `:overlays:CalendarPortlet:dataInit`, `:overlays:NewsReaderPortlet:dataInit` | 33 lines: 13 `defineClass`, 4 `String(char[],int,int,Void)` and their repeats | none |
+| `dataInit`, with | 21.0.12 | passes | 0 | none |
+| `dataInit`, without | 11.0.32 | passes | 0 | 7 JVMs print "An illegal reflective access operation has occurred", from javassist `defineClass` (Calendar and NewsReader schema), Groovy's `String` constructor (Calendar and NewsReader imports), Spring 4.3's `ReflectionUtils` to `MethodHandles$Lookup` (2) and dom4j to a Xerces class (1) |
+| `dataInit`, with | 11.0.32 | passes | 0 | 3 JVMs, from Spring 4.3's `ReflectionUtils` (2) and dom4j (1) |
+
+So both opens are needed on JDK 21, and they are enough for every data step. On JDK 11, which CI
+runs, the steps passed before and pass now. The opens remove four of the seven warning blocks.
+The other three come from `java.lang.invoke` and the JDK's Xerces, which the branch doesn't open,
+and those calls don't fail on JDK 21. "JVM warnings" counts `WARNING:` lines without Hibernate's
+`Failed Query Report` lines, which the schema drop of an empty database writes on both JDKs.
+
+### Tomcat at the new tips
+
+The data from the `dataInit` runs above, Tomcat 9.0.122. `wait-for-portlets.sh` checks that every
+portlet webapp registered its portlets. The student page counts `up-portlet-wrapper` elements in
+the header and the content.
+
+| Launcher | JDK | `setenv.sh` | Result |
+| --- | --- | --- | --- |
+| `catalina.sh` (`tomcatStart`) | 21.0.12 | this branch | answers after about 50 s, every webapp registers, the student page has 19 portlets. No `InaccessibleObjectException` in any log |
+| `daemon.sh start` (jsvc 1.6.1 built from Tomcat's `commons-daemon-native.tar.gz`) | 21.0.12 | this branch | the same, after about 35 s |
+| `daemon.sh start` | 21.0.12 | without the opens line | Announcements and NewsReaderPortlet fail to start ("Exception sending context initialized event", `ExceptionInInitializerError` from Spring's AOP proxy, `Cannot load configuration class: NewsReaderBeans`). NotificationPortlet doesn't register its portlets, and the student page loses Emergency Alert (18). `InaccessibleObjectException` in 7 logs |
+| `catalina.sh` (`tomcatStart`) | 11.0.32 | this branch | answers after about 50 s, every webapp registers, 19 portlets. Tomcat logs `--add-opens=java.base/java.lang=ALL-UNNAMED` twice, from `JDK_JAVA_OPTIONS` and from `CATALINA_OPTS`, and the JVM takes both. One illegal reflective access warning, from dom4j in BookmarksPortlet to a Xerces class, which the opens don't cover |
+
+On JDK 11, which CI runs, the `setenv.sh` line repeats an option that `catalina.sh` already
+passes and changes nothing else. `:buildSrc:test` passes (11 tests).
+
+Measurement 2 (released 5.17.9) and the seeded fault of October weren't repeated. The run without
+`portalJvmArgs` above is that fault again, on the new tips.
+
+### CI
+
+The push runs of this note's commit are added when they finish.
+
+## Next step
+
+None on this branch. The coordinator reviews it against the tip.
+
 ## Proposed LOG rows (MOD-I365 to MOD-I369)
 
 | ID | Area | Finding | Status |
