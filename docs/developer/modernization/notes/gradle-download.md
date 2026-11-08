@@ -296,10 +296,22 @@ SUCCESSFUL`, after a read timeout on attempt 1 of the distribution) and then fai
 Coveralls step, whose download from GitHub releases got `504 Gateway Time-out`. DB integration
 (42472918520) and DB copy tool (42472918678) passed.
 
-**Fourth push (this note).** Next step: read its saving job. The key of the third push still
-has no entry. Its jobs fetch the distribution again. If Playwright: postgres-18 passes, its
-post step must log `Basic caching saved entry`, which shows that the post step read the input
-again. A later push with the same build files then restores that entry and doesn't download.
+**Fourth push, `95a292de5` (a note commit).** The key still had no entry, and the 9 Gradle jobs
+fetched the distribution again. Each got it, Cluster: two nodes (128713353281) on attempt 3, and
+CI's Linux leg (128713277835) and Playwright: hsqldb (128713353546) on attempt 2. Playwright:
+hsqldb then failed on `visual-resource-server.spec.ts:153` again. CI, Migration equivalence,
+HTTP replay and G-index passed. The saving job, Playwright: postgres-18 (128713353312), got it on
+the first attempt and then failed on two specs that passed only on a retry,
+`simple-content.spec.ts:149` and `user-locale.spec.ts:82`, which this branch doesn't change.
+Its post step logged `Cache was read-only`, "0 restored, 0 saved". That was the `820b8b501`
+version, where the input was true from the start, so this result doesn't show that the post
+step read it again.
+
+**Fifth push (`3d6f3fd6e` and this note).** Next step: read its saving job. If Playwright:
+postgres-18 fails again, its `Setup Gradle` step must log `cache-read-only: false`. After its
+last step has run, the post step must log `Cache was read-only` and save nothing. If it passes, it
+must log `Basic caching saved entry`, and the next push with the same build files must restore
+the entry without a download.
 
 ## An empty cache entry after a failed job
 
@@ -315,27 +327,31 @@ dependency. The first job of a key to finish saves it (MOD-D53), and a job that 
 finishes first. If the download fails on the integration branch's first push after this topic
 is merged, the integration branch gets such an entry too.
 
-The fix (`820b8b501`) saves the cache only from a job whose steps all passed. Each job that
-saves on `ccr-*` branches gets a last step, `Let setup-gradle save the Gradle cache`, which writes
-`GRADLE_CACHE_SAVE=true` to `GITHUB_ENV`. It runs only when every earlier step passed, the
-default `if: success()`. Their `cache-read-only` gains `|| env.GRADLE_CACHE_SAVE != 'true'`:
+The fix saves the cache only from a job whose steps all passed. Each job that saves on `ccr-*`
+branches gets a last step, `Keep a failed job's Gradle home out of the cache`, with
+`if: ${{ !success() }}`. It runs only when an earlier step failed or the job was cancelled, and
+writes `GRADLE_CACHE_JOB_FAILED=true` to `GITHUB_ENV`. Their `cache-read-only` gains
+`|| env.GRADLE_CACHE_JOB_FAILED == 'true'`:
 
 * `playwright-database` in `integration.yml`, which saves on every `ccr-*` push;
 * `test` in `CI.yml`, which saves on Windows and macOS on `ccr-*` branches, and on every
   platform on master. A topic push runs only its Linux leg, which only reads.
 
 The runner evaluates a step's `with:` inputs again for the action's post step. That's where
-setup-gradle decides whether to save, and where `env` holds `GRADLE_CACHE_SAVE`. At the start
-of the job the variable isn't set, so the input is true there. That doesn't matter, because a
-restore happens in either case. setup-gradle has no input of its own that saves only after a
-passing job (the inputs it prints are `cache-disabled`, `cache-read-only`, `cache-write-only`,
-`cache-overwrite-existing`, `cache-cleanup` and the `gradle-home-cache-*` options), and its
-source repository answers 403 to this session, so the condition is a step and an expression.
+setup-gradle decides whether to save, and where `env` holds `GRADLE_CACHE_JOB_FAILED`. During
+the job the variable isn't set, and the input has its old value. setup-gradle has no input of
+its own that saves only after a passing job (the inputs it prints are `cache-disabled`,
+`cache-read-only`, `cache-write-only`, `cache-overwrite-existing`, `cache-cleanup` and the
+`gradle-home-cache-*` options), and its source repository answers 403 to this session, so the
+condition is a step and an expression.
 
-The check is a passing saving job: it can save only if its post step read the input again after
-the last step. A failed or cancelled job skips that step. Its input is then still true, it saves
-nothing, and a later passing job can save the key. Next step: the push runs of
-`540aa9b79` and this note (see "Push runs").
+The first version (`820b8b501`) did it the other way round: the input was true from the start
+until a last step with the default `if: success()` set `GRADLE_CACHE_SAVE`. If the post step
+didn't read the input again, no job would ever have saved, and the failed jobs of the third and
+fourth pushes couldn't tell the two cases apart. `3d6f3fd6e` turned it round. If the post step
+didn't read the input again, a job would save as before. A failed saving job shows the
+difference: its `Setup Gradle` step logs `cache-read-only: false`, and its post step reports the
+cache as read-only and saves nothing.
 
 On master and in pull requests the other Gradle jobs keep the action's default (master: every
 job saves, pull requests: none). On master the first job to finish can still save an empty
@@ -385,4 +401,4 @@ jobs.
 | ID | Area | Issue | Status |
 | --- | --- | --- | --- |
 | MOD-I? | CI | On 2026-11-08 the tip's Cluster and DB harness: postgres-18 jobs (Integration 42463431999) and In place: mariadb-12.3 and Copy: mariadb-11.4 to postgres-18 (Migration equivalence 42463431964) failed before any test ran. The Gradle wrapper gave up on services.gradle.org after 10 s (`networkTimeout=10000`, `retries=0`). Every Gradle job downloads the distribution when its branch has no Gradle cache entry, as on a topic branch's first push or after a build file change. The tip's entry of 2026-10-15 was gone after 24 days without a push, and 32 jobs downloaded the distribution on that push. | **Open**, reduced (uPortal-start `4ac81b5f4`, `43b1eb29e`, uPortal `86f85fcbb`): the wrapper waits 30 s for each read and retries the download 6 times, 5 s to 160 s apart (315 s for a run of fast 504s). services.gradle.org redirects to GitHub releases, which answered 504 from 09:51 to at least 10:24 on 2026-11-08. On this branch's two pushes 12 of 20 downloads passed, where the old settings would have passed 6. A longer outage still fails the job. Reusing one copy of the distribution would avoid it, an open decision for the owner (`notes/gradle-download.md`). uPortal's wrapper, which the `Build uPortal` jobs run, has the same values. |
-| MOD-I? | CI | The job that saves a branch's Gradle cache (MOD-D53) saves it even when it fails. Playwright: postgres-18 (128700895467) failed in the distribution download on 2026-11-08 and saved a 484-byte entry for its key. An entry is never replaced, so every later push with the same build files restores an empty Gradle home and downloads everything again. | **Fixed** (uPortal-start `820b8b501`): in the saving jobs of `integration.yml` and `CI.yml`, `cache-read-only` is true unless the job's last step set `GRADLE_CACHE_SAVE`, and that step runs only after every earlier step passed. The post step evaluates the input again, so only a passing job saves (`notes/gradle-download.md`). |
+| MOD-I? | CI | The job that saves a branch's Gradle cache (MOD-D53) saves it even when it fails. Playwright: postgres-18 (128700895467) failed in the distribution download on 2026-11-08 and saved a 484-byte entry for its key. An entry is never replaced, so every later push with the same build files restores an empty Gradle home and downloads everything again. | **Fixed** (uPortal-start `820b8b501`, `3d6f3fd6e`): the saving jobs of `integration.yml` and `CI.yml` end with a step that runs only after a failure or a cancellation (`if: ${{ !success() }}`). It sets `GRADLE_CACHE_JOB_FAILED`, and `cache-read-only` is true when that is set. The post step evaluates the input again, so a failed or cancelled job saves nothing (`notes/gradle-download.md`). |
