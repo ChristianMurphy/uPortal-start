@@ -47,8 +47,9 @@ The places the brief listed don't apply:
   checkout's wrapper with `-PuPortalVersion=5.17.9`. Only the `Build uPortal` jobs use another
   wrapper, uPortal's (see "Exposure").
 * **Scripts with another Gradle home.** `tests/db/lib.sh`, `harness.sh`, `equivalence.sh`,
-  `migrate.sh`, `tests/cluster/cluster.sh` and `tests/query-budget/run.sh` call `./gradlew` in
-  the checkout, without `-g`, `--gradle-user-home` or `GRADLE_USER_HOME`.
+  `migrate.sh`, `tests/db/gindex/gindex.sh`, `tests/cluster/cluster.sh` and
+  `tests/replay/portal.sh` call `./gradlew` in the checkout, without `-g`, `--gradle-user-home`
+  or `GRADLE_USER_HOME`.
 
 The cause is an empty Gradle cache. The basic provider of setup-gradle is the cache of
 actions/setup-java. It saves `~/.gradle/caches` and `~/.gradle/wrapper`, the distribution
@@ -130,7 +131,13 @@ downloaded it at 08:33 on that push. uPortal-start can't change that file. See "
   own properties and reads only `distributionSha256Sum` from the existing file, so an upgrade
   without those options resets them.
 
-Why not reuse a distribution instead:
+The 504s came and went from 09:51 until at least 10:24. In the last 5 minutes of that, almost
+every request failed. A bounded retry can't outlast such an outage, and a longer window would
+keep every job waiting far longer than the morning's 504s needed. Such a job still fails, and the guide's rule for a job that stopped before any test ran
+applies (re-run it once). Only a copy of the distribution that doesn't come from GitHub
+releases avoids it. See "Decision for the coordinator".
+
+Why not reuse a distribution instead, within this brief:
 
 * setup-gradle already reuses it when the branch has a cache entry (the 09:18 jobs). When it
   has none, no other copy is reachable: entries of other branches can't be read, and a job's
@@ -225,10 +232,62 @@ distribution and then failed on a test that passed only on a retry,
 `background-preference.spec.ts:108` ("offers None and the three images, each with a thumbnail"),
 which this branch doesn't change.
 
-**Second push, `43b1eb29e` (retries=6).** Next step: read its runs. The cache key changed
-again with `gradle-wrapper.properties`. Its Gradle jobs fetch the distribution once more.
-Look for `Fetching distribution (retrying 6 times, with an initial back off of 5000 ms).` and
-whether each download passed.
+**Second push, `5668cdddf` (`43b1eb29e` and a note commit, retries=6).** The cache key
+changed again with `gradle-wrapper.properties`, so every Gradle job fetched the distribution
+once more, and every log shows `Fetching distribution (retrying 6 times, with an initial back
+off of 5000 ms).` uPortal: the same reused build of `1d485034e`.
+
+| Job | First attempt | Attempts | Result of the download |
+| --- | --- | --- | --- |
+| ubuntu-latest (CI 42470784860), 128700792134 | 10:17:31 | 504 seven times, until 10:23:11 | failed |
+| In place: postgres-18 (Migration equivalence 42470784870), 128700875041 | 10:18:04 | 504 seven times, until 10:23:43 | failed |
+| Playwright: hsqldb, CAS (Integration 42470785087), 128700895452 | 10:18:05 | the file | passed |
+| Playwright: hsqldb (Integration), 128700895491 | 10:18:05 | 504 six times, then the file at 10:23:34 (attempt 7/7) | passed |
+| Copy: mariadb-11.4 to postgres-18 (Migration equivalence), 128700874869 | 10:18:11 | 504 seven times, until 10:23:51 | failed |
+| DB harness: postgres-18 (Integration), 128700895419 | 10:18:15 | the file | passed |
+| Cluster: two nodes (Integration), 128700895460 | 10:18:20 | the file | passed |
+| G-migrate: mariadb-11.4 to postgres-18 (Integration), 128700895482 | 10:18:25 | 504, 504, 504, then the file at 10:19:14 | passed |
+| Playwright: postgres-18 (Integration), 128700895467 | 10:18:40 | 504 seven times, until 10:24:31 | failed |
+
+Of the 42 attempts, 5 got the file, and from 10:19:28 to 10:24:20 all 19 got 504. "Prose
+(Vale)" (128700792440) and "Commit messages" (128700792377) failed on the Vale download again
+(504, 10:17:27 to 10:17:51). HTTP replay and G-index passed. "Replay against 5.17" didn't run,
+because `tests/replay` didn't change.
+
+Together, the two pushes made 20 distribution downloads. With the tip's settings 6 would have
+passed, the ones that got the file on the first attempt. With the new settings 12 passed, one of
+them on attempt 7. The other 8 got 504 on every attempt.
+
+## An empty cache entry after a failed job
+
+The job that saves the branch's Gradle cache (`playwright-database`, `cache-read-only:
+${{ env.GRADLE_CACHE_READ_ONLY }}`) saves it even when it fails. On the second push, Playwright:
+postgres-18 (128700895467) failed in the download and then saved
+`setup-java-Linux-x64-gradle-4c008b23...`: `Sent 484 of 484`, a Gradle home without the
+distribution or any dependency. On the first push the same job, after a full run, saved 1.2 GB
+under `8b5c28c4...`. GitHub never replaces an entry, and each restore counts as a read, so the
+7-day removal doesn't apply while the branch gets pushes. Until the build files change, every
+Gradle job of this branch restores that entry and still downloads the distribution and every
+dependency. The first job of a key to finish saves it (MOD-D53), and a job that fails early
+finishes first. If the download fails on the integration branch's first push after this topic
+is merged, the integration branch gets such an entry too.
+
+## Decision for the coordinator
+
+These changes would remove the dependency on GitHub releases. Each is larger than this brief and
+changes the cache design of MOD-D53, and I didn't make them:
+
+* **Reuse one copy of the distribution across runs and branches.** The `uportal` job that every
+  other job needs could find a `gradle-9.8.1-bin` artifact from an earlier run, the way
+  `find-uportal-build.sh` finds a uPortal build (MOD-I342), check it against a
+  `distributionSha256Sum`, and download it from GitHub releases only when none exists. Each Gradle
+  job would then put the zip in `~/.gradle/wrapper/dists/gradle-9.8.1-bin/<hash>/`, and the
+  wrapper unzips it without a request. Cost: one artifact of about 130 MB per retention period,
+  and one more step in each Gradle job of five workflows.
+* **Save the cache only after a passing job**, so a failed download can't leave an empty entry.
+  setup-gradle's basic provider has no input for that. A step with `if: failure()` that removes
+  `~/.gradle/caches` and `~/.gradle/wrapper` in the saving job would leave nothing to save. I
+  haven't tested that.
 
 ## Left open
 
@@ -241,11 +300,15 @@ whether each download passed.
 * `vale.sh` downloads Vale and the ai-tells styles from GitHub releases in every "Prose (Vale)"
   and "Commit messages" job, with `curl --retry 3` (1, 2 and 4 s apart). The 504s of
   2026-11-08 failed both jobs. Outside this topic.
-* An outage longer than about 5 minutes still fails a job. Re-run such a job once, as the guide
-  says for a job that stopped before any test ran.
+* An outage longer than about 5 minutes still fails a job, as on the second push. Re-run such a
+  job once, as the guide says for a job that stopped before any test ran.
+* This branch's entry `setup-java-Linux-x64-gradle-4c008b23...` is the empty one. The caches API
+  answers 403 here, so I couldn't delete it. Someone with access can delete it in the
+  repository's Actions caches page, or the next change to a build file replaces the key.
 
-## Proposed LOG row
+## Proposed LOG rows
 
 | ID | Area | Issue | Status |
 | --- | --- | --- | --- |
-| MOD-I? | CI | On 2026-11-08 the tip's Cluster and DB harness: postgres-18 jobs (Integration 42463431999) and In place: mariadb-12.3 and Copy: mariadb-11.4 to postgres-18 (Migration equivalence 42463431964) failed before any test ran. The Gradle wrapper gave up on services.gradle.org after 10 s (`networkTimeout=10000`, `retries=0`). Every Gradle job downloads the distribution when its branch has no Gradle cache entry, as on a topic branch's first push or after a build file change. The tip's entry of 2026-10-15 was gone after 24 days without a push, and 32 jobs downloaded the distribution on that push. | **Fixed** (uPortal-start, this branch): the wrapper waits 30 s for each read and retries the download 6 times, 5 s to 160 s apart (315 s for a run of fast 504s). services.gradle.org redirects to GitHub releases, which answered 504 for minutes on 2026-11-08. uPortal's wrapper, used by the `Build uPortal` jobs, still has the old values (`notes/gradle-download.md`). |
+| MOD-I? | CI | On 2026-11-08 the tip's Cluster and DB harness: postgres-18 jobs (Integration 42463431999) and In place: mariadb-12.3 and Copy: mariadb-11.4 to postgres-18 (Migration equivalence 42463431964) failed before any test ran. The Gradle wrapper gave up on services.gradle.org after 10 s (`networkTimeout=10000`, `retries=0`). Every Gradle job downloads the distribution when its branch has no Gradle cache entry, as on a topic branch's first push or after a build file change. The tip's entry of 2026-10-15 was gone after 24 days without a push, and 32 jobs downloaded the distribution on that push. | **Open**, reduced (uPortal-start `4ac81b5f4`, `43b1eb29e`): the wrapper waits 30 s for each read and retries the download 6 times, 5 s to 160 s apart (315 s for a run of fast 504s). services.gradle.org redirects to GitHub releases, which answered 504 from 09:51 to at least 10:24 on 2026-11-08. On this branch's two pushes 12 of 20 downloads passed, where the old settings would have passed 6. A longer outage still fails the job. Reusing one copy of the distribution would avoid it (a decision, `notes/gradle-download.md`). uPortal's wrapper, used by the `Build uPortal` jobs, still has the old values. |
+| MOD-I? | CI | The job that saves a branch's Gradle cache (MOD-D53) saves it even when it fails. Playwright: postgres-18 (128700895467) failed in the distribution download on 2026-11-08 and saved a 484-byte entry for its key. An entry is never replaced, so every later push with the same build files restores an empty Gradle home and downloads everything again. | **Open**: needs a decision (`notes/gradle-download.md`, "Decision for the coordinator"). |
