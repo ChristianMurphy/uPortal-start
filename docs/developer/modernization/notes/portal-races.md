@@ -49,6 +49,23 @@ Evidence:
   instance of declaring class`. On the new code both of its tests pass, and so do the 85 tests
   of uPortal-core.
 
+The landing 2 tip run, Integration 42463431999 (uPortal `1d485034e`, uPortal-start
+`a0a125fee`), had three tests that passed only on a retry. Their portal logs have the same
+exception, each at the request the test saw fail, after the first one at the guest login of
+`global-setup.ts`:
+
+| Job | Test | Request that failed, portal log |
+| --- | --- | --- |
+| 128678268222, G-migrate postgres-15 to MariaDB 12.3 | `portlet-modes.spec.ts:330`, word-of-the-day "help, maximised" (a 500) | 08:58:26, `/p/word-of-the-day.ctf2/max/render.uP?pCm=help`: the theme's `XalanAuthorizationHelperBean.hasPermission` calls `GroupService.getEntity`, then the cache proxy of `getEntityIDFromType` |
+| 128678268220, G-migrate postgres-16 to postgres-18 | `portlet-modes.spec.ts:330`, whos-online "config, maximised" (console errors) | 08:54:38, `/api/v5-1/userinfo` answered 500 from `IdTokenFactory.createUserInfo` through `GroupService.getGroupMember`. The console error the test reported is that 500 |
+| 128678268241, Playwright HSQLDB | `per-role-pages.spec.ts:38`, "Testing tab has test portlets" (element not found) | 08:55:42, `/f/testing/normal/render.uP`: the same theme permission check, and the tab didn't render |
+
+The fix explains all three. The second test that passed only on a retry in the postgres-16 to
+postgres-18 job, `user-locale.spec.ts:82` (`page.goto: net::ERR_ABORTED` on
+`/p/user-locales-selector`, then on `/Logout`), has no matching error in the portal log and
+isn't explained by these fixes. The MariaDB pair's other one, `visual-resource-server.spec.ts:153`,
+is MOD-I378.
+
 The fix removes the `key` attribute. Spring's default key generator then uses the `Class`
 argument itself, as `CLASS_BY_ID` already does with its `Integer`. `deleteEntityType` evicts all
 entries of the three caches, which doesn't depend on the key, and no other code reads or evicts
@@ -189,7 +206,33 @@ removed.
 For the old code, the main source file of each fix was restored from the integration tip, and
 the tests were run again.
 
-RUNS_PLACEHOLDER
+## Runs
+
+The first push, uPortal `d14ccded9` and uPortal-start `bef518c67`, met an outage of the Gradle
+distribution download on GitHub's runners from 08:47 UTC on 2026-11-08: the Gradle wrapper of
+uPortal and of uPortal-start timed out after 10 s on `services.gradle.org`, and Vale's download
+from GitHub releases answered 504. Every failed job below stopped at one of those downloads,
+before any test ran. Each run was started again at 08:50 and at 09:30, and the uPortal runs
+and the Integration run a last time at 10:13, when other branches' downloads worked again for a
+while.
+
+| Run | Attempts | Result |
+| --- | --- | --- |
+| uPortal CI 42464372528 | 4 | the build job and Commit messages failed on the downloads in each attempt. Prose (Vale) passed |
+| uPortal DB copy tool 42464372525 | 2 | passed |
+| uPortal DB integration 42464377318, started by hand | 4 | uPortal-webapp's tests, the three new ones included, passed on MySQL 9.7 in attempt 2 and on PostgreSQL 18 in attempt 4, with 468 tests and no failure in each. MariaDB 12.3, SQL Server 2025 and Oracle 23 failed on the Gradle download in every attempt |
+| uPortal-start Integration 42464381026 | 4 | Build uPortal built uPortal `d14ccded9` from this branch (notice of the job), and Cluster passed. The Playwright, DB harness and G-migrate jobs failed on the Gradle download in every attempt |
+| uPortal-start CI 42464381060, HTTP replay 42464381028, Migration equivalence 42464381035, G-index 42464381063 | 2 or 3 | failed on the downloads |
+
+The G-index job of attempt 2 also showed that `tests/db/gindex/gindex.sh` reports "deploy and
+dataInit ... ok" when that phase's Gradle run failed. Its `deploy.log` ends with the download
+timeout, and the next phase failed on the missing Tomcat.
+
+Still to run, once the downloads work (the `-gradle-download` branch gives uPortal-start's
+wrapper a longer timeout and retries): MariaDB 12.3, SQL Server 2025 and Oracle 23 of the
+manual DB integration run, uPortal's CI build, and the uPortal-start Integration jobs. Starting
+the failed jobs of runs 42464377318 and 42464381026 again is enough. The uPortal commit doesn't
+change.
 
 ## Proposed LOG rows
 
@@ -199,6 +242,6 @@ The coordinator gave MOD-I391, MOD-I392 and MOD-I394 at landing 2. These rows re
 | ID | Area | Issue | Status |
 | --- | --- | --- | --- |
 | MOD-I391 | i18n | `PUT /api/v6-0/locale` answers 500 when two sessions of one user save the language at the same moment: `RDBMLocaleStore.updateUserLocales` deletes, then inserts, and the second insert violates `UP_USER_LOCALE`'s primary key. With two different locales PostgreSQL keeps both rows. | **Fixed** (uPortal `fix(i18n): save one user's language from two sessions in turn`): a save locks the user's `UP_USER` row first and runs under READ COMMITTED. `RDBMLocaleStoreConcurrencyTest` fails on the old code on HSQLDB, PostgreSQL 16 and MariaDB 10.11 (`notes/portal-races.md`). |
-| MOD-I392 | Security | `EntityTypes.getEntityIDFromType`'s cache key `#type.Name` fails on Spring 5.3 on the first call and after the garbage collector clears an entry of `ClassUtils`' interface method cache: SpEL calls `Principal.getName()` on `IPerson.class`. A sign-in then fails with "Invalid username or password", and a render or REST call answers 500. Cause of MOD-I383's `reset-my-layout.spec.ts:238`. | **Fixed** (uPortal `fix(core): key the entity type id cache by the class`): the `Class` is the key. `EntityTypesCacheTest` fails on the old key. No other key or expression in uPortal has the fault. |
+| MOD-I392 | Security | `EntityTypes.getEntityIDFromType`'s cache key `#type.Name` fails on Spring 5.3 on the first call and after the garbage collector clears an entry of `ClassUtils`' interface method cache: SpEL calls `Principal.getName()` on `IPerson.class`. A sign-in then fails with "Invalid username or password", and a render or REST call answers 500. Cause of MOD-I383's `reset-my-layout.spec.ts:238`, and of the three tests that passed only on a retry in landing 2's tip run 42463431999 (jobs 128678268222, 128678268220, 128678268241). | **Fixed** (uPortal `fix(core): key the entity type id cache by the class`): the `Class` is the key. `EntityTypesCacheTest` fails on the old key. No other key or expression in uPortal has the fault. |
 | MOD-I394 | Persistence | Overlapping imports of new users deadlock on MariaDB (1213): `UserImporterExporter.importData` updates, then inserts, under REPEATABLE READ, and InnoDB's gap locks on `UPU_USER_NAME` block both inserts. `self-edit-account.spec.ts:256` was flaky in job 116563567479. | **Fixed** (uPortal `fix(io): import users under read committed`): the import runs under READ COMMITTED. `UserImporterExporterConcurrencyTest` fails on the old code on MariaDB 10.11 with 1213. |
 | MOD-I? | Layout | Saves of one user's layout that overlap fail on PostgreSQL with `DuplicateKeyException` on `up_layout_param_pkey`: `setUserLayout` deletes, then inserts, and the second save's delete doesn't see the rows the first one committed. Parallel sign-ins of one user each save the merged layout. `background-preference.spec.ts:124` failed at the student's sign-in in job 116563567769 (run 38775913145). Reproduced on a local PostgreSQL 16. | **Open.** Lock the user's `UP_USER` row at the start of the save, as MOD-I391 does. MOD-I360's test needs to run its second save in a thread (`notes/portal-races.md`). |
