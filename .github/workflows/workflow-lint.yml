@@ -55,3 +55,5 @@ jobs:
         run: .github/scripts/check-uportal-downloads.py
       - name: Test the check of the uPortal build downloads
         run: .github/scripts/check-uportal-downloads.test.sh
+      - name: Test the check for placeholders in the notes
+        run: .github/scripts/check-placeholders.test.sh
