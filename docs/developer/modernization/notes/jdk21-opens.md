@@ -171,7 +171,23 @@ Measurement 2 (released 5.17.9) and the seeded fault of October weren't repeated
 
 ### CI
 
-The push runs of this note's commit are added when they finish.
+Push runs of `381a17128`. They built uPortal `ccr-43ba0785-hzlrj5` at `0cf02679f`, since uPortal
+has no branch of this name (the `uPortal under test` annotation of each `Build uPortal` job). CI
+runs the portal and the data tools on JDK 11.
+
+| Workflow | Run | Result |
+| --- | --- | --- |
+| Integration | 42488124359 | passed. Playwright on HSQLDB 512 passed (job 128755229380), on PostgreSQL 18 512 passed (128755229476), on HSQLDB with CAS passed. Cluster, DB harness on PostgreSQL 18 and G-migrate MariaDB 11.4 to PostgreSQL 18 passed |
+| CI | 42488124486 | passed, with the lint job |
+| HTTP replay | 42488124366 | passed. "Replay against 5.17" ran, because the merge brought changes to `tests/replay` |
+| Migration equivalence | 42488124445 | passed. Its 5.17.9 side runs this branch's data tools on JDK 11 |
+| G-index | 42488124430 | passed (G-index on PostgreSQL 18, job 128754828560) |
+| Workflow lint | 42488124376 | passed |
+
+The CI job "ubuntu-latest with Java temurin version 11" runs `dataInit` with `-i`. Its log has 3
+"An illegal reflective access operation has occurred" blocks on this branch (job 128754374830)
+and 7 on the integration tip `9c20dbaf6` (job 128745328118, run 42485157594), as in the local
+JDK 11 runs. Neither log has an `InaccessibleObjectException`.
 
 ## Next step
 
@@ -181,7 +197,7 @@ None on this branch. The coordinator reviews it against the tip.
 
 | ID | Area | Finding | Status |
 | --- | --- | --- | --- |
-| MOD-I365 | JDK 21 | At the integration tip (Hibernate 5.2.18, javassist 3.30.2, Spring 5.3), uPortal's `dataInit` and SimpleContentPortlet pass on JDK 21 without opens. The CalendarPortlet, NewsReaderPortlet and Announcements data steps fail with `InaccessibleObjectException`, because Hibernate 3's javassist and Spring's cglib call `ClassLoader.defineClass`, and the Cernunnos scripts' Groovy engine opens `String` and `HashSet` constructors. The Calendar and NewsReader schema steps hide their failure (`failonerror: false`) | **Fixed** (uPortal-start, commit 1): `portalJvmArgs` opens `java.lang` and `java.util` to every forked data tool |
+| MOD-I365 | JDK 21 | At the integration tip (Hibernate 5.2.18, javassist 3.30.2, Spring 5.3), uPortal's `dataInit` and SimpleContentPortlet pass on JDK 21 without opens. The CalendarPortlet, NewsReaderPortlet and Announcements data steps fail with `InaccessibleObjectException`, because Hibernate 3's javassist and Spring's cglib call `ClassLoader.defineClass`, and the Cernunnos scripts' Groovy engine opens `String` and `HashSet` constructors. The Calendar and NewsReader schema steps hide their failure (`failonerror: false`) | **Fixed** (uPortal-start, commit 1): `portalJvmArgs` opens `java.lang` and `java.util` to every forked data tool. Measured again on 2026-11-08 at uPortal `0cf02679f`: without them the three data steps fail on JDK 21, with them every step passes. On JDK 11 they remove four of seven illegal reflective access warnings |
 | MOD-I366 | JDK 21 | Released uPortal 5.17.9's `dataInit` fails on JDK 21 without the `java.lang` opens (Spring 4.3's `ConfigurationClassEnhancer`). 5.17.9 with commit 1 imports its data and its portal starts on JDK 21 and Tomcat 9.0.122, so the equivalence job's 5.17.9 side can move to 21 | **Fixed** by commit 1. The workflow change belongs to P4-2 commit 4 |
 | MOD-I367 | CI | The replay job's reference, uPortal-start `master`, uses Gradle 6.9.4, which can't run on JDK 21 (`Unsupported class file major version 65`). Its Tomcat 8.5.100 runs 5.17.9 on JDK 21 when Gradle and the data tools stay on JDK 11 | **Open**: decide for P4-2 commit 4. Either two JDKs in that job (11 for Gradle, 21 as `JAVA_HOME`) or a newer reference checkout |
 | MOD-I368 | Tomcat | Tomcat 9's `daemon.sh` (jsvc) reads `setenv.sh` but doesn't add any module opens, and jsvc ignores `JDK_JAVA_OPTIONS`. On JDK 21, Announcements, NewsReaderPortlet and NotificationPortlet then fail to start. `catalina.sh` and `catalina.bat` add the opens | **Fixed** (uPortal-start, commit 2): `setenv.sh` adds the `java.lang` opens. `setenv.bat` isn't changed, because procrun doesn't read it |
