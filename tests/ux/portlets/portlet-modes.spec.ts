@@ -14,6 +14,7 @@ import {
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 import { BUNDLED_PORTLETS, BundledPortlet } from "./portlet-modes.data";
+import { ownUser } from "../utils/own-users";
 
 /*
  * Every bundled portlet in every portlet mode it declares, maximised and in
@@ -227,9 +228,19 @@ function printInFlightNotesOfFailedTest(info: TestInfo): void {
  * not student: favorites.spec.ts changes student's favorites, and in
  * Integration run 38109073749 two of its tests passed only on a retry while
  * this spec rendered portlets as student in parallel.
+ *
+ * NewsReader portlets render as the worker's own user instead. Every
+ * NewsReader portlet of a user reads and saves one news set, and NewsReader
+ * hands the same cached copy of it to every session of the user. Two
+ * sessions that render NewsReader portlets at once both save that copy, and
+ * the second render shows uPortal's error portlet ("Illegal attempt to
+ * associate a collection with two open sessions"). The two workers of this
+ * spec rendered motley-fool and movie-news in edit mode as staff in the same
+ * second in Integration run 42507870441 (job 128815050922).
  */
 function userFor(portlet: BundledPortlet, mode: Mode): User {
   if (mode === "config") return config.users.admin;
+  if (portlet.webapp === "/NewsReaderPortlet") return ownUser("news");
   if (portlet.groups.length === 1 && portlet.groups[0] === "Guests")
     return undefined;
   if (
@@ -332,13 +343,14 @@ test.describe("Bundled portlets in every mode and window state", () => {
       await trackPortalRequests(page);
       const scriptRequests = trackScriptRequests(page);
       const errors = collectErrors(page);
-      let current: User | "none" = "none";
+      // The signed-in user's name: undefined for guest, "" before the first render
+      let current: string | undefined = "";
       for (const mode of portlet.modes) {
         const user = userFor(portlet, mode);
-        if (user !== current) {
+        if (user?.username !== current) {
           await page.context().clearCookies();
           if (user) await loginViaUrl(page, user);
-          current = user;
+          current = user?.username;
         }
         for (const state of STATES) {
           await test.step(`${mode}, ${state === "max" ? "maximised" : "normal"}`, async () => {
