@@ -191,6 +191,12 @@ const STRING_MASKS = [
 // self-check across midnight on 2026-10-11.
 const DATE_TIME = /\b\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?\b/g;
 const HTTP_DATE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT\b/g;
+// In JSON, an RFC 1123 date may also have a one-digit day: java.time's RFC_1123_DATE_TIME writes
+// the day without a leading zero. The health check's "Current Time" (HealthCheckController) uses
+// it, in 5.17.9 and in 6.0. Header fields keep HTTP_DATE, because RFC 9110 requires IMF-fixdate
+// there. Seen: "Sun, 8 Nov 2026 06:43:24 GMT" in CI run 42455427011, on the first replay on one
+// of the days 1 to 9 of a month.
+const RFC_1123_DATE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{1,2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT\b/g;
 const shape = (text) => text.replaceAll(/\d/g, '9');
 
 export function maskString(text) {
@@ -484,7 +490,10 @@ export function maskJson(value, origin) {
     if (typeof value === 'number' && Number.isInteger(value) && value >= EPOCH_MS_MIN && value <= EPOCH_MS_MAX) {
         return '{epoch-ms:number}';
     }
-    if (typeof value === 'string') return origin ? normaliseUrl(value, origin).replaceAll(origin, '{origin}') : maskString(value);
+    if (typeof value === 'string') {
+        const masked = origin ? normaliseUrl(value, origin).replaceAll(origin, '{origin}') : maskString(value);
+        return masked.replace(RFC_1123_DATE, '{http-date}');
+    }
     return value;
 }
 

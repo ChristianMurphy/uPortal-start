@@ -88,8 +88,10 @@ comparison. `tests/replay/lib.mjs` gives the reason for each one:
   parallel threads;
 * the names of aggregated skin resources, which are hashes of their content;
 * dates and times. In JSON strings, headers and HTML, every digit becomes 9, so a changed format
-  still shows. HTTP dates become `{http-date}`. JSON numbers between the years 2000 and 2100 in
-  milliseconds become `{epoch-ms:number}`, so a switch from numbers to strings still shows;
+  still shows. HTTP dates become `{http-date}`. In JSON, so does an RFC 1123 date with a one-digit
+  day, which java.time writes on days 1 to 9 (the health check's time). A header date must keep
+  its two-digit day. JSON numbers between the years 2000 and 2100 in milliseconds become
+  `{epoch-ms:number}`, so a switch from numbers to strings still shows;
 * `ETag` values, which hash the body or the size and modification time of a deployed file. The
   tag's length and whether it is weak are compared;
 * the signed token from `/api/v5-1/userinfo`, whose header and claims are compared without its
