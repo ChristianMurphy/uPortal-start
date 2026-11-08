@@ -75,7 +75,7 @@ a layout save (see background-preference above).
 | Spec | User | What it changes | Readers in parallel | Decision |
 | --- | --- | --- | --- | --- |
 | `ux/smoke/user-locale.spec.ts` (signed in) | student | language (French) | every student spec: `visual-resource-server`, `per-role-pages`, `search`, `search-web-component`, `web-components`, `portlet-options`, `favorites`, `background-preference`, `self-edit-account`, `notifications`, `feedback`, `cas-proxy-test`, `groups-manager`, `uportal-auth`, `ux/i18n/pseudo-locales`, `layout/pages`, `api/session-timeout`, `api/popular-portlets-v6-0` | own user |
-| `ux/smoke/search-web-component.spec.ts` ("speaks the user's language") | student | language (Spanish, French) | the same | retry-flakes moved the two tests to the developer (`dd63f3f46`), so this branch leaves them |
+| `ux/smoke/search-web-component.spec.ts` ("speaks the user's language") | student, and the developer since landing 2 (MOD-I390) | language (Spanish, French) | the student's specs, then the developer's (below) | own user |
 | `ux/smoke/favorites.spec.ts` | student | layout (favorites) | the same, and `layout/pages` measures the student's Favorites page | own user |
 | `ux/smoke/portlet-options.spec.ts` ("Favorite and unfavorite from the menu") | student | layout (favorites) | the same | own user, for that test |
 | `ux/smoke/background-preference.spec.ts` | student (and reads staff) | the background-preference channel's preference | none reads the student's background | keeps the student |
@@ -85,10 +85,10 @@ a layout save (see background-preference above).
 | `api/portlet-list.spec.ts` | admin, staff, faculty | portlet lists they own | only this spec reads them | keeps them |
 | `ux/smoke/user-locale-component.spec.ts` | staff | language (saves `en_US` only, and the portal refuses `fr_FR` without the token and `xx_YY`) | the portal renders `en_US` without a saved language. The readers get the same pages | keeps staff |
 | `ux/portlets/popular-portlets.spec.ts` (retry-flakes) | staff, admin | layout (six portlets on staff's Main Staff Tab, one on admin's Testing tab) | staff: `per-role-pages` (Main Staff Tab portlets), `layout/pages`, `portlet-modes`, `background-preference`, `user-locale-component`, `api/portlet-list`; admin: most admin specs | the other topic's |
-| `ux/smoke/session-timeout.spec.ts` (warning in es and fr) | developer | language (Spanish, French) | the other language tests (Reset My Layout UX, and the search tests on retry-flakes) set their own session's language before they open a page, and the portal renders a session in its own language before the saved one. `api/reset-my-layout` and `pluto-testsuite` check nothing that depends on the language | keeps the developer |
-| `ux/portlets/pluto-testsuite.spec.ts` (JSR-286 suite) | developer | layout (a tab with two portlets for the length of the describe) | `api/reset-my-layout` resets the developer's layout three times. The language tests sign in as the developer | open, see below |
-| `api/reset-my-layout.spec.ts` (retry-flakes) | developer | layout (adds tabs, resets) | `pluto-testsuite`, the language tests | the other topic's |
-| `ux/smoke/reset-my-layout.spec.ts` (retry-flakes) | riley, developer | riley's layout (reset), the developer's language | riley: none. Developer: as for `session-timeout` | the other topic's |
+| `ux/smoke/session-timeout.spec.ts` (warning in es and fr) | developer | language (Spanish, French) | the other language tests (Reset My Layout UX, the search tests) set their own session's language before they open a page, so they don't see this one's. Their saves can meet, and the locale API then answers 500 (MOD-I391). `api/reset-my-layout` and `pluto-testsuite` check nothing that depends on the language | own user |
+| `ux/portlets/pluto-testsuite.spec.ts` (JSR-286 suite) | developer | layout (a tab with two portlets for the length of the describe) | `api/reset-my-layout` resets the developer's layout three times. The Reset My Layout language tests sign in as the developer | open, see below |
+| `api/reset-my-layout.spec.ts` (retry-flakes) | developer | layout (adds tabs, resets) | `pluto-testsuite`, the Reset My Layout language tests | the other topic's |
+| `ux/smoke/reset-my-layout.spec.ts` (retry-flakes) | riley, developer | riley's layout (reset), the developer's language | riley: none. Developer: `pluto-testsuite` and `api/reset-my-layout`, which check nothing that depends on the language. After this branch it is the only spec that saves the developer's language | the other topic's |
 | `ux/portlets/bookmarks.spec.ts` | admin | admin's bookmarks | Bookmarks is on the Welcome fragment, which admins don't get; no other spec opens admin's Bookmarks | keeps admin |
 | `ux/admin/permissions-manager.spec.ts` | admin | a permission for admin, removed afterwards | admin is a superuser already | keeps admin |
 | `ux/smoke/self-edit-account.spec.ts` (retry-flakes), `self-edit-account-component`, `reset-password`, `forgot-password`, `ux/admin/user-administration` | an account each test imports | attributes, password | none | own users already |
@@ -114,14 +114,14 @@ own would have to be a member of Portal Developers. The import can add a member 
 the group's whole list. This branch leaves pluto on the developer. The reset API spec belongs to
 the retry-flakes topic, and a user of its own there removes that collision.
 
-The developer stays a user that two specs change the layout of while three language specs sign
-in. On PostgreSQL such a sign-in can get the 500 described above while pluto or the reset API
-spec saves the layout. No failure of this kind is in the runs looked at here.
+The developer stays a user that two specs change the layout of while the Reset My Layout language
+tests sign in. On PostgreSQL such a sign-in can get the 500 described above while pluto or the
+reset API spec saves the layout. No failure of this kind is in the runs looked at here.
 
 ## The fix
 
 `tests/ux/utils/own-users.ts` lists the users of a spec's own: `favorites`, `options`,
-`language` and `channel`. `global-setup.ts` imports each of them once for every worker slot,
+`language`, `channel`, `search` and `timeout`. `global-setup.ts` imports each of them once for every worker slot,
 named `e2e-<name>-<slot>`, before the first test, and logs each in once, as it does for the
 users in `general-config.ts`. A spec calls `ownUser("<name>")` in a hook or test and gets the
 account of its worker's slot (`test.info().parallelIndex`). Workers that run in parallel have
@@ -133,9 +133,8 @@ only tab is Welcome (Bookmarks, Calendar, My Drives), which is all these tests u
 
 The import uses `importNamedAccount()`, which `importLocalAccount()` now calls with its generated
 name. global-setup imports the accounts one after another, before any worker starts. The
-retry-flakes topic found that imports of new users that overlap deadlock on MariaDB
-(`notes/retry-flakes.md`, cause 3). An import in each spec's `beforeAll` would add such
-overlaps.
+retry-flakes topic found that imports of new users that overlap deadlock on MariaDB (MOD-I394).
+An import in each spec's `beforeAll` would add such overlaps.
 
 This differs from riley (uPortal-start 964c3ea92), a user in the quickstart data. A user in
 `data/quickstart` needs the migration equivalence reference recorded again with uPortal 5.17.9,
@@ -149,10 +148,12 @@ quickstart data as it is.
 | `favorites.spec.ts`, both describes | `e2e-favorites-<slot>`, Fay |
 | `portlet-options.spec.ts`, "Favorite and unfavorite from the menu send the CSRF token", in a describe of its own | `e2e-options-<slot>`, Olive |
 | `web-component-channel.spec.ts` | `e2e-channel-<slot>`, Cora |
+| `search-web-component.spec.ts`, the two language tests | `e2e-search-<slot>`, Sol |
+| `session-timeout.spec.ts`, the two language tests | `e2e-timeout-<slot>`, Tess |
 
 The people search specs look for "steven", which these names don't contain. The other tests of
-these specs still sign in as the student. The tip and the retry-flakes branch on origin
-(`d0a90ccec`) have no user with these names.
+these specs still sign in as the student. The integration tip (`a0a125fee`, landing 2) has no
+user with these names.
 
 ## A second cause in user-locale.spec.ts
 
@@ -202,11 +203,11 @@ The first push, head `4a57deb8b`, built uPortal `ccr-43ba0785-hzlrj5` at `498252
 | Migration equivalence 42456118622 | passed |
 | HTTP replay 42456118615 | failed, see below |
 
-The PostgreSQL 18 flake is retry-flakes' cause 1, which this branch doesn't change: the artifact's
+The PostgreSQL 18 flake is MOD-I390 from retry-flakes, which that push didn't include: the artifact's
 access log has `PUT /api/v6-0/locale` and `GET /p/search/max?query=zzqxjv` at 07:08:23
 (`search-web-component.spec.ts`, "speaks the user's language: es_ES", still as the student here),
 and the student's sign-in of the failed test in the same second, with `locale="es-ES"` on the
-element. retry-flakes `dd63f3f46` moves those tests off the student.
+element. Landing 2 moved those tests off the student, and this branch has it since the merge.
 
 The HTTP replay failed with the same 10 differences on the retry-flakes (42455427011) and admin-390
 (42455714380) branches today. The integration branch's replay passed on 2026-10-15 (38775913401).
@@ -222,7 +223,8 @@ the reference's `{http-date}` mask doesn't match. Admin's principal string reads
 | --- | --- | --- | --- |
 | MOD-I? | Portlets | **French users get the Calendar without its labels and a script error.** CalendarPortlet 2.7.4's `calendarNarrowView.jsp` writes the labels of `<calendar-portlet>` as JSON in a `<script type="application/json">`, each with `<spring:message javaScriptEscape='true'/>`. Spring's JavaScript escaping writes an apostrophe as `\'`, which JSON doesn't allow. `messages_fr.properties` has `view.more.events=Voir plus d'évènements`, so for a user whose language is French `JSON.parse` fails at that label: the console shows `calendar-portlet: invalid i18n JSON SyntaxError: Bad escaped character in JSON`, and the element falls back to its English labels. Every French user gets it on every page with the Calendar in narrow view, such as Welcome. `calendarWideView.jsp` has the same pattern, but none of its French labels has an apostrophe today. Found by `visual-resource-server.spec.ts:153` (HSQLDB job 116563567542), when `user-locale.spec.ts` had the shared student in French. Since this topic's test users, no spec puts a shared user in French, and the suite doesn't see it. | **Open**, the owner's choice. (1) An overlay in uPortal-start. `overlays/CalendarPortlet/src/main/resources/i18n/messages_fr.properties` with `’` (U+2019) in place of the apostrophe fixes today's text only. Replacement JSPs that write the labels with JSON escaping fix any label. (2) A CalendarPortlet release that writes the JSON with a JSON encoder. Whether one after 2.7.4 exists couldn't be checked here, since Maven Central answers 429. (3) An upstream report to the CalendarPortlet project with the cause and the JSP lines. A Playwright test that signs in as a French user of its own, opens Welcome and expects an empty console would show the fix. |
 | MOD-I? | Layout | **A sign-in answers 500 on PostgreSQL when another session of the same user saves the layout at the same moment.** A sign-in saves the user's layout when the fragment merge changed it (`RDBMDistributedLayoutStore._getUserLayout`). `RDBMUserLayoutStore.setUserLayout` deletes the user's `UP_LAYOUT_STRUCT` and `UP_LAYOUT_PARAM` rows and inserts them again, so two saves at once fail with `duplicate key value violates unique constraint "up_layout_param_pkey"`, and the user gets the error page. Seen in G-migrate job 116563567769 (postgres-16 to postgres-18) at `Login?userName=student` while `portlet-options.spec.ts` favorited and unfavorited as the student. A user with two devices or tabs can hit it. Related to MOD-I330 (unique-key conflicts on `UP_LAYOUT_PARAM`), MOD-I360 (the same saves on MariaDB) and MOD-I364 (an older copy overwrites a newer save). | **Open** (uPortal). The test users of this topic keep the suite's layout changes off shared users, so the suite no longer hits it. |
-| MOD-I? | Tests | Specs changed a shared user's language or layout while other specs signed in as that user: `user-locale.spec.ts` (the student's language), `favorites.spec.ts` and `portlet-options.spec.ts` (the student's layout) and `web-component-channel.spec.ts` (faculty's layout). Behind MOD-I378, MOD-I379, MOD-I380 and the shared-user part of MOD-I385. | **Fixed** (uPortal-start, `ccr-43ba0785-hzlrj5-test-users`): global-setup imports an account per spec and worker slot, and those specs sign in as it (`notes/test-users.md`). Open: `pluto-testsuite.spec.ts` and `api/reset-my-layout.spec.ts` both change the developer's layout. |
+| MOD-I? | Tests | Specs changed a shared user's language or layout while other specs signed in as that user: `user-locale.spec.ts` (the student's language), `favorites.spec.ts` and `portlet-options.spec.ts` (the student's layout), `web-component-channel.spec.ts` (faculty's layout), and the language tests of `search-web-component.spec.ts` and `session-timeout.spec.ts`, which saved the developer's language next to each other (MOD-I391). Behind MOD-I378, MOD-I379, MOD-I380 and the shared-user part of MOD-I385. | **Fixed** (uPortal-start, `ccr-43ba0785-hzlrj5-test-users`): global-setup imports an account per spec and worker slot, and those specs sign in as it (`notes/test-users.md`). Open: `pluto-testsuite.spec.ts` and `api/reset-my-layout.spec.ts` both change the developer's layout. |
+| MOD-I? | Tests | `user-locale.spec.ts` opened the next page while the language component reloaded the page after Update, also when the language stayed the same, and the page load ended with `net::ERR_ABORTED`: 3 of 50 tests on the tip and 9 of 50 with the spec's own user in local runs. | **Fixed** (uPortal-start, `ccr-43ba0785-hzlrj5-test-users`): `chooseLanguage()` waits for the reloaded page. 0 of 80 locally afterwards. |
 
 ## Next step
 
