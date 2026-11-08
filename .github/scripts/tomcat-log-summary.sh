@@ -26,22 +26,30 @@ done
 
 # A web application whose listener failed to start logs the exception after the SEVERE line, as
 # an exception line and "Caused by:" lines between stack frames. Print those lines, without the
-# frames, so the job log names the cause.
+# frames, so the job log names the cause. A SEVERE line is printed only when an exception follows
+# it: Tomcat logs many plain SEVERE lines (memory leak checks at shutdown, persistence disabled),
+# and they pushed the cause past the output limit. The localhost logs, where a listener's
+# exception goes, come first.
 causes() {
   awk '
-    /SEVERE/ { if (n > 0) print "--"; n = 0; capture = 1; print FILENAME ": " $0; next }
+    FNR == 1 { capture = 0 }
+    /SEVERE/ { severe = FILENAME ": " $0; n = 0; capture = 1; next }
     capture && /^[[:space:]]*at / { next }
     capture && /^[[:space:]]*(Caused by: |[[:alnum:]_.$]+(Exception|Error)(: |$))/ {
+      if (n == 0) { if (shown++) print "--"; print severe }
       if (n < 20) print "    " $0
       n++
       next
     }
-    capture && /^[0-9]{2}-[A-Za-z]{3}-[0-9]{4} / { capture = 0 }
+    capture && /^[0-9][0-9]-[A-Za-z][A-Za-z][A-Za-z]-[0-9][0-9][0-9][0-9] / { capture = 0 }
   ' "$@"
 }
+cause_files=("$dir"/localhost* "$dir"/catalina*)
+found=$(causes "${cause_files[@]}")
+[ -n "$found" ] || found="No exception follows a SEVERE line."
 
 echo "::group::Exceptions after SEVERE lines"
-causes "${files[@]}" | head -n 300
+head -n 300 <<< "$found"
 echo "::endgroup::"
 
 if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
@@ -57,7 +65,7 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
     echo "### Exceptions after SEVERE lines"
     echo
     echo '```'
-    causes "${files[@]}" | head -n 60
+    head -n 60 <<< "$found"
     echo '```'
   } >> "$GITHUB_STEP_SUMMARY"
 fi

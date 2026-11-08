@@ -49,6 +49,8 @@ jobs:
         run: .github/scripts/choose-uportal.test.sh
       - name: Test the wait for the portlets to register
         run: .github/scripts/wait-for-portlets.test.sh
+      - name: Test the summary of Tomcat's startup errors
+        run: .github/scripts/tomcat-log-summary.test.sh
       - name: Test the search for an earlier uPortal build
         run: .github/scripts/find-uportal-build.test.sh
       - name: Check that every job downloads the uPortal build by its commit name
