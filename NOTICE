@@ -92,7 +92,6 @@ This project includes:
   Jackson-core under The Apache Software License, Version 2.0 or GNU Lesser General Public License, Version 2.1
   jackson-databind under The Apache Software License, Version 2.0 or GNU Lesser General Public License, Version 2.1
   Jackson-module-JAXB-annotations under The Apache Software License, Version 2.0 or GNU Lesser General Public License, Version 2.1
-  Jadira Usertype Core (for Joda Time, Joda Money, Libphonenum and JDK Types with Hibernate) under Apache 2
   Jadira Usertype SPI Classes for Hibernate under Apache 2
   jansi under The Apache Software License, Version 2.0
   Jasig CAS ClearPass Extension under Apache 2
@@ -114,8 +113,6 @@ This project includes:
   JGroups under GNU Lesser General Public License 2.1
   JGroups Replication under The Apache Software License, Version 2.0
   JLine under The BSD License
-  Joda-Time under Apache 2
-  Joda-Time JSP tags support under Apache 2
   JPA 2.0 API under Sun Binary Code License
   JSON (JavaScript Object Notation) under provided without support or warranty
   json-lib under Apache License, Version 2.0
