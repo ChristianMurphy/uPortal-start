@@ -28,6 +28,7 @@ import {
     normaliseCookie,
     normaliseResponse,
     outcome,
+    renormalise,
     resolvePath,
     sessionFor,
 } from './lib.mjs';
@@ -302,9 +303,10 @@ async function replay() {
     const expected = [...readJson(join(fixtures, 'crawl.json')), ...readJson(join(fixtures, 'suite.json'))];
     const items = plan(routes, suiteRequests);
     console.error(`replay: ${items.length} requests against ${origin}, compared with ${meta.label}`);
-    // --actual re-evaluates a saved run (build/replay/actual.json), for example after editing the registry
+    // --actual re-evaluates a saved run (build/replay/actual.json), for example after editing the
+    // registry or a mask. The current masks apply to its responses, as they do to the recording.
     const saved = options.actual ? readJson(options.actual) : null;
-    const actual = saved ? saved.exchanges : await execute(items);
+    const actual = saved ? saved.exchanges.map((e) => ({ ...e, response: renormalise(e.response, e.path) })) : await execute(items);
     const upgrading = options.upgrading ? headingsOf(readFileSync(options.upgrading, 'utf8')) : null;
     const registry = loadRegistry(readJson(options.registry ?? join(here, 'intended-differences.json')), upgrading);
     const recordedMatrix = readJson(join(fixtures, 'security-matrix.json'));

@@ -4,6 +4,7 @@
   <creator>system</creator>
   <description>All students</description>
   <children>
+    <literal>riley</literal>
     <literal>student-lo</literal>
     <literal>student</literal>
   </children>

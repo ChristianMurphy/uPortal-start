@@ -6,6 +6,7 @@ import {
   openDropdown,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
 
 test.describe("Portlet Options menu", () => {
   test.beforeEach(async ({ page }) => {
@@ -51,35 +52,6 @@ test.describe("Portlet Options menu", () => {
     ).toBeVisible();
   });
 
-  test("Favorite and unfavorite from the menu send the CSRF token", async ({
-    page,
-  }) => {
-    // modern-favorite.js posts to /api/layout, which needs the page's CSRF
-    // token (MOD-I130). Toggling twice leaves the layout as it was.
-    const calendarWrapper = page.locator(
-      ".up-portlet-wrapper:has(.portlet-title a[title='Calendar'])",
-    );
-    for (let toggle = 0; toggle < 2; toggle++) {
-      await openDropdown(
-        calendarWrapper
-          .locator(".portlet-options-menu .dropdown-toggle")
-          .first(),
-      );
-      const [response] = await Promise.all([
-        page.waitForResponse(
-          (candidate) =>
-            candidate.url().includes("/api/layout?action=") &&
-            candidate.request().method() === "POST",
-        ),
-        calendarWrapper.locator(".up-portlet-options-item.favorite a").click(),
-      ]);
-      expect(response.request().headers()["x-csrf-token"]).toBeTruthy();
-      expect(response.status()).toBe(200);
-      await waitForPortalRequestsToSettle(page);
-      await page.reload();
-    }
-  });
-
   test("Options dropdown shows expected items for locked portlet", async ({
     page,
   }) => {
@@ -114,6 +86,51 @@ test.describe("Portlet Options menu", () => {
     await expect(
       menu.locator(".up-portlet-options-item.remove"),
     ).not.toBeAttached();
+  });
+});
+
+/*
+ * Favoriting changes the user's layout, so this test signs in as a user of
+ * its own (own-users.ts). As the shared student, it changed the layout
+ * that favorites.spec.ts changed at the same time, and that the student's
+ * other specs loaded at sign-in (MOD-I380).
+ */
+test.describe("Portlet Options menu favorite item", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, ownUser("options"));
+  });
+
+  test.afterEach(async ({ page }) => {
+    await logout(page);
+  });
+
+  test("Favorite and unfavorite from the menu send the CSRF token", async ({
+    page,
+  }) => {
+    // modern-favorite.js posts to /api/layout, which needs the page's CSRF
+    // token (MOD-I130). Toggling twice leaves the layout as it was.
+    const calendarWrapper = page.locator(
+      ".up-portlet-wrapper:has(.portlet-title a[title='Calendar'])",
+    );
+    for (let toggle = 0; toggle < 2; toggle++) {
+      await openDropdown(
+        calendarWrapper
+          .locator(".portlet-options-menu .dropdown-toggle")
+          .first(),
+      );
+      const [response] = await Promise.all([
+        page.waitForResponse(
+          (candidate) =>
+            candidate.url().includes("/api/layout?action=") &&
+            candidate.request().method() === "POST",
+        ),
+        calendarWrapper.locator(".up-portlet-options-item.favorite a").click(),
+      ]);
+      expect(response.request().headers()["x-csrf-token"]).toBeTruthy();
+      expect(response.status()).toBe(200);
+      await waitForPortalRequestsToSettle(page);
+      await page.reload();
+    }
   });
 });
 

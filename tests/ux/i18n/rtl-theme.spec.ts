@@ -68,7 +68,10 @@ async function open(page: Page, url: string): Promise<void> {
 
 /* Pairs of elements whose order mirrors: [first, second] */
 const PAIRS: Record<string, [string, string]> = {
-  "header: logo before search": [".portal-logo", "#webSearchContainer"],
+  "header: logo before search": [
+    ".portal-logo",
+    "#region-header-right up-search-launcher",
+  ],
   "columns: first before second": [
     ".portal-page-column.column-1",
     ".portal-page-column.column-2",
@@ -82,7 +85,9 @@ const PAIRS: Record<string, [string, string]> = {
 /**
  * For each pair, whether the first element's content is to the right of the
  * second's. The content's box counts, not the element's: a title spans the
- * whole title bar in both directions, and only its text moves.
+ * whole title bar in both directions, and only its text moves. A web
+ * component's content is in its shadow root, which a range over its children
+ * doesn't measure, so its own box counts.
  */
 async function startsOnTheRight(page: Page): Promise<Record<string, boolean>> {
   return page.evaluate(
@@ -92,9 +97,12 @@ async function startsOnTheRight(page: Page): Promise<Record<string, boolean>> {
           const centers = [first, second].map((selector) => {
             const element = document.querySelector(selector);
             if (element === null) throw new Error(`no ${selector}`);
-            const range = document.createRange();
-            range.selectNodeContents(element);
-            const box = range.getBoundingClientRect();
+            let box = element.getBoundingClientRect();
+            if (element.shadowRoot === null) {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              box = range.getBoundingClientRect();
+            }
             return box.left + box.width / 2;
           });
           return [name, centers[0] > centers[1]];

@@ -1,9 +1,10 @@
+/* global Buffer, Headers */
 // Seeded violations of the replay's rules (tests/replay/evaluate.mjs), so each rule is shown to
 // fail a run. Run with: node --test tests/replay/evaluate.check.mjs
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { evaluate, headingsOf, loadRegistry } from './evaluate.mjs';
-import { outcome } from './lib.mjs';
+import { normaliseBody, normaliseResponse, outcome } from './lib.mjs';
 
 const response = (status, location, body = { kind: 'empty' }) => ({ status, ...(location ? { location } : {}), headers: {}, body });
 const exchange = (role, path, status, location) => ({ set: 'crawl', role, method: 'GET', path, response: response(status, location) });
@@ -186,4 +187,49 @@ test('a matrix cell whose redirect now points at the login form needs its locati
     const result = run(recorded, actual, [form]);
     assert.equal(result.matrixChanges[0].registered, true);
     assert.equal(result.failed, false);
+});
+
+// A JSON response as a replay normalises it now; the recorded side stays as the fixture stores it
+const origin = 'http://localhost:8080';
+const json = (path, value) => normaliseBody(Buffer.from(JSON.stringify(value)), 'application/json', origin, path);
+const answered = (role, path, body) => ({ ...exchange(role, path, 200), response: response(200, null, body) });
+
+test('a health check on day 1 to 9 matches its recording from a two-digit day', () => {
+    // HealthCheckController writes the time with java.time's RFC_1123_DATE_TIME, in 5.17.9 and
+    // in 6.0, and that formatter writes the day without a leading zero. CI run 42455427011 on
+    // 2026-11-08 printed "Sun, 8 Nov 2026 06:43:24 GMT"; the fixture holds the masked date.
+    const path = '/uPortal/health-check?detail=ALL';
+    const recorded = [answered('guest', path, { kind: 'json', value: { Time: { 'Current Time': '{http-date}' } } })];
+    const actual = [answered('guest', path, json(path, { Time: { 'Current Time': 'Sun, 8 Nov 2026 06:43:24 GMT' } }))];
+    const result = run(recorded, actual, []);
+    assert.deepEqual(result.failures.flatMap((f) => f.differences.flatMap((d) => d.detail)), []);
+    assert.equal(result.failed, false);
+});
+
+test('a header date that loses the leading zero of its day still shows', () => {
+    // RFC 9110 requires IMF-fixdate, with a two-digit day, in header fields
+    const path = '/uPortal/media/skins/respondr/defaultSkin.css';
+    const expires = (value) => normaliseResponse({ status: 200, headers: new Headers({ expires: value }), setCookies: [], body: Buffer.alloc(0) }, origin);
+    const recorded = [{ ...exchange('guest', path, 200), response: expires('Thu, 15 Oct 2026 17:21:39 GMT') }];
+    assert.equal(run(recorded, [{ ...recorded[0], response: expires('Sun, 08 Nov 2026 06:43:24 GMT') }], []).failed, false);
+    const result = run(recorded, [{ ...recorded[0], response: expires('Sun, 8 Nov 2026 06:43:24 GMT') }], []);
+    assert.deepEqual(
+        result.failures.flatMap((f) => f.differences),
+        [{ field: 'header:expires', from: '{http-date}', to: 'Sun, 8 Nov 2026 06:43:24 GMT' }]
+    );
+});
+
+test("the entity type id in a person's principal key is a generated id", () => {
+    // uPortal numbers the entity types in the order it imports their files, which is the order
+    // the file system lists them. The same uPortal build gave IPerson 14 on runner image
+    // ubuntu24/20261012.334 (run 38775913401) and 13 on ubuntu24/20261101.360 (run 42455427011).
+    const path = '/uPortal/api/entities/person/admin.json';
+    const recorded = [answered('admin', path, { kind: 'json', value: { jsonEntityBean: { principalString: '14.admin' } } })];
+    const now = (principalString) => [answered('admin', path, json(path, { jsonEntityBean: { principalString } }))];
+    const result = run(recorded, now('13.admin'), []);
+    assert.deepEqual(result.failures.flatMap((f) => f.differences.flatMap((d) => d.detail)), []);
+    assert.equal(result.failed, false);
+    // A principal key in another form still shows
+    assert.equal(run(recorded, now('PERSON.admin'), []).failed, true);
+    assert.equal(run(recorded, now('13.staff'), []).failed, true);
 });

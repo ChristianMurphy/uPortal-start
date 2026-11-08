@@ -8,11 +8,39 @@ export type AuthMode = "local" | "cas";
 // server on port 8090 (docs/authentication.md).
 const authMode: AuthMode = process.env.AUTH_MODE === "cas" ? "cas" : "local";
 
+const DATABASES = [
+  "hsqldb",
+  "mariadb",
+  "mysql",
+  "oracle",
+  "postgres",
+  "sqlserver",
+] as const;
+export type Database = (typeof DATABASES)[number];
+
+/**
+ * The database the portal under test runs on, from UPORTAL_DB_VENDOR: a name
+ * from tests/db/vendors such as sqlserver-2025 or oracle-xe-21. The DB
+ * harness and G-migrate set it; elsewhere it is unset and the result is
+ * undefined. An unknown name throws, so a new vendor can't pass unnoticed.
+ */
+function parseDatabase(vendor: string | undefined): Database | undefined {
+  if (vendor === undefined || vendor === "") return undefined;
+  const database = DATABASES.find((name) =>
+    new RegExp(`^${name}(-xe)?(-[0-9.]+)?$`).test(vendor),
+  );
+  if (database === undefined) {
+    throw new Error(`Unknown UPORTAL_DB_VENDOR '${vendor}'`);
+  }
+  return database;
+}
+
 export const config = {
   // Set PORTAL_BASE_URL (with a trailing slash) to test a portal on another port or host.
   url: process.env.PORTAL_BASE_URL ?? "http://localhost:8080/uPortal/",
   authMode,
   casUrl: process.env.CAS_BASE_URL ?? "http://localhost:8090/cas/",
+  database: parseDatabase(process.env.UPORTAL_DB_VENDOR),
   users: {
     admin: {
       id: "13",
@@ -42,8 +70,21 @@ export const config = {
       password: "student",
       displayName: "Steven Student",
     },
-    // Only the language tests sign in as the developer, since they change the
-    // user's saved language, which a parallel spec would see at its sign-in
+    // A student whose layout only the Reset My Layout UX spec changes: every
+    // sign-in of a user lets the user's other sessions reload the layout
+    riley: {
+      id: "xx",
+      username: "riley",
+      // eslint-disable-next-line sonarjs/no-hardcoded-credentials
+      password: "riley",
+      displayName: "Riley Reset",
+    },
+    // The Reset My Layout tests in Spanish and French sign in as the
+    // developer, since they change the user's saved language, which a
+    // parallel spec would see at its sign-in. The other language tests have
+    // users of their own (ux/utils/own-users.ts). The Reset My Layout API spec
+    // changes only the developer's layout and checks nothing that depends on
+    // the language.
     developer: {
       id: "xx",
       username: "developer",

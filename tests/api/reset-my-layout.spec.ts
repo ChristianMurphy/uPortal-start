@@ -80,17 +80,30 @@ test.describe("Reset My Layout API as a guest", () => {
   });
 });
 
+/*
+ * The developer, whose layout no other spec changes. Every sign-in drops the
+ * layout the portal caches for that user, and each other session of the user
+ * then reloads it from its own copy and may save that copy back. A spec that
+ * resets or edits a user's layout while another spec signs in as the same
+ * user in parallel can lose the other spec's tab or undo the reset. These
+ * tests ran as the student next to the student's Reset My Layout UX spec.
+ */
+const USER = config.users.developer;
+
 test.describe("Reset My Layout API as a user", () => {
+  // The tests sign in as the same user one after another, never in parallel
+  test.describe.configure({ mode: "serial" });
+
   // Each test owns a tab name; tab names hold at most 35 characters
   let tab: string;
 
   test.beforeEach(async ({ request }, testInfo) => {
     tab = `Reset api ${testInfo.testId.slice(-8)}`;
-    await loginViaApi(request, config.users.student);
+    await loginViaApi(request, USER);
   });
 
   test.afterEach(async ({ request }) => {
-    // Leave the student the default layout from the next sign-in on
+    // Leave the user the default layout from the next sign-in on
     await resetWithToken(request);
     await logoutViaApi(request);
   });
@@ -101,7 +114,7 @@ test.describe("Reset My Layout API as a user", () => {
     expect(response.status()).toBe(200);
     expect(response.headers()["cache-control"]).toBe("no-store");
     expect(await response.json()).toEqual({
-      userName: config.users.student.username,
+      userName: USER.username,
     });
   });
 
@@ -122,7 +135,7 @@ test.describe("Reset My Layout API as a user", () => {
     expect(forged.status()).toBe(403);
     // Nothing was reset: the tab is still there at the next sign-in
     await logoutViaApi(request);
-    await loginViaApi(request, config.users.student);
+    await loginViaApi(request, USER);
     expect(await welcomePage(request)).toContain(tab);
   });
 
@@ -140,11 +153,11 @@ test.describe("Reset My Layout API as a user", () => {
     expect(response.status()).toBe(200);
     expect(response.headers()["cache-control"]).toBe("no-store");
     expect(await response.json()).toEqual({
-      userName: config.users.student.username,
+      userName: USER.username,
     });
     // The default layout comes back at the next sign-in
     await logoutViaApi(request);
-    await loginViaApi(request, config.users.student);
+    await loginViaApi(request, USER);
     expect(await welcomePage(request)).not.toContain(tab);
   });
 });

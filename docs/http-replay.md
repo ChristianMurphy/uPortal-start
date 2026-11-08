@@ -88,8 +88,10 @@ comparison. `tests/replay/lib.mjs` gives the reason for each one:
   parallel threads;
 * the names of aggregated skin resources, which are hashes of their content;
 * dates and times. In JSON strings, headers and HTML, every digit becomes 9, so a changed format
-  still shows. HTTP dates become `{http-date}`. JSON numbers between the years 2000 and 2100 in
-  milliseconds become `{epoch-ms:number}`, so a switch from numbers to strings still shows;
+  still shows. HTTP dates become `{http-date}`. In JSON, so does an RFC 1123 date with a one-digit
+  day, which java.time writes on days 1 to 9 (the health check's time). A header date must keep
+  its two-digit day. JSON numbers between the years 2000 and 2100 in milliseconds become
+  `{epoch-ms:number}`, so a switch from numbers to strings still shows;
 * `ETag` values, which hash the body or the size and modification time of a deployed file. The
   tag's length and whether it is weak are compared;
 * the signed token from `/api/v5-1/userinfo`, whose header and claims are compared without its
@@ -109,13 +111,16 @@ comparison. `tests/replay/lib.mjs` gives the reason for each one:
 portlets, portlet types and entity types differ between two machines that import the
 same data. So do the user part of layout node ids (`u26l1n210` on one machine, `u22l1n210` on
 another) and every list that 5.17 orders by those ids, such as the fragments in a page and the
-portlets in a category. The replay handles this in four ways:
+portlets in a category. A new GitHub runner image can list the files in another order too: the
+same uPortal build gave the IPerson entity type the id 14 on image ubuntu24/20261012.334 and 13
+on ubuntu24/20261101.360. The replay handles this in four ways:
 
 * layout node ids in recorded URLs get this portal's user part before they are sent. It comes
   from the role's own `layout.json` and welcome page, which the crawl requests first anyway, by
   the portlet's fname, or else by the node part;
 * generated ids in responses are masked: `u{id}l1n210`, `local.{id}`, `PORTLET_ID.{id}`,
-  `{type}.local.`, Pluto namespaces, and numeric `id`, `chanID`, `typeId` and similar fields;
+  `{type}.local.`, the entity type of every `principalString` (`{type}.admin`), Pluto namespaces,
+  and numeric `id`, `chanID`, `typeId` and similar fields;
 * lists of objects in JSON, and the lines of an HTML outline, are compared without their order;
 * requests that name a generated id are not replayed (see above), and the crawl names groups by
   their PAGS key (`pags.Authenticated Users`).

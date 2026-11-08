@@ -7,19 +7,19 @@ import {
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
 import { setUserLocale } from "../utils/user-locale";
+import { ownUser } from "../utils/own-users";
 
 /*
  * What the Reset My Layout channel (fname reset-my-layout) does for users.
  * The quickstart data places it in no layout, so the tests open it at
  * /p/reset-my-layout.
  *
- * The channel explains what it does and that the user must sign in again to
- * see the change, with a Reset Now button. Reset Now asks for confirmation,
- * naming the user; Cancel goes back without changing anything. Reset Layout
- * resets the signed-in user's own layout and says so; Continue goes back to
- * the start. The page the user is on keeps the old layout: the default tabs
- * and portlets come back at the next sign-in. Other users' layouts do not
- * change.
+ * The channel explains what it does and that the default layout shows the
+ * next time a page loads, with a Reset Now button. Reset Now asks for
+ * confirmation, naming the user; Cancel goes back without changing anything.
+ * Reset Layout resets the signed-in user's own layout and says so; Continue
+ * goes back to the start. Every page of the user shows the default tabs and
+ * portlets at its next load. Other users' layouts do not change.
  *
  * Every test makes its own starting point: it adds a tab of its own to the
  * user's layout through the layout API, so a layout that is still customized
@@ -35,7 +35,8 @@ const LAYOUT_API = `${config.url}api/layout`;
 
 const STUDENT_TABS = ["Welcome", "Academics", "LMS", "Campus"];
 const STUDENT_WELCOME_PORTLETS = ["Bookmarks", "Calendar", "My Drives"];
-const STAFF_TABS = ["Welcome", "Main Staff Tab"];
+// The tabs of a user of a spec's own (own-users.ts), who is in no group
+const OWN_USER_TABS = ["Welcome"];
 
 /** The channel, which the theme marks with its fname. */
 function channel(page: Page): Locator {
@@ -124,7 +125,7 @@ async function expectStartView(content: Locator): Promise<void> {
     "Use this portlet to reset your portal layout to the defaults.",
   );
   await expect(content).toContainText(
-    "NOTE: You must sign on again to see the changes.",
+    "NOTE: The default layout shows the next time a page loads.",
   );
   await expect(
     content.getByRole("button", { name: "Reset Now" }),
@@ -135,18 +136,26 @@ async function expectStartView(content: Locator): Promise<void> {
 }
 
 test.describe("Reset My Layout", () => {
+  // The tests reset the student's layout: one at a time, and a retry runs
+  // them all again from the first
+  test.describe.configure({ mode: "serial" });
+
+  // A student whose layout no other spec changes: another spec's sign-in as
+  // the same user would let its session reload the layout in the middle
+  const USER = config.users.riley;
+
   // Each test owns a tab name, so a test's leftovers cannot pass another test
   let tab: string;
 
   test.beforeEach(async ({ page }, testInfo) => {
     // Tab names hold at most 35 characters
     tab = `Reset test ${testInfo.testId.slice(-8)}`;
-    await loginViaUrl(page, config.users.student);
+    await loginViaUrl(page, USER);
   });
 
   test.afterEach(async ({ page }) => {
-    // A new session: the old one may still hold the layout from before a reset
-    await signInAgain(page, config.users.student);
+    // A new session, so every test cleans up the layout as stored
+    await signInAgain(page, USER);
     await removeTabs(page, tab);
     await logout(page);
   });
@@ -170,7 +179,7 @@ test.describe("Reset My Layout", () => {
       "Resetting a user's layout is irreversible.",
     );
     await expect(content).toContainText(
-      `Are you sure you want to reset the layout for ${config.users.student.username}?`,
+      `Are you sure you want to reset the layout for ${USER.username}?`,
     );
     await expect(content.getByRole("button", { name: "Cancel" })).toBeVisible();
     await expect(
@@ -185,7 +194,7 @@ test.describe("Reset My Layout", () => {
     await content.getByRole("button", { name: "Cancel" }).click();
 
     await expectStartView(content);
-    await signInAgain(page, config.users.student);
+    await signInAgain(page, USER);
     expect(await tabNames(page)).toContain(tab);
   });
 
@@ -199,7 +208,7 @@ test.describe("Reset My Layout", () => {
 
     await expect(content).toContainText("Success");
     await expect(content).toContainText(
-      `Layout for ${config.users.student.username} has been reset`,
+      `Layout for ${USER.username} has been reset`,
     );
     await expect(
       content.getByRole("button", { name: "Reset Layout" }),
@@ -216,10 +225,10 @@ test.describe("Reset My Layout", () => {
     await content.getByRole("button", { name: "Reset Layout" }).click();
     await expect(content).toContainText("Success");
 
-    // The page keeps the layout the user signed in with
-    expect(await tabNames(page)).toContain(tab);
+    // The page shows the default layout at its next load
+    expect(await tabNames(page)).toEqual(STUDENT_TABS);
 
-    await signInAgain(page, config.users.student);
+    await signInAgain(page, USER);
     expect(await tabNames(page)).toEqual(STUDENT_TABS);
     for (const title of STUDENT_WELCOME_PORTLETS) {
       await expect(
@@ -229,22 +238,26 @@ test.describe("Reset My Layout", () => {
   });
 
   test("leaves other users' layouts alone", async ({ page }) => {
-    // Staff customize their layout, then the student resets theirs
-    await signInAgain(page, config.users.staff);
+    // Another user customizes their layout, then the student resets theirs.
+    // The other user is one of this spec's own (own-users.ts), not staff,
+    // whose tabs per-role-pages.spec.ts and layout/pages.spec.ts check and
+    // measure in parallel.
+    const other = ownUser("bystander");
+    await signInAgain(page, other);
     try {
       await addTab(page, tab);
-      await signInAgain(page, config.users.student);
+      await signInAgain(page, USER);
       const content = await startReset(page);
       await content.getByRole("button", { name: "Reset Layout" }).click();
       await expect(content).toContainText("Success");
 
-      await signInAgain(page, config.users.staff);
-      expect(await tabNames(page)).toEqual([...STAFF_TABS, tab]);
+      await signInAgain(page, other);
+      expect(await tabNames(page)).toEqual([...OWN_USER_TABS, tab]);
     } finally {
-      await signInAgain(page, config.users.staff);
+      await signInAgain(page, other);
       await removeTabs(page, tab);
-      expect(await tabNames(page)).toEqual(STAFF_TABS);
-      await signInAgain(page, config.users.student);
+      expect(await tabNames(page)).toEqual(OWN_USER_TABS);
+      await signInAgain(page, USER);
     }
   });
 });

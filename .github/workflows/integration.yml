@@ -587,7 +587,8 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           cache-provider: basic
-          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY }}
+          # Read-only for the post step once a step of this job failed (see the job's last step)
+          cache-read-only: ${{ env.GRADLE_CACHE_READ_ONLY == 'true' || env.GRADLE_CACHE_JOB_FAILED == 'true' }}
       - name: Point Gradle at the JDK 21 for its daemon
         run: |
           # setup-gradle may move GRADLE_USER_HOME (D:\a\.gradle on Windows runners)
@@ -621,6 +622,14 @@ jobs:
           path: |
             build/db-harness/
             .gradle/tomcat/logs/
+      # Prototype only (MOD-D53): this job saves the branch's Gradle cache, and GitHub never
+      # replaces an entry. A failed job can leave a Gradle home without the distribution: job
+      # 128700895467 failed in the wrapper download and saved 484 bytes, which every later job of
+      # that key restored. The runner evaluates cache-read-only again for setup-gradle's post
+      # step, so a failed or cancelled job saves nothing and leaves the key to a later job.
+      - name: Keep a failed job's Gradle home out of the cache
+        if: ${{ !success() }}
+        run: echo "GRADLE_CACHE_JOB_FAILED=true" >> "$GITHUB_ENV"
 
   # G-migrate (MOD-D11, MOD-D25): a used 5.17 portal's database on an old server, copied with
   # dbMigrate into a current server and verified; for some pairs the whole Playwright suite then
@@ -732,7 +741,7 @@ jobs:
       - name: Download the uPortal build
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: uportal-maven-local
+          name: ${{ needs.uportal.outputs.artifact }}
           path: ~/.m2/repository/org/jasig/portal
       - name: Bootstrap gradle.properties for the uPortal build
         env:
@@ -921,7 +930,7 @@ jobs:
       - name: Download the uPortal build
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: uportal-maven-local
+          name: ${{ needs.uportal.outputs.artifact }}
           path: ~/.m2/repository/org/jasig/portal
       - name: Bootstrap gradle.properties for the uPortal build
         env:
@@ -985,7 +994,7 @@ jobs:
       - name: Download the uPortal build
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: uportal-maven-local
+          name: ${{ needs.uportal.outputs.artifact }}
           path: ~/.m2/repository/org/jasig/portal
       - name: Bootstrap gradle.properties for the uPortal build
         env:

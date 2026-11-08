@@ -6,6 +6,7 @@ import {
   waitForPortalRequestsToSettle,
   offeredTestLocales,
 } from "../utils/ux-general-utils";
+import { Account, ownUser } from "../utils/own-users";
 
 /*
  * What the User Locales Selector channel (fname user-locales-selector) does
@@ -23,6 +24,11 @@ import {
  *
  * The locators use roles and names only, so the same tests describe the
  * portlet and any replacement that keeps its behaviour.
+ *
+ * The signed-in tests save the user's language, so they sign in as a user of
+ * their own (own-users.ts). As the shared student, they put every spec that
+ * signed in as the student at the same time into French (MOD-I378,
+ * MOD-I379).
  */
 const URL = `${config.url}p/user-locales-selector`;
 
@@ -42,14 +48,29 @@ async function openSelector(page: Page): Promise<void> {
   await waitForPortalRequestsToSettle(page);
 }
 
-/** Choose a language by its name in the user's language and press Update. */
+/**
+ * Choose a language by its name in the user's language and press Update.
+ * Update saves the choice and then reloads the page, also when the language
+ * stays the same, so this waits for the reloaded page: a navigation that
+ * starts during the reload ends with net::ERR_ABORTED. A failed save doesn't
+ * reload the page, so the save's answer is checked first.
+ */
 async function chooseLanguage(
   page: Page,
   label: string,
   update: string,
 ): Promise<void> {
   await page.getByRole("radio", { name: label }).check();
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      response.url().endsWith("/api/v6-0/locale"),
+  );
+  const reloaded = page.waitForEvent("load");
   await page.getByRole("button", { name: update, exact: true }).click();
+  const response = await saved;
+  expect(response.status(), "PUT /api/v6-0/locale").toBe(200);
+  await reloaded;
   await waitForPortalRequestsToSettle(page);
 }
 
@@ -69,8 +90,11 @@ async function chooseEnglish(page: Page): Promise<void> {
 
 test.describe("User locale selector", () => {
   test.describe("signed in", () => {
+    let user: Account;
+
     test.beforeEach(async ({ page }) => {
-      await loginViaUrl(page, config.users.student);
+      user = ownUser("language");
+      await loginViaUrl(page, user);
       await chooseEnglish(page);
     });
 
@@ -124,7 +148,7 @@ test.describe("User locale selector", () => {
       await expect(page.locator("html")).toHaveAttribute("lang", /^fr/);
 
       await logout(page);
-      await loginViaUrl(page, config.users.student);
+      await loginViaUrl(page, user);
       await openSelector(page);
       await expect(page.locator("html")).toHaveAttribute("lang", /^fr/);
       await expect(page.getByRole("radio", { name: "français" })).toBeChecked();
