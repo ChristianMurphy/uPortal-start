@@ -67,10 +67,11 @@ from a session whose copy of the layout is older than another session's save ove
 
 ## Which specs change a user's state
 
-Each row is a spec that changes something the portal saves for a user. "Readers" are the specs
-that sign in as the same user in the same run. Playwright runs two spec files in parallel, locally
-and on CI, so any of them can overlap. On PostgreSQL each of their sign-ins can also collide with
-a layout save (see background-preference above).
+Each row is a spec that changes something the portal saves for a user. "Readers" are the specs that
+sign in as the same user in the same run. Playwright runs as many spec files in parallel as it has
+workers. By default that is half the CPU threads. CI's runners and this machine have four threads,
+so two spec files run at once there. Any of them can overlap. On PostgreSQL each of their sign-ins
+can also collide with a layout save (see background-preference above).
 
 | Spec | User | What it changes | Readers in parallel | Decision |
 | --- | --- | --- | --- | --- |
@@ -89,10 +90,11 @@ a layout save (see background-preference above).
 | `ux/portlets/pluto-testsuite.spec.ts` (JSR-286 suite) | developer | layout (a tab with two portlets for the length of the describe) | `api/reset-my-layout` resets the developer's layout three times. The Reset My Layout language tests sign in as the developer | open, see below |
 | `api/reset-my-layout.spec.ts` (retry-flakes) | developer | layout (adds tabs, resets) | `pluto-testsuite`, the Reset My Layout language tests | the other topic's |
 | `ux/smoke/reset-my-layout.spec.ts` (retry-flakes) | riley, developer | riley's layout (reset), the developer's language | riley: none. Developer: `pluto-testsuite` and `api/reset-my-layout`, which check nothing that depends on the language. After this branch it is the only spec that saves the developer's language | the other topic's |
+| `ux/smoke/reset-my-layout.spec.ts` ("leaves other users' layouts alone", `:238`) | staff | layout (adds a tab, removes it in `finally`) | `per-role-pages` expects staff's two tabs, `layout/pages` measures staff's tabs | own user (`bystander`), found by the review |
 | `ux/portlets/bookmarks.spec.ts` | admin | admin's bookmarks | Bookmarks is on the Welcome fragment, which admins don't get; no other spec opens admin's Bookmarks | keeps admin |
 | `ux/admin/permissions-manager.spec.ts` | admin | a permission for admin, removed afterwards | admin is a superuser already | keeps admin |
 | `ux/smoke/self-edit-account.spec.ts` (retry-flakes), `self-edit-account-component`, `reset-password`, `forgot-password`, `ux/admin/user-administration` | an account each test imports | attributes, password | none | own users already |
-| `ux/i18n/web-components-locale.spec.ts` | `e2e-locale`, which it imports | language | none | own user already |
+| `ux/i18n/web-components-locale.spec.ts` | `e2e-locale`, which it imported in `beforeAll` in each worker | language | its own copies under `--repeat-each`, and its import could overlap other imports of new users (MOD-I394) | own user per slot (`locale`), found by the review |
 
 The guest tests (`rtl-theme`, the guest tests of `user-locale` and `user-locale-component`) change
 only their own session.
@@ -120,16 +122,17 @@ reset API spec saves the layout. No failure of this kind is in the runs looked a
 
 ## The fix
 
-`tests/ux/utils/own-users.ts` lists the users of a spec's own: `favorites`, `options`,
-`language`, `channel`, `search` and `timeout`. `global-setup.ts` imports each of them once for every worker slot,
-named `e2e-<name>-<slot>`, before the first test, and logs each in once, as it does for the
-users in `general-config.ts`. A spec calls `ownUser("<name>")` in a hook or test and gets the
-account of its worker's slot (`test.info().parallelIndex`). Workers that run in parallel have
-different slots and never share an account. That also holds for two copies of a spec
-that `--repeat-each` runs on two workers, since Playwright puts the repeat index in the worker
-hash. A retry runs in the slot of the worker it replaces and gets the same account, which the
-tests set up as they did for the student. The accounts are local accounts in no group, so their
-only tab is Welcome (Bookmarks, Calendar, My Drives), which is all these tests use.
+`tests/ux/utils/own-users.ts` lists the users of a spec's own: `favorites`, `options`, `language`,
+`channel`, `search`, `timeout`, `locale` and `bystander`. `global-setup.ts` imports each of them
+once for every worker slot, named `e2e-<name>-<slot>`, before the first test, and logs each in once,
+as it does for the users in `general-config.ts`. A spec calls `ownUser("<name>")` in a hook or test
+and gets the account of its worker's slot (`test.info().parallelIndex`). Within one Playwright run
+against a portal, workers that run in parallel have different slots and never share an account. That
+also holds for two copies of a spec that `--repeat-each` runs on two workers, since Playwright puts
+the repeat index in the worker hash. Playwright runs that overlap against one portal would share the
+accounts. A retry runs in the slot of the worker it replaces and gets the same account, which the
+tests set up as they did for the student. The accounts are local accounts in no group, so their only
+tab is Welcome (Bookmarks, Calendar, My Drives), which is all these tests use.
 
 The import uses `importNamedAccount()`, which `importLocalAccount()` now calls with its generated
 name. global-setup imports the accounts one after another, before any worker starts. The
@@ -150,6 +153,8 @@ quickstart data as it is.
 | `web-component-channel.spec.ts` | `e2e-channel-<slot>`, Cora |
 | `search-web-component.spec.ts`, the two language tests | `e2e-search-<slot>`, Sol |
 | `session-timeout.spec.ts`, the two language tests | `e2e-timeout-<slot>`, Tess |
+| `web-components-locale.spec.ts` | `e2e-locale-<slot>`, Lou |
+| `reset-my-layout.spec.ts`, "leaves other users' layouts alone", as the other user | `e2e-bystander-<slot>`, Bea |
 
 The people search specs look for "steven", which these names don't contain. The other tests of
 these specs still sign in as the student. The integration tip (`a0a125fee`, landing 2) has no
@@ -165,7 +170,9 @@ already, so the next `page.goto` (the test's selector page, or the sign-out in `
 during the reload, and one of the two navigations ended with `net::ERR_ABORTED`. A trace of a
 failed test shows the `PUT /api/v6-0/locale` at 45.242 s, the test's goto at 45.312 s and the
 reload's request cancelled at 45.346 s. The commit "wait for the reload after update in the user
-locale spec" makes `chooseLanguage()` wait for the page's `load` event after Update.
+locale spec" makes `chooseLanguage()` wait for the page's `load` event after Update. A later
+commit checks the answer to `PUT /api/v6-0/locale` first, since a failed save (MOD-I391) doesn't
+reload the page.
 
 ## Evidence
 
@@ -190,6 +197,16 @@ and the next 99 tests passed.
 The student home test passed in the 10 copies before the fix. Locally the French windows of
 `user-locale.spec.ts` didn't overlap with it. HSQLDB doesn't show the PostgreSQL 500 at sign-in.
 
+After landing 2 and the review, a fourth session ran on the same portal, with 12.4 to 13.5 GB
+available. "Before" ran the specs of the integration tip `a0a125fee`, "after" this branch at
+`7d03c7d19`:
+
+| Set | Before | After |
+| --- | --- | --- |
+| The language tests of `search-web-component`, `session-timeout` and `reset-my-layout`, `--repeat-each=5` (on the tip, all three as the developer) | 1 failed of 30: "speaks the user's language: es_ES" got a 500 from `PUT /api/v6-0/locale`, and the portal log has `DuplicateKeyException` on `UP_USER_LOCALE` at that second (MOD-I391) | 0 of 50, with `web-components-locale` added |
+| `user-locale` and the student home test, `--repeat-each=5`, with the save check | not run | 0 of 25 |
+| `reset-my-layout` with `per-role-pages`, three runs (the reset spec's riley is one fixed user, so not `--repeat-each`) | not run | 0 of 32 in each run |
+
 ### Push runs
 
 The first push, head `4a57deb8b`, built uPortal `ccr-43ba0785-hzlrj5` at `498252acd` (the
@@ -203,17 +220,18 @@ The first push, head `4a57deb8b`, built uPortal `ccr-43ba0785-hzlrj5` at `498252
 | Migration equivalence 42456118622 | passed |
 | HTTP replay 42456118615 | failed, see below |
 
-The PostgreSQL 18 flake is MOD-I390 from retry-flakes, which that push didn't include: the artifact's
-access log has `PUT /api/v6-0/locale` and `GET /p/search/max?query=zzqxjv` at 07:08:23
+The PostgreSQL 18 flake is MOD-I390 from retry-flakes, which that push didn't include. The
+artifact's access log has `PUT /api/v6-0/locale` and `GET /p/search/max?query=zzqxjv` at 07:08:23
 (`search-web-component.spec.ts`, "speaks the user's language: es_ES", still as the student here),
 and the student's sign-in of the failed test in the same second, with `locale="es-ES"` on the
 element. Landing 2 moved those tests off the student, and this branch has it since the merge.
 
-The HTTP replay failed with the same 10 differences on the retry-flakes (42455427011) and admin-390
-(42455714380) branches today. The integration branch's replay passed on 2026-10-15 (38775913401).
-The health check's `Current Time` reads `Sun, 8 Nov 2026 06:51:47 GMT` with a one-digit day, which
-the reference's `{http-date}` mask doesn't match. Admin's principal string reads `13.admin`, and
-5.17 had `14.admin`. This branch doesn't change portal code or data, and the cause is outside it.
+On that first push, the HTTP replay failed with the same 10 differences on the retry-flakes
+(42455427011) and admin-390 (42455714380) branches today. The integration branch's replay passed on
+2026-10-15 (38775913401). The health check's `Current Time` reads `Sun, 8 Nov 2026 06:51:47 GMT`
+with a one-digit day, which the reference's `{http-date}` mask doesn't match. Admin's principal
+string reads `13.admin`, and 5.17 had `14.admin`. This branch doesn't change portal code or data,
+and the cause is outside it.
 
 `npm run lint` passes. Type coverage is 100 %, and ESLint reports nothing in the changed files.
 
@@ -226,6 +244,23 @@ the reference's `{http-date}` mask doesn't match. Admin's principal string reads
 | MOD-I? | Tests | Specs changed a shared user's language or layout while other specs signed in as that user: `user-locale.spec.ts` (the student's language), `favorites.spec.ts` and `portlet-options.spec.ts` (the student's layout), `web-component-channel.spec.ts` (faculty's layout), and the language tests of `search-web-component.spec.ts` and `session-timeout.spec.ts`, which saved the developer's language next to each other (MOD-I391). Behind MOD-I378, MOD-I379, MOD-I380 and the shared-user part of MOD-I385. | **Fixed** (uPortal-start, `ccr-43ba0785-hzlrj5-test-users`): global-setup imports an account per spec and worker slot, and those specs sign in as it (`notes/test-users.md`). Open: `pluto-testsuite.spec.ts` and `api/reset-my-layout.spec.ts` both change the developer's layout. |
 | MOD-I? | Tests | `user-locale.spec.ts` opened the next page while the language component reloaded the page after Update, also when the language stayed the same, and the page load ended with `net::ERR_ABORTED`: 3 of 50 tests on the tip and 9 of 50 with the spec's own user in local runs. | **Fixed** (uPortal-start, `ccr-43ba0785-hzlrj5-test-users`): `chooseLanguage()` waits for the reloaded page. 0 of 80 locally afterwards. |
 
-## Next step
+The final push of the first round, head `278f50444` (after the merge of landing 2), built uPortal
+`ccr-43ba0785-hzlrj5` at `1d485034e` (annotation of job 128678451794). Every run passed:
 
-Read the push runs of the second push (head with the reload wait) and add them here.
+| Run | Result |
+| --- | --- |
+| Integration 42463762314 | Playwright HSQLDB: 512 passed, none flaky (job 128679843234). Playwright PostgreSQL 18: 512 passed, none flaky (job 128679843313). DB harness PostgreSQL 18, G-migrate MariaDB 11.4 to PostgreSQL 18, CAS and Cluster passed |
+| CI 42463762141, HTTP replay 42463762159, Migration equivalence 42463762266, G-index 42463762196, Workflow lint 42463762180 | passed. The replay passed with landing 2's replay-date fix |
+
+### Recording the replay reference
+
+The review raised this, and it isn't a regression. `replay.yml` records the reference by running
+the Playwright suite against uPortal 5.17 with uPortal-start master's data. The suite's global setup
+now imports the users of a spec's own, and the import needs the CSRF token from
+`<meta name="_csrf">`, which 5.17's pages don't have. riley isn't in upstream's data either. So the
+suite stops in its global setup there, and the step "Run the Playwright suite with network traces"
+turns any failure of the suite into a warning (`replay.yml`, line 392). Whoever records the
+reference next gets a warning and none of the suite's requests. Before that, global setup could
+skip the own users when the portal's pages have no CSRF token, or the recording could leave the
+global setup out.
+
