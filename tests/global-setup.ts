@@ -54,7 +54,7 @@ export default async function globalSetup(
   for (const user of Object.values(config.users)) {
     await logInOnce(user);
   }
-  const admin = await request.newContext();
+  const admin = await request.newContext({ timeout: TIMEOUT });
   try {
     await logIn(admin, config.users.admin);
     for (const user of await importOwnUsers(admin, fullConfig.workers)) {

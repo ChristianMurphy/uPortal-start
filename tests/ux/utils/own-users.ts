@@ -13,10 +13,12 @@ export type { Account } from "./local-account-utils";
  *
  * global-setup.ts imports each one for every worker slot before the first
  * test, one import after another: imports that overlap can deadlock on
- * MariaDB. The worker's parallel index is part of the name, so two workers
- * that run at the same time never sign in as the same one, and neither do two
- * copies of a spec under --repeat-each. Each is a local account in no group,
- * so its only tab is Welcome (Bookmarks, Calendar and My Drives).
+ * MariaDB. The worker's parallel index is part of the name, so within one
+ * Playwright run against a portal, two workers that run at the same time
+ * never sign in as the same one, and neither do two copies of a spec under
+ * --repeat-each. Two runs against one portal at once would share them. Each
+ * is a local account in no group, so its only tab is Welcome (Bookmarks,
+ * Calendar and My Drives).
  */
 const OWN_USERS = {
   favorites: "Fay",
