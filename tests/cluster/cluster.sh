@@ -15,6 +15,9 @@
 #   invalidation-permission  a permission granted, then revoked, on one node is enforced in a new
 #                            session on the other
 #   permission-session       a session that checked the permission before the change follows it
+#   permission-rounds        node A grants and revokes the permission again and again while
+#                            several existing student sessions poll node B; each session follows
+#                            every change
 #   split-heal               the nodes are split (JGroups traffic blocked), node A changes a portlet
 #                            title and grants a permission, and once JGroups merges the nodes again
 #                            node B shows both: the title, and an existing session allowed
@@ -31,8 +34,8 @@
 # A check listed in KNOWN_FAILURES fails because of a known uPortal problem: its failure is
 # reported as a warning and does not fail the run.
 #
-#   tests/cluster/cluster.sh [--fault <fault>] [--join-starts <n>] [--keep] [--no-deploy]
-#                            [-- <extra Gradle arguments>]
+#   tests/cluster/cluster.sh [--fault <fault>] [--join-starts <n>] [--permission-rounds <n>]
+#                            [--keep] [--no-deploy] [-- <extra Gradle arguments>]
 #
 # Options:
 #   --fault F    seed a fault and expect the checks that should catch it to fail (exit 0 when
@@ -51,6 +54,9 @@
 #   --lone-restarts N  only measure a lone node's restart after a crash: start node A alone,
 #                then N times kill -9 it and start it again, and time how long it waits on the
 #                coordinator row it left in JGROUPSPING (build/cluster/lone-restarts.txt)
+#   --permission-rounds N  run permission-rounds with N rounds of a grant and a revocation
+#                (default 10, and 0 with --fault; 0 skips the check); the outcome of each change
+#                is in build/cluster/permission-rounds.txt
 #   --keep       leave the nodes and the database running afterwards
 #   --no-deploy  reuse the database and the nodes deployed by an earlier --keep run
 #
@@ -67,6 +73,7 @@ ROOT=$(pwd)
 FAULT=
 JOIN_STARTS=0
 LONE_RESTARTS=0
+PERMISSION_ROUNDS=
 KEEP=false
 DEPLOY=true
 GRADLE_EXTRA=()
@@ -75,10 +82,11 @@ while [ $# -gt 0 ]; do
         --fault) FAULT="$2"; shift ;;
         --join-starts) JOIN_STARTS="$2"; shift ;;
         --lone-restarts) LONE_RESTARTS="$2"; shift ;;
+        --permission-rounds) PERMISSION_ROUNDS="$2"; shift ;;
         --keep) KEEP=true ;;
         --no-deploy) DEPLOY=false ;;
         --) shift; GRADLE_EXTRA=("$@"); break ;;
-        -h|--help) sed -n '2,61p' "$0"; exit 0 ;;
+        -h|--help) sed -n '2,67p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
     shift
@@ -98,6 +106,10 @@ declare -A KNOWN_FAILURES=()
 if [ -n "$FAULT" ] && [ -z "${FAULT_CHECKS[$FAULT]+x}" ]; then
     echo "Unknown fault '$FAULT'; faults: ${!FAULT_CHECKS[*]}" >&2
     exit 2
+fi
+# A seeded fault does not need the rounds, and under replication-off each of them waits out its bound
+if [ -z "$PERMISSION_ROUNDS" ]; then
+    if [ -n "$FAULT" ]; then PERMISSION_ROUNDS=0; else PERMISSION_ROUNDS=10; fi
 fi
 
 VENDOR=postgres-18
@@ -226,6 +238,9 @@ trace_cluster_locks() {  # trace_cluster_locks <node>: log every cluster-lock ch
     sed -i 's#</configuration>#  <logger name="org.apereo.portal.concurrency.locking.ClusterLockServiceImpl" level="TRACE"/>\n</configuration>#' "$file"
     # JGroups' warnings and each cluster view the node installs, to the portal log
     sed -i 's#</configuration>#  <logger name="org.jgroups" level="INFO"/>\n  <logger name="org.jgroups.protocols.pbcast.GMS" level="TRACE"/>\n  <logger name="org.jgroups.protocols.MERGE3" level="DEBUG"/>\n  <logger name="org.jgroups.protocols.ASYM_ENCRYPT" level="TRACE"/>\n</configuration>#' "$file"
+    # Each cache replication message a node queues, sends and receives ("received remove all:
+    # cache=..."), to the portal log, so a lost change can be traced to the removals node B applied
+    sed -i 's#</configuration>#  <logger name="net.sf.ehcache.distribution.jgroups" level="DEBUG"/>\n</configuration>#' "$file"
     # ASYM_ENCRYPT discards a message sent or received while the node has no secret key or an
     # older one, and logs that below INFO. JGroups writes through java.util.logging, which
     # Tomcat's logging.properties filters, so its levels are raised there too.
@@ -509,6 +524,14 @@ new_session_allowed() { [ "$(new_session_status "$1")" = 200 ]; }
 new_session_denied() { [ "$(new_session_status "$1")" = 403 ]; }
 allowed_on() { [ "$(portlet_status "$1" "$2")" = 200 ]; }
 
+session_user() {  # session_user <node> <jar>: whose session the jar holds, from /api/session.json
+    local body
+    body=$(get "$1" "$2" /api/session.json)
+    printf '/api/session.json gives userName %s (HTTP %s)' "$(node -e '
+        let s = ""; process.stdin.on("data", d => s += d).on("end", () => {
+            try { console.log(JSON.parse(s).person.userName); } catch { console.log("?"); } });' <<< "$body")" "$(status_of)"
+}
+
 check_permission_invalidation() {
     local admin=$JARS/perm-admin started elapsed session=() n
     PERSON_TYPE=$(sql "select entity_type_id from up_entity_type where entity_type_name = 'org.apereo.portal.security.IPerson'")
@@ -529,7 +552,7 @@ check_permission_invalidation() {
     # The existing sessions first: a new login of the student could refresh what they read
     for n in a b; do
         poll "$PERMISSION_SESSION_BOUND_S" allowed_on "$n" "$JARS/perm-early-$n" ||
-            session+=("node $n: the session denied before the grant was still denied $PERMISSION_SESSION_BOUND_S s after it$(late_by 120 allowed_on "$n" "$JARS/perm-early-$n")")
+            session+=("node $n: the session denied before the grant was still denied $PERMISSION_SESSION_BOUND_S s after it$(late_by 120 allowed_on "$n" "$JARS/perm-early-$n"); $(session_user "$n" "$JARS/perm-early-$n")")
     done
     started=$(now_ms)
     if ! poll 30 new_session_allowed a; then
@@ -553,7 +576,7 @@ check_permission_invalidation() {
     started=$(now_ms)
     for n in a b; do
         poll "$PERMISSION_SESSION_BOUND_S" denied_on "$n" "$JARS/perm-granted-$n" ||
-            session+=("node $n: the session allowed before the revocation was still allowed $PERMISSION_SESSION_BOUND_S s after it$(late_by 120 denied_on "$n" "$JARS/perm-granted-$n")")
+            session+=("node $n: the session allowed before the revocation was still allowed $PERMISSION_SESSION_BOUND_S s after it$(late_by 120 denied_on "$n" "$JARS/perm-granted-$n"); $(session_user "$n" "$JARS/perm-granted-$n")")
     done
     if ! poll 30 new_session_denied a; then
         record invalidation-permission FAIL "a new session on node A, where the permission was revoked, was still allowed 30 s later"
@@ -567,6 +590,83 @@ check_permission_invalidation() {
         record permission-session PASS "existing sessions on both nodes followed the grant and the revocation within $PERMISSION_SESSION_BOUND_S s"
     else
         record permission-session FAIL "$(IFS=';'; echo "${session[*]}")"
+    fi
+}
+
+# Existing student sessions on node B in permission-rounds. They all poll node B, one request
+# after the other, from the change on node A until each has seen it, so that a check runs on node
+# B while it applies the removals node A sent
+PERMISSION_ROUND_SESSIONS=4
+
+round_jars() { local k; for k in $(seq 1 "$PERMISSION_ROUND_SESSIONS"); do echo "$JARS/perm-round-b-$k"; done; }
+
+round_sessions_follow() {  # round_sessions_follow <status>: every round session gets it within the bound
+    local deadline jar still pending
+    deadline=$(( $(date +%s) + PERMISSION_SESSION_BOUND_S ))
+    mapfile -t pending < <(round_jars)
+    while [ ${#pending[@]} -gt 0 ]; do
+        still=()
+        for jar in "${pending[@]}"; do
+            [ "$(portlet_status b "$jar")" = "$1" ] || still+=("$jar")
+        done
+        pending=("${still[@]}")
+        [ ${#pending[@]} -eq 0 ] && break
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            for jar in "${pending[@]}"; do
+                echo "${jar##*/} still got HTTP $(portlet_status b "$jar"); $(session_user b "$jar")"
+            done
+            return 1
+        fi
+    done
+    # Once all have seen it, each must still see it: a check that read the permissions before
+    # the change must not have stored the old decision after the removals
+    mapfile -t pending < <(round_jars)
+    for jar in "${pending[@]}"; do
+        [ "$(portlet_status b "$jar")" = "$1" ] ||
+            { echo "${jar##*/} got HTTP $(status_of) after all had seen $1; $(session_user b "$jar")"; return 1; }
+    done
+}
+
+round_login() {  # a new login of each round session; it also purges the student's cached decisions on node B
+    local jar
+    for jar in $(round_jars); do
+        login b student "$jar" || return 1
+    done
+}
+
+check_permission_rounds() {
+    local admin=$JARS/perm-round-admin round started out missed=0 slowest=0 elapsed assignment expect
+    [ "$PERMISSION_ROUNDS" -gt 0 ] || return 0
+    : > "$OUT/permission-rounds.txt"
+    login a admin "$admin" && round_login || { record permission-rounds FAIL "login failed"; return; }
+    round_sessions_follow 403 > /dev/null ||
+        { record permission-rounds FAIL "a student session on node B could already open $PERMISSION_FNAME"; return; }
+    for round in $(seq 1 "$PERMISSION_ROUNDS"); do
+        for assignment in GRANT INHERIT; do
+            if [ "$assignment" = GRANT ]; then expect=200; else expect=403; fi
+            if ! update_permission "$admin" "$assignment"; then
+                record permission-rounds FAIL "round $round: $assignment on node A failed (HTTP $(status_of))"
+                update_permission "$admin" INHERIT
+                return
+            fi
+            started=$(now_ms)
+            if out=$(round_sessions_follow "$expect"); then
+                elapsed=$(( $(now_ms) - started ))
+                [ "$elapsed" -gt "$slowest" ] && slowest=$elapsed
+                echo "round $round $assignment: all $PERMISSION_ROUND_SESSIONS sessions on node B followed in $elapsed ms" >> "$OUT/permission-rounds.txt"
+            else
+                missed=$(( missed + 1 ))
+                echo "round $round $assignment: MISSED, $PERMISSION_SESSION_BOUND_S s after the change: ${out//$'\n'/; }" | tee -a "$OUT/permission-rounds.txt"
+                # A new login purges the student's decisions, so the next round starts clean
+                round_login || { record permission-rounds FAIL "login failed after round $round"; update_permission "$admin" INHERIT; return; }
+            fi
+        done
+    done
+    log "permission-rounds: $(( PERMISSION_ROUNDS * 2 )) changes, $missed missed"
+    if [ "$missed" -eq 0 ]; then
+        record permission-rounds PASS "$PERMISSION_ROUND_SESSIONS existing sessions on node B followed each of $(( PERMISSION_ROUNDS * 2 )) changes on node A (grant and revocation, $PERMISSION_ROUNDS rounds) within $PERMISSION_SESSION_BOUND_S s, the slowest change in $slowest ms"
+    else
+        record permission-rounds FAIL "$missed of $(( PERMISSION_ROUNDS * 2 )) changes on node A were missed by a session on node B for $PERMISSION_SESSION_BOUND_S s ($OUT/permission-rounds.txt): $(grep -m 1 MISSED "$OUT/permission-rounds.txt")"
     fi
 }
 
@@ -1050,6 +1150,7 @@ if [ "$setup_ok" = true ]; then
     check_portlet_invalidation
     check_layout_invalidation
     check_permission_invalidation
+    check_permission_rounds
     check_split_heal
     if check_jobs_once; then
         check_failover
