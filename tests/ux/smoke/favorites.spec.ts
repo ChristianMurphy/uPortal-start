@@ -6,12 +6,18 @@ import {
   openDropdown,
   waitForPortalRequestsToSettle,
 } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
 
 /*
  * Favorites has two halves: the "Add to my Favorites" item of every portlet's
  * Options menu (rendered by the theme) and the Favorites channel at
  * /p/favorites, which is the <up-favorites> web component (a "Web Component"
  * channel, uPortal MOD-D18) backed by /api/v6-0/favorites.
+ *
+ * Favoriting changes the user's layout, so the tests sign in as a user of
+ * their own (own-users.ts). As the shared student, they changed the layout
+ * that portlet-options.spec.ts changed at the same time, and that the
+ * student's other specs loaded at sign-in (MOD-I380).
  */
 const FAVORITES_URL = `${config.url}p/favorites`;
 const FAVORITES_API = `${config.url}api/v6-0/favorites`;
@@ -57,7 +63,7 @@ async function expectFavoriteLinkText(
 
 /**
  * Ensure Calendar is in the expected favorites state before a test runs.
- * Self-clean across sessions: student's persisted layout accumulates
+ * Self-clean across sessions: the user's persisted layout accumulates
  * favorites over time, so we can't assume any starting state.
  */
 async function ensureCalendarFavoriteState(
@@ -84,7 +90,7 @@ async function ensureCalendarFavoriteState(
 
 test.describe("Favorites", () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaUrl(page, config.users.student);
+    await loginViaUrl(page, ownUser("favorites"));
   });
 
   test.afterEach(async ({ page }) => {
@@ -212,7 +218,7 @@ async function csrfHeaders(
 }
 
 /**
- * Make sure the student has the portlet as a favorite, through the REST API.
+ * Make sure the user has the portlet as a favorite, through the REST API.
  * Returns its node ID when this call created it (so the test removes it
  * again), or undefined when it was a favorite already.
  */
@@ -262,7 +268,7 @@ function moveDirection(order: string[], name: string): "up" | "down" {
 
 test.describe("Favorites web component", () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaUrl(page, config.users.student);
+    await loginViaUrl(page, ownUser("favorites"));
   });
 
   test.afterEach(async ({ page }) => {
