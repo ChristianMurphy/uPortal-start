@@ -30,6 +30,7 @@ const OWN_USERS = {
   locale: "Lou",
   bystander: "Bea",
   background: "Nina",
+  news: "Ned",
 } as const;
 
 export type OwnUser = keyof typeof OWN_USERS;
