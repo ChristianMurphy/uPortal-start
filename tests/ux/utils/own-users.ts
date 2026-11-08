@@ -25,6 +25,7 @@ const OWN_USERS = {
   channel: "Cora",
   search: "Sol",
   timeout: "Tess",
+  locale: "Lou",
   bystander: "Bea",
 } as const;
 
