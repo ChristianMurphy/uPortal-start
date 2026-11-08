@@ -154,24 +154,67 @@ The people search specs look for "steven", which these names don't contain. The 
 these specs still sign in as the student. The tip and the retry-flakes branch on origin
 (`d0a90ccec`) have no user with these names.
 
+## A second cause in user-locale.spec.ts
+
+The local runs below found a cause of their own in `user-locale.spec.ts`. The language component
+saves the choice on Update and then reloads the page (`window.location.reload()` in uPortal's
+`up-user-locale.ts`), also when the language stays the same. `chooseLanguage()` returned once the
+old page had no portal request in flight. `chooseEnglish()` then found the page in English
+already, so the next `page.goto` (the test's selector page, or the sign-out in `afterEach`) started
+during the reload, and one of the two navigations ended with `net::ERR_ABORTED`. A trace of a
+failed test shows the `PUT /api/v6-0/locale` at 45.242 s, the test's goto at 45.312 s and the
+reload's request cancelled at 45.346 s. The commit "wait for the reload after update in the user
+locale spec" makes `chooseLanguage()` wait for the page's `load` event after Update.
+
 ## Evidence
 
-Local portal runs: not run yet. Maven Central answers 429 to this machine. The shared uPortal tip
-build (`/home/user/wt/.m2-tip`) couldn't finish without it, and a local portal needs that build.
-The commands for when it can start:
+### Local runs
 
-```sh
-npx playwright test --config=<local config> --retries=0 --repeat-each=10 \
-  tests/ux/smoke/favorites.spec.ts tests/ux/smoke/portlet-options.spec.ts \
-  tests/ux/smoke/background-preference.spec.ts
-npx playwright test --config=<local config> --retries=0 --repeat-each=10 \
-  tests/ux/smoke/user-locale.spec.ts tests/ux/smoke/visual-resource-server.spec.ts \
-  tests/ux/smoke/per-role-pages.spec.ts
-```
+One portal, uPortal `498252acd` (5.17.10-SNAPSHOT from `/home/user/wt/.m2-tip`) with this branch's
+uPortal-start on HSQLDB, ports 8680, 8605 and 8687, JDK 11 for the portal. Chromium 1194, two
+workers, `--retries=0`, 9.3 to 13.1 GB of memory available. "Before" ran the tip's specs
+(`d1326f514`, a separate worktree) and "after" this branch's, against the same portal.
+
+| Set | Before (tip) | After |
+| --- | --- | --- |
+| `favorites`, `portlet-options`, `background-preference`, `--repeat-each=5` | 4 failed of 150. `favorites.spec.ts:120` once (the Calendar was still a favorite after the remove). `background-preference.spec.ts` three times (`net::ERR_ABORTED` at the student's sign-in once, and twice its `afterEach` ran out of time after slow sign-ins) | 0 of 150 (`4a57deb8b`) |
+| `user-locale` and the student home test of `visual-resource-server`, `--repeat-each=10` | 5 failed of 50, all in `user-locale.spec.ts`. Twice `:121` found English after the sign-in (MOD-I379), three times `net::ERR_ABORTED` | With the own user only (`4a57deb8b`): 9 of 50, all `net::ERR_ABORTED`. With the reload wait (`5a336dbc8`): 1 of 100 in two runs, and `user-locale.spec.ts` 0 of 80 |
+| `web-component-channel` and `per-role-pages`, `--repeat-each=5` | 0 of 110 | 0 of 110 |
+
+The one failure after the reload wait was the student home test, the first test after Tomcat
+started again. The waffle menu's `fetch` failed while the test left the landing page for the next
+one, and the menu logged `TypeError: Failed to fetch`. That has nothing to do with the language,
+and the next 99 tests passed.
+
+The student home test passed in the 10 copies before the fix. Locally the French windows of
+`user-locale.spec.ts` didn't overlap with it. HSQLDB doesn't show the PostgreSQL 500 at sign-in.
+
+### Push runs
+
+The first push, head `4a57deb8b`, built uPortal `ccr-43ba0785-hzlrj5` at `498252acd` (the
+`uPortal under test` annotation of job 128655388564: uPortal has no branch of this name):
+
+| Run | Result |
+| --- | --- |
+| Integration 42456118686 | Playwright HSQLDB: 510 passed (job 128655530879). Playwright PostgreSQL 18: 509 passed, 1 flaky, `reset-my-layout.spec.ts:289` (job 128655530826). DB harness PostgreSQL 18, G-migrate MariaDB 11.4 to PostgreSQL 18, CAS and Cluster passed |
+| CI 42456118596 | passed |
+| G-index 42456118687 | passed |
+| Migration equivalence 42456118622 | passed |
+| HTTP replay 42456118615 | failed, see below |
+
+The PostgreSQL 18 flake is retry-flakes' cause 1, which this branch doesn't change: the artifact's
+access log has `PUT /api/v6-0/locale` and `GET /p/search/max?query=zzqxjv` at 07:08:23
+(`search-web-component.spec.ts`, "speaks the user's language: es_ES", still as the student here),
+and the student's sign-in of the failed test in the same second, with `locale="es-ES"` on the
+element. retry-flakes `dd63f3f46` moves those tests off the student.
+
+The HTTP replay failed with the same 10 differences on the retry-flakes (42455427011) and admin-390
+(42455714380) branches today. The integration branch's replay passed on 2026-10-15 (38775913401).
+The health check's `Current Time` reads `Sun, 8 Nov 2026 06:51:47 GMT` with a one-digit day, which
+the reference's `{http-date}` mask doesn't match. Admin's principal string reads `13.admin`, and
+5.17 had `14.admin`. This branch doesn't change portal code or data, and the cause is outside it.
 
 `npm run lint` passes. Type coverage is 100 %, and ESLint reports nothing in the changed files.
-
-CI: the push runs of this branch, below once they finish.
 
 ## Proposed LOG rows
 
@@ -183,6 +226,4 @@ CI: the push runs of this branch, below once they finish.
 
 ## Next step
 
-Read the push runs of this branch, which run Playwright on HSQLDB and on PostgreSQL 18, and the
-G-migrate pairs. Then run the two `--repeat-each` commands above on the integration tip and on this branch,
-once a local portal can start, and record the counts here.
+Read the push runs of the second push (head with the reload wait) and add them here.
