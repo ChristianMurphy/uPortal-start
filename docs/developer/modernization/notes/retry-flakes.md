@@ -46,6 +46,14 @@ account the language tests use (`general-config.ts`). The other developer specs 
 Layout and Session Timeout language tests, which set their own session's language before they
 open a page, Pluto's test suite and the Reset My Layout API spec.
 
+The language tests that share the developer can still save its language at the same moment. The
+portal then answers 500 to one of them: `RDBMLocaleStore.updateUserLocales` deletes the user's
+rows in `UP_USER_LOCALE` and inserts the new ones, and the second insert hits the primary key. The
+local runs below saw it once in 60 search tests that shared the student, and not in 180 tests
+that shared the developer. A user of its own per worker for each language spec would remove it,
+as the `test-users` branch does for `user-locale.spec.ts` with `own-users.ts`. That helper isn't
+on the integration branch yet.
+
 `user-locale.spec.ts` saves French for the student too (MOD-I378). That spec belongs to the
 `test-users` branch, which gives it a user of its own, so this branch leaves it alone. Once both
 are merged, the student's saved language is always English.
@@ -164,16 +172,42 @@ separate: on MariaDB the two names differed (`-14` and `-13`).
   sign in as the student in parallel (MOD-I330, MOD-I364). `favorites.spec.ts:272` in the same
   job wasn't looked at.
 
-## Evidence still to collect
+## Local evidence
 
-* Local runs before and after the fix with `--repeat-each`, together with
-  `search-web-component.spec.ts`: not run. The shared uPortal build in `.m2-tip` was ready at
-  06:49 UTC, but this worktree's `portalInit` got 429 from Maven Central at 06:57 for
-  SimpleContentPortlet 3.4.4's POM, so no local portal started. A script for the run is ready:
-  the reset web component tests, the reset language tests and the search language tests with
-  `--repeat-each 30 --workers 4 --retries 0`, once with the integration tip's search spec and
-  once with this branch's.
-* The push runs of this branch: see the next section.
+Local portal on uPortal-start ports 8980, 8905 and 8987, HSQLDB, uPortal `498252acd` from the
+shared `.m2-tip` build, the portal on JDK 11, Playwright 1.64.0 with Chromium 1194
+(`executablePath` in an untracked config). The first `portalInit` got 429 from Maven Central at
+06:57 UTC. The second, at 07:12, passed.
+
+Command, run from the worktree with `PORTAL_BASE_URL=http://localhost:8980/uPortal/`:
+
+```sh
+npx playwright test -c <local config> tests/ux/smoke/reset-my-layout.spec.ts <search spec> \
+  --grep "Reset My Layout web component|Reset My Layout in Spanish and French|speaks the user's language" \
+  --repeat-each 30 --retries 0 --workers 4
+```
+
+| Run | Search spec | Memory available | Result |
+| --- | --- | --- | --- |
+| Before, 07:17 | the integration tip's (student) | 11062 MB | 17 failed, 223 passed |
+| After, 07:28 | this branch's (developer) | 11482 MB | 1 failed, 239 passed |
+| After, 07:40, with the Session Timeout language tests | this branch's (developer) | 11997 MB | 2 failed, 298 passed |
+
+* Before: 15 of the 120 reset web component tests failed (`:289` 5 times, `:308` 6, `:326` 2 and
+  `:345` 2), all with Spanish or French on the page. Two of the 60 search tests failed too. One
+  got a 500 from `PUT /api/v6-0/locale`: two copies saved the student's language at once, and
+  `RDBMLocaleStore` hit `DuplicateKeyException` on `UP_USER_LOCALE`. The other didn't find the
+  "Personas" tab.
+* After: none of the reset web component tests failed for the language. The one failure was
+  `browserContext.close: ENOSPC`, when the machine's disk was full.
+* After, with `session-timeout.spec.ts --grep "Session timeout warning in"` added, so that 180 of
+  the 300 tests sign in as the developer: no locale mix-up and no 500 from the locale API. Two
+  developer tests failed. "Session timeout warning in es_ES" didn't see its dialog in the first
+  20 s of the run, where each request took about a second. In "speaks fr to a user whose language
+  is fr_FR", the developer's Welcome page took 28 s to render. At that moment the portal log has
+  the cache key failure of cause 2 in that page's esup-filemanager portlet.
+* Cause 4 needs two imports in the same millisecond, and the local runs didn't try to reproduce
+  it. The evidence is the CI log above.
 
 ## Push runs
 
@@ -194,13 +228,25 @@ First push, uPortal-start `d0a90ccec` (the search fix and this note). Every run 
   principal strings came out as `13` where the recording has `14` (`14.admin` against
   `13.admin`). The integration branch's replay 38775913401 passed on 2026-10-15.
 
-Second push: RUNS_PLACEHOLDER
+Second push, uPortal-start `36279f24e` (adds the account name fix), the same uPortal `498252acd`:
+
+* Integration 42457215984 passed with no flaky test. Its jobs were the Playwright suite on HSQLDB
+  (with local login and with CAS) and on postgres-18, the postgres-18 DB harness, G-migrate
+  mariadb-11.4 to postgres-18, and Cluster.
+* CI 42457216008, G-index 42457216022, Migration equivalence 42457215958 and HTTP replay
+  42457215979 passed. HTTP replay skipped "Replay against 5.17", as a topic push does when
+  `tests/replay` hasn't changed.
+
+The jobs where the reset and self-edit failures happened (MariaDB Playwright and the postgres-15
+and postgres-16 G-migrate pairs) run only in the full matrix, which the coordinator runs when it
+merges a batch.
 
 ## Proposed LOG rows
 
 | ID | Area | Issue | Status |
 | --- | --- | --- | --- |
 | MOD-I? | Tests | `search-web-component.spec.ts` saved Spanish and French for the shared student. A spec that signed in as the student meanwhile got Spanish pages: `reset-my-layout.spec.ts:289` and `:308` were flaky in Integration 38775913145 (jobs 116563567668, 116563567769, 116563568282). | **Fixed** (uPortal-start `dd63f3f46`): the language tests sign in as the developer (`notes/retry-flakes.md`). |
+| MOD-I? | i18n | `PUT /api/v6-0/locale` answers 500 when two sessions of one user save the language at the same moment: `RDBMLocaleStore.updateUserLocales` deletes, then inserts, and the second insert violates `UP_USER_LOCALE`'s primary key. Seen locally on HSQLDB, once in 60 search tests that shared the student. | **Open**, small. Language tests that share a user can hit it (`notes/retry-flakes.md`). |
 | MOD-I? | Security | `EntityTypes.getEntityIDFromType`'s cache key `#type.Name` fails on Spring 5.3 on the first call and after the garbage collector clears an entry of `ClassUtils`' interface method cache: SpEL calls `Principal.getName()` on `IPerson.class`. A sign-in then fails with "Invalid username or password", and a render or REST call answers 500. Spring 4.3 (5.17) doesn't fail. Cause of MOD-I383's `reset-my-layout.spec.ts:238` in run 38689486418. | **Open.** Drop the `key` attribute so the `Class` is the key (`notes/retry-flakes.md`). |
 | MOD-I? | Tests | `importLocalAccount` named accounts `<prefix>-<time>-<n>` with a count per worker. The self-edit specs keep their counts in step and could ask for the same user in the same millisecond. The second import answered 500 (unique key on `UPU_USER_NAME`). `self-edit-account-component.spec.ts:255` was flaky in run 42455427048 (job 128653803621). | **Fixed** (uPortal-start `deb4ac860`): the name contains the worker's index (`notes/retry-flakes.md`). |
 | MOD-I? | Persistence | Overlapping imports of new users deadlock on MariaDB (1213): `UserImporterExporter.importData` updates, then inserts, under REPEATABLE READ, and InnoDB's gap locks on `UPU_USER_NAME` block both inserts. `self-edit-account.spec.ts:256` was flaky in job 116563567479. | **Open.** Run the import under READ COMMITTED, as MOD-I360 did. Related to MOD-I382. |
