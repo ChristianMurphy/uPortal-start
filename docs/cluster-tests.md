@@ -41,7 +41,8 @@ Tomcat's `catalina.*` logs and the portal log.
 | `invalidation-portlet` | Node B reads a portlet definition (`/api/portlet/what-is-uportal.json`), node A imports it with a new title (`/api/import`), node B must show the new title | 30 s |
 | `invalidation-layout` | Node B loads the student's layout, node A adds a tab to it (`/api/layout?action=addTab`), a new student session on node B must have the tab | 30 s |
 | `invalidation-permission` | Both nodes deny the student the Permissions Manager portlet; node A grants SUBSCRIBE on it, and a new student session on node A, then on node B must allow it; node A revokes it, and a new session on node B must be denied again | 330 s (see below) |
-| `permission-session` | On each node, a student session denied before the grant must be allowed after it. A session allowed before the revocation must be denied after it. Both are polled before any new student login on that node | 30 s |
+| `permission-session` | On each node, a student session denied before the grant must be allowed after it. A session allowed before the revocation must be denied after it. Both are polled before any new student login on that node. A failure also gives the user name `/api/session.json` returns for the session | 30 s |
+| `permission-rounds` | Node A grants and revokes the permission 10 times (`--permission-rounds`) while 4 student sessions on node B, which checked it before, follow each change. After each change the sessions poll node B one request after the other until each has seen it, and then each must still see it. A missed change is listed in `build/cluster/permission-rounds.txt`, and the sessions log in again before the next change | 30 s per change |
 | `split-heal` | `iptables` drops the JGroups packets between the nodes (ports 7800 to 7810 on loopback) until each installs a view of one member. Node A imports a new portlet title and grants the student SUBSCRIBE on the Permissions Manager. Node B must still show the old title and deny the student, which shows the split held. The ports are opened again, and once both nodes install a MergeView node B must show the new title and allow its existing student session | 30 s after the merge |
 | `jobs-once` | Once node B's scheduled tasks run (120 s after it starts), every test user logs in and renders their layout three times on each node; once the aggregator has read all raw events, each interval's login and portlet-render aggregates (group Everyone) must have grown by exactly the number of raw events | |
 | `failover-takeover` | A table lock on `UP_EVENT_AGGR_STATUS` makes the next aggregation run wait inside its cluster lock. The test waits 95 s, past the abandonment age and the server bias, before it kills the holder. The other node must not take the lock in that time. The kill is a `kill -9`, and the table lock is released after it. The other node must take the lock over no sooner than 60 s after the dead node's last update (it is not abandoned before), and no later than 60 s + the 28 s server bias + 60 s | 148 s |
@@ -53,7 +54,11 @@ uPortal caches permission checks on each node (`AuthorizationImpl.PRINCIPAL_HAS_
 180 s and `AnyUnblockedGrantPermissionPolicy.HAS_UNBLOCKED_GRANT` for 300 s). Since 6.0 a
 permission change clears both caches and the removal is replicated. `invalidation-permission`
 still allows the old bound of 330 s for new sessions, and `permission-session` holds sessions
-that checked the permission before the change to 30 s.
+that checked the permission before the change to 30 s. A check that node B ran while it applied
+the removals node A sent kept the old decision in run 42458398202 (job 128662855202).
+`permission-rounds` makes many such changes while node B is polled, and both nodes log each
+replication message they queue, send and receive (`net.sf.ehcache.distribution.jgroups` at
+`DEBUG`, in `logs-a/portal/portal.log` and `logs-b/portal/portal.log`).
 
 A node that fails to join is split from the cluster. In a local run node B's JOIN timed out
 four times (`GMS join_timeout=1000`, `max_join_attempts=4` in uPortal 5's `jgroups.xml`)
@@ -119,10 +124,12 @@ tests/cluster/cluster.sh --fault replication-off  # a seeded fault must be caugh
 tests/cluster/cluster.sh --keep                   # leave the nodes and the database running
 tests/cluster/cluster.sh --no-deploy              # reuse them (after --keep)
 tests/cluster/cluster.sh --join-starts 20         # start node B 20 times, count the joins
+tests/cluster/cluster.sh --permission-rounds 50   # 50 grants and 50 revocations in permission-rounds
 tests/cluster/cluster.sh --lone-restarts 10       # crash and restart node A alone 10 times
 ```
 
-`--join-starts` skips the checks. It starts node A, then starts and stops node B N times, and writes
+`--permission-rounds` sets the number of rounds of `permission-rounds`, 10 by default. With
+`--fault` the default is 0, which skips the check. `--join-starts` skips the checks. It starts node A, then starts and stops node B N times, and writes
 each start's `cluster-join` outcome to `build/cluster/join-starts.txt`. `--lone-restarts` starts
 node A alone, then kills it with `kill -9` and starts it again N times. JDBC_PING returns the row
 the killed node left in `JGROUPSPING` as a coordinator. The restarted node sends JOINs to that dead
