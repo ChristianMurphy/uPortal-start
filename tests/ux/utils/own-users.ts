@@ -19,7 +19,10 @@ export type { Account } from "./local-account-utils";
  * so its only tab is Welcome (Bookmarks, Calendar and My Drives).
  */
 const OWN_USERS = {
+  favorites: "Fay",
+  options: "Olive",
   language: "Lena",
+  channel: "Cora",
 } as const;
 
 export type OwnUser = keyof typeof OWN_USERS;
