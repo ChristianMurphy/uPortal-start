@@ -111,13 +111,16 @@ comparison. `tests/replay/lib.mjs` gives the reason for each one:
 portlets, portlet types and entity types differ between two machines that import the
 same data. So do the user part of layout node ids (`u26l1n210` on one machine, `u22l1n210` on
 another) and every list that 5.17 orders by those ids, such as the fragments in a page and the
-portlets in a category. The replay handles this in four ways:
+portlets in a category. A new GitHub runner image can list the files in another order too: the
+same uPortal build gave the IPerson entity type the id 14 on image ubuntu24/20261012.334 and 13
+on ubuntu24/20261101.360. The replay handles this in four ways:
 
 * layout node ids in recorded URLs get this portal's user part before they are sent. It comes
   from the role's own `layout.json` and welcome page, which the crawl requests first anyway, by
   the portlet's fname, or else by the node part;
 * generated ids in responses are masked: `u{id}l1n210`, `local.{id}`, `PORTLET_ID.{id}`,
-  `{type}.local.`, Pluto namespaces, and numeric `id`, `chanID`, `typeId` and similar fields;
+  `{type}.local.`, the entity type of every `principalString` (`{type}.admin`), Pluto namespaces,
+  and numeric `id`, `chanID`, `typeId` and similar fields;
 * lists of objects in JSON, and the lines of an HTML outline, are compared without their order;
 * requests that name a generated id are not replayed (see above), and the crawl names groups by
   their PAGS key (`pags.Authenticated Users`).
