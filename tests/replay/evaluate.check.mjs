@@ -218,3 +218,18 @@ test('a header date that loses the leading zero of its day still shows', () => {
         [{ field: 'header:expires', from: '{http-date}', to: 'Sun, 8 Nov 2026 06:43:24 GMT' }]
     );
 });
+
+test("the entity type id in a person's principal key is a generated id", () => {
+    // uPortal numbers the entity types in the order it imports their files, which is the order
+    // the file system lists them. The same uPortal build gave IPerson 14 on runner image
+    // ubuntu24/20261012.334 (run 38775913401) and 13 on ubuntu24/20261101.360 (run 42455427011).
+    const path = '/uPortal/api/entities/person/admin.json';
+    const recorded = [answered('admin', path, { kind: 'json', value: { jsonEntityBean: { principalString: '14.admin' } } })];
+    const now = (principalString) => [answered('admin', path, json(path, { jsonEntityBean: { principalString } }))];
+    const result = run(recorded, now('13.admin'), []);
+    assert.deepEqual(result.failures.flatMap((f) => f.differences.flatMap((d) => d.detail)), []);
+    assert.equal(result.failed, false);
+    // A principal key in another form still shows
+    assert.equal(run(recorded, now('PERSON.admin'), []).failed, true);
+    assert.equal(run(recorded, now('13.staff'), []).failed, true);
+});
