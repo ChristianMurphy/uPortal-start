@@ -1,7 +1,7 @@
 # Portal races on the red tip (MOD-I391, MOD-I392, MOD-I394)
 
 Branch `ccr-43ba0785-hzlrj5-portal-races` in uPortal and in uPortal-start. uPortal has the three
-fixes, one commit each, on the integration tip `1d485034e`. uPortal-start has only this note, on
+fixes, one commit each, on the integration tip `1d485034e`, and three commits from the review. uPortal-start has only this note, on
 `a0a125fee`. Its push runs build the uPortal branch of the same name, so the Integration run
 tests the fixes in the portal.
 
@@ -150,6 +150,28 @@ READ as well. READ COMMITTED keeps the result independent of when MariaDB opens 
 second writes the cache second as well, unless its thread is delayed for longer than the second
 save's statements take, and the fix leaves that as it was.
 
+## Review follow-ups
+
+The oss-review of `d14ccded9` found nothing blocking. These commits answer its findings:
+
+* `test(io): check that the user import runs under read committed`. The import test passed on
+  HSQLDB with or without READ COMMITTED, and default CI runs only HSQLDB. Its connections now
+  default to SERIALIZABLE, and the mocked counter store reads the isolation of the connection
+  bound to each import's transaction. With the isolation removed from `importData`, the test fails
+  on HSQLDB with `expected:<[2, 2]> but was:<[8, 8]>`.
+* `test(i18n): check that locale saves run under read committed`. The locale test now records the
+  isolation of every statement's connection under the same SERIALIZABLE default. With the READ
+  COMMITTED line removed from `RDBMLocaleStore`, the two concurrency tests fail on HSQLDB with a
+  serialization failure of save B, and `testUserWithoutUserRowStillSaves` fails with
+  `expected:<2> but was:<8>`.
+* `fix(i18n): warn when a locale save finds no user row to lock`. A session whose user id has no
+  `UP_USER` row, such as after `DistributedLayoutManager` recreates a user for a corrupted layout
+  or after the shell's `deleteUser`, has no row to lock. The store now logs a warning and saves as
+  before. `testUserWithoutUserRowStillSaves` covers that save.
+
+uPortal-webapp's 469 tests pass on HSQLDB. `spotlessCheck` and `spotbugsMain` pass, and
+`check-freeze-store.py` reports that no rule grew.
+
 ## Item 4: background-preference.spec.ts:124 on postgres-16 to postgres-18
 
 In job 116563567769 of run 38775913145, `background-preference.spec.ts:124` failed at the
@@ -228,11 +250,11 @@ The G-index job of attempt 2 also showed that `tests/db/gindex/gindex.sh` report
 dataInit ... ok" when that phase's Gradle run failed. Its `deploy.log` ends with the download
 timeout, and the next phase failed on the missing Tomcat.
 
-Still to run, once the downloads work (the `-gradle-download` branch gives uPortal-start's
-wrapper a longer timeout and retries): MariaDB 12.3, SQL Server 2025 and Oracle 23 of the
-manual DB integration run, uPortal's CI build, and the uPortal-start Integration jobs. Starting
-the failed jobs of runs 42464377318 and 42464381026 again is enough. The uPortal commit doesn't
-change.
+The downloads worked again by 10:49. The second push, uPortal `285e7a7bc` with the review
+commits and uPortal-start with this note, started new runs, and DB integration 42473494660 was
+started by hand on uPortal `285e7a7bc`.
+
+RUNS_PLACEHOLDER
 
 ## Proposed LOG rows
 
