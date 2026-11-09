@@ -22,6 +22,10 @@ import { ownUser } from "../utils/own-users";
  *
  * The assertions name only what a user sees and does, so the same spec
  * covers the portlet and the web component that replaces it.
+ *
+ * The logout tests wait for the portal's answer to /Logout before they load
+ * the next page. Waiting only for the request let page.goto() cancel the
+ * logout while the portal was still ending the session.
  */
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -139,9 +143,9 @@ test.describe("Session timeout warning", () => {
   test("log me out ends the session", async ({ page }) => {
     const dialog = await runUntilWarning(page);
 
-    const logoutRequest = page.waitForRequest(`${config.url}Logout`);
+    const loggedOut = page.waitForResponse(`${config.url}Logout`);
     await dialog.getByRole("button", { name: "No, log me out" }).click();
-    await logoutRequest;
+    await loggedOut;
 
     await page.goto(config.url);
     await expect(page.locator("div.user-name")).toHaveCount(0);
@@ -152,9 +156,9 @@ test.describe("Session timeout warning", () => {
   }) => {
     await runUntilWarning(page);
 
-    const logoutRequest = page.waitForRequest(`${config.url}Logout`);
+    const loggedOut = page.waitForResponse(`${config.url}Logout`);
     await page.clock.runFor(DIALOG_DISPLAY_MS + 2 * SECOND);
-    await logoutRequest;
+    await loggedOut;
 
     await page.goto(config.url);
     await expect(page.locator("div.user-name")).toHaveCount(0);
