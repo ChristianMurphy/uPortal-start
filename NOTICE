@@ -104,7 +104,6 @@ This project includes:
   JavaBeans(TM) Activation Framework under COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
   JavaMail API (compat) under CDDL or GPLv2+CE
   JavaServer Pages(TM) API under CDDL + GPLv2 with classpath exception
-  Javassist under MPL 1.1 or LGPL 2.1 or Apache License 2.0
   JAXB2 Basics - Runtime under BSD-Style License
   jaxen under Apache style license
   JBoss Logging 3 under GNU Lesser General Public License, version 2.1
