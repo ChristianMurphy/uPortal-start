@@ -127,7 +127,7 @@ case "${1:-}" in
         echo "Skipping ${sha:0:9}: listed in .github/vale/commit-exceptions.txt"
         continue
       fi
-      git log -1 --format=%B "$sha" | grep -vE '^(Co-Authored-By|Claude-Session|Signed-off-by):' > "$dir/${sha:0:9}.md"
+      git log -1 --format=%B "$sha" | grep -vE '^(Co-Authored-By|Signed-off-by):' > "$dir/${sha:0:9}.md"
     done < <(git log --no-merges "${since[@]}" --format=%H "$@")
     count=$(find "$dir" -name '*.md' | wc -l)
     if [ "$count" -eq 0 ]; then
