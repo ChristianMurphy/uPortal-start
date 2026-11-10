@@ -8,9 +8,10 @@ name: Verify portlet fixes in a portal
 #               the Calendar in its narrow and its wide view. What the element shows and what it
 #               logs is recorded with the released 2.7.4 and then with the branch's war.
 #   newsreader  NewsReaderPortlet, fix/news-set-two-sessions. Two sessions of one user render the
-#               same NewsReader portlet at the same moment, for ten minutes, with the released
-#               5.1.5 and then with the branch's war. The count is the number of "Illegal attempt
-#               to associate a collection with two open sessions" exceptions in the logs.
+#               same NewsReader portlet in edit mode at the same moment, for ten minutes, with
+#               the released 5.1.5 and then with the branch's war. The count is the number of
+#               "Illegal attempt to associate a collection with two open sessions" exceptions
+#               in the logs.
 #
 # .github/verify/portlets/verify.sh has the steps. A job fails if a check fails with the fix
 # deployed. What the released portlet did is reported, not judged.

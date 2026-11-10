@@ -3,6 +3,10 @@
 
     news_two_sessions.py <label> <out directory> <Tomcat logs directory> <fname> ...
 
+The renders are in edit mode. That render loads the user's news set on the server. The plain
+view loads it later, when the browser asks for the feeds, which a script without a browser
+doesn't do.
+
 Each round signs student in twice, so there are two new sessions. For each NewsReader portlet,
 a third session of student renders it first, which leaves the user's news set in the portlet's
 cache. Then the two new sessions request the same portlet at the same moment. That is each
@@ -10,8 +14,9 @@ session's first render of the portlet, the render that saves the news set.
 
 The script runs rounds for CHECK_SECONDS seconds (600 by default) and then counts, in the Tomcat
 logs, the exceptions with "Illegal attempt to associate a collection with two open sessions".
-It also counts the renders that came back without the portlet's own markup. With the label
-"after" it exits 1 if it counts any exception.
+It also counts the renders that answered 200 without the portlet's own markup. With the label
+"after" it exits 1 if it counts any of either. Answers other than 200 are counted by status and
+not judged: the portal itself can fail when one user signs in twice in a row.
 """
 import http.client
 import json
@@ -89,7 +94,7 @@ def signed_in():
 
 
 def render(client, fname):
-    return client.get(f'/uPortal/p/{fname}/max/render.uP')
+    return client.get(f'/uPortal/p/{fname}/max/render.uP?pCm=edit')
 
 
 def count_in_logs(logs, needle):
@@ -115,8 +120,9 @@ def main():
     usable = [fname for fname in fnames if MARKUP in render(first, fname)[1]]
     traces_at_start = count_in_logs(logs, TRACE_LINE)
 
-    rounds = pairs = without_markup = not_200 = 0
-    sample = None
+    rounds = pairs = without_markup = 0
+    not_200 = {}
+    sample = other = None
     deadline = time.monotonic() + seconds
     while usable and time.monotonic() < deadline:
         sessions = [signed_in(), signed_in()]
@@ -138,7 +144,8 @@ def main():
             pairs += 1
             for status, body in answers:
                 if status != 200:
-                    not_200 += 1
+                    not_200[status] = not_200.get(status, 0) + 1
+                    other = other or body
                 elif MARKUP not in body:
                     without_markup += 1
                     sample = sample or (fname, body)
@@ -155,16 +162,19 @@ def main():
         'rounds (two new sessions each)': rounds,
         'pairs of renders at the same moment': pairs,
         'renders in those pairs': pairs * 2,
-        'renders that did not answer 200': not_200,
-        'renders without the portlet markup': without_markup,
+        'renders that did not answer 200, by status': not_200,
+        'renders that answered 200 without the portlet markup': without_markup,
         'exceptions in the logs': traces,
         'log lines with the message': count_in_logs(logs, NEEDLE),
         'problems': [],
     }
     if not usable:
         result['problems'].append('no NewsReader portlet rendered')
-    if traces or without_markup or not_200:
-        result['problems'].append('renders failed')
+    if traces or without_markup:
+        result['problems'].append('renders failed in the portlet')
+    if other:
+        with open(f'{out}/render-not-200-{label}.html', 'w') as page:
+            page.write(other)
     if sample:
         with open(f'{out}/render-without-markup-{label}.html', 'w') as page:
             page.write(sample[1])
