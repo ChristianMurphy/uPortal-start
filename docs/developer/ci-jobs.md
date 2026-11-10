@@ -1,9 +1,9 @@
 # Which CI jobs run
 
 This page lists what each uPortal-start workflow runs for each kind of push. The rules for
-workstream branches (`ccr-43ba0785-hzlrj5-<topic>`) are prototype only (MOD-D30, MOD-D55,
-MOD-I306) and go before upstreaming. A staging branch (`ccr-43ba0785-hzlrj5-landing-<n>`) counts
-as the integration branch. So does a manual run on any branch, except in `Migration equivalence`,
+workstream branches (`<type>/<topic>`, such as `fix/layout-save-lock`) are prototype only (MOD-D30,
+MOD-D55, MOD-I306) and go before upstreaming. A staging branch (`staging/landing-<n>`) counts
+as the integration branch (`feat/uportal-6`). So does a manual run on any branch, except in `Migration equivalence`,
 which gives a manual run on a workstream branch the workstream set. The nightly run is the schedule or a manual run with `nightly` ticked. `CI` has no
 schedule. Its nightly set runs only from a manual run.
 
@@ -18,9 +18,25 @@ schedule. Its nightly set runs only from a manual run.
 The `CI` workflow's `commits`, `prose` and `lint` jobs run on every push. `lint` runs
 `npm run lint`: tsc, type coverage and ESLint over the tests.
 
+## Branch names
+
+`.github/scripts/branches.sh` holds the names, and the workflows and scripts ask it which kind a
+branch is. uPortal has the same file. Its table test, `branches.test.sh`, also checks the push
+triggers of the workflows against it.
+
+| Kind | Name | Name before 2026-11-10 |
+| --- | --- | --- |
+| Integration | `feat/uportal-6` | `ccr-43ba0785-hzlrj5` |
+| Staging | `staging/landing-<n>` | `ccr-43ba0785-hzlrj5-landing-<n>` |
+| Topic (workstream) | `<type>/<topic>`, with `<type>` one of `feat`, `fix`, `ci`, `docs`, `test`, `build`, `refactor`, `chore` and `perf` | `ccr-43ba0785-hzlrj5-<topic>` |
+
+`feat/uportal-6` alone is the integration branch, so `feat/uportal-6-x` is a topic branch. A
+branch such as `staging/other` or `style/x` doesn't start any run. The old names are accepted
+until the owner deletes those branches.
+
 ## Staging branches and the staging check
 
-The coordinator pushes a landing to `ccr-43ba0785-hzlrj5-landing-<n>` in uPortal and then in
+The coordinator pushes a landing to `staging/landing-<n>` in uPortal and then in
 uPortal-start, before it reaches the integration branch. The runs there build the uPortal branch
 of the same name and run the jobs of the integration branch.
 
@@ -51,8 +67,8 @@ design and its limits are in uPortal's `docs/developer/modernization/notes/ci-pr
 
 The workflows that build uPortal from source (`Integration`, `G-index`, `Migration equivalence` and
 `HTTP replay`) run `.github/scripts/choose-uportal.sh`. It takes the `uportal-ref` of a manual run,
-else uPortal's branch with the name of this branch, else uPortal's `ccr-43ba0785-hzlrj5`, else
-`master`. It doesn't try shorter versions of the branch name. The job summary and a notice
+else uPortal's branch with the name of this branch, else uPortal's integration branch
+(`feat/uportal-6`, or `ccr-43ba0785-hzlrj5` while uPortal has only that one), else `master`. It doesn't try shorter versions of the branch name. The job summary and a notice
 annotation give the repository, ref and commit that were chosen, and the last step of the
 `Build uPortal` job prints them again, so the last lines of its log show which uPortal ran. The
 checkout uses that commit. `.github/scripts/choose-uportal.test.sh` checks the order with a table of examples.
@@ -73,7 +89,7 @@ and the workflow lint job runs it.
 
 ## G-index on a workstream push
 
-The `Build uPortal` job of `g-index.yml` compares the branch with `origin/ccr-43ba0785-hzlrj5` in
+The `Build uPortal` job of `g-index.yml` compares the branch with the integration branch in
 uPortal-start and, if uPortal has a branch of the same name, in uPortal. The paths that count are in
 `.github/scripts/gindex-changes.sh`: in uPortal-start `tests/db`, `data`, the G-index workflow and
 script, the Gradle tasks and build files that `gindex.sh` uses, and the settings of the portal and

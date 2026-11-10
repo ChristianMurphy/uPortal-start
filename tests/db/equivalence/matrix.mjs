@@ -8,7 +8,7 @@
 // tests/db/migrate/matrix.json lists (MOD-D25).
 //   push        as listed in equivalence/matrix.json (the integration branch); copies must cross
 //               vendors, and a copy's zone (EQUIVALENCE_ZONE) must be an IANA time zone
-//   workstream  the light profile for ccr-43ba0785-hzlrj5-<topic> branches (MOD-D30), as listed
+//   workstream  the light profile for <type>/<topic> branches (MOD-D30), as listed
 //   nightly     in place on every target; one copy per vendor, from its oldest source into the
 //               next vendor's target, so every vendor is copied from and into once
 // Exits with 1 when a vendor file is missing or a pair breaks these rules.
