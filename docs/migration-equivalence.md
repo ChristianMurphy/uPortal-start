@@ -203,8 +203,8 @@ same way `integration.yml` builds it. `tests/db/equivalence/matrix.json` lists t
 `tests/db/equivalence/matrix.mjs` turns them into job matrices. The servers come from
 `tests/db/migrate/matrix.json`.
 
-* **Push set** (a manual run without `nightly`, and every push to a `ccr-*` branch in this
-  prototype, MOD-I74): in place on HSQLDB, PostgreSQL 18 and MariaDB 12.3. Copies from PostgreSQL 16
+* **Push set** (a manual run without `nightly`, and every push to the integration branch or a staging
+  branch in this prototype, MOD-I74): in place on HSQLDB, PostgreSQL 18 and MariaDB 12.3. Copies from PostgreSQL 16
   to MariaDB 12.3 and, in America/New_York, from MariaDB 11.4 to PostgreSQL 18.
 * **Workstream branches** (prototype only, MOD-D30): in place on PostgreSQL 18 and the copy from
   MariaDB 11.4 to PostgreSQL 18, in America/New_York.

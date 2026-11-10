@@ -73,14 +73,14 @@ from its `gradle.args`). Everything a run produces is in `build/db-harness/<vend
 `harness.log` and, after a comparison, `drift-report.txt`.
 
 `.github/workflows/integration.yml` runs the harness against uPortal built from source: it
-builds the uPortal branch of the same name (else uPortal's `ccr-43ba0785-hzlrj5`, else `master`;
+builds the uPortal branch of the same name (else uPortal's integration branch `feat/uportal-6`, else `master`;
 or the repository and ref given to a manual run) and installs it into `~/.m2`. On every push it then runs the whole Playwright suite on
 HSQLDB, the harness with `--portal` on the six runtime databases, the harness with `--full-suite`
 on PostgreSQL 18 and MariaDB 12.3 (nightly on MySQL 9.7 as well), and the G-migrate pairs. The
 scripts start every database themselves from its vendor file; MySQL and MariaDB need a server
 option (`lower_case_table_names=1`) that a service container cannot be given. On GitHub Actions
 the harness also shows a failed vendor's drift report and failed specs as annotations on the run.
-In the prototype, a workstream branch (`ccr-43ba0785-hzlrj5-<topic>`, MOD-D30) runs a light profile
+In the prototype, a workstream branch (`<type>/<topic>`, MOD-D30) runs a light profile
 instead, with the uPortal build, Playwright on HSQLDB, the harness and Playwright on PostgreSQL 18,
 and one G-migrate pair.
 

@@ -103,7 +103,7 @@ finding becomes an annotation with its suggested DDL.
 ## CI
 
 `.github/workflows/g-index.yml` builds uPortal from source like `integration.yml` (the branch of
-the same name, else `ccr-43ba0785-hzlrj5`, else `master`) and runs:
+the same name, else the integration branch `feat/uportal-6`, else `master`) and runs:
 
 * **every push:** PostgreSQL 18 at scale 0.01 with the whole Playwright suite and four minutes of
   the driver, then, on the same database, the seeded faults (`idx_upp_prefs_id` dropped, a second
@@ -111,9 +111,9 @@ the same name, else `ccr-43ba0785-hzlrj5`, else `master`) and runs:
 * **nightly** (and on a manual run with `nightly`): PostgreSQL 18 and MariaDB 12.3 at scale 0.05,
   ten minutes of the driver. A manual run can set any scale.
 
-A push to a topic branch (`ccr-43ba0785-hzlrj5-<topic>`) runs the first set only when it changes
+A push to a topic branch (`<type>/<topic>`) runs the first set only when it changes
 persistence, SQL, schema, data files or G-index itself. The first job of the workflow compares the
-branch with `origin/ccr-43ba0785-hzlrj5` in uPortal-start and, if uPortal has a branch of the same
+branch with the integration branch in uPortal-start and, if uPortal has a branch of the same
 name, in uPortal, against the paths listed in `.github/scripts/gindex-changes.sh`. The job summary
 lists the files that matched, or says `no matching changes, G-index skipped`, and then the build
 of uPortal and the G-index job are skipped. A push to the integration branch, a manual run and the
