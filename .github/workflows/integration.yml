@@ -25,10 +25,11 @@ name: Integration
 #
 # Prototype only (MOD-D30): a push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs a
 # light profile to spare the account's runners: the uPortal build, Playwright on HSQLDB (local
-# login, and the auth specs with CAS), the harness and Playwright on PostgreSQL 18, and one
-# cross-vendor G-migrate pair. A manual run on a workstream branch, a push to a staging branch
-# (ccr-43ba0785-hzlrj5-landing-<n>, where a landing is tested before it is pushed) and the
-# integration branch run everything above, and the schedule or nightly=true the nightly sets.
+# login, and the auth specs with CAS), the harness and Playwright on PostgreSQL 18, the query
+# budgets and one cross-vendor G-migrate pair. A manual run on a workstream branch, a push to a
+# staging branch (ccr-43ba0785-hzlrj5-landing-<n>, where a landing is tested before it is pushed)
+# and the integration branch run everything above, and the schedule or nightly=true the nightly
+# sets.
 #
 on:
   push:
@@ -966,9 +967,9 @@ jobs:
   # p6spy in front of uPortal's JDBC driver in the deployed copy only (docs/query-budgets.md)
   query-budgets:
     name: "Query budgets: hsqldb"
+    # On every push, workstream branches included: a change to uPortal's dependencies raised the
+    # statement counts and reached the integration branch (run 42743207405)
     needs: [uportal]
-    # Prototype only (MOD-D30): on a workstream branch (ccr-43ba0785-hzlrj5-<topic>) nightly only
-    if: ${{ needs.uportal.outputs.set != 'workstream' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
