@@ -34,8 +34,41 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
 
 jobs:
+  # Prototype only: on the integration branch and on a staging branch
+  # (ccr-43ba0785-hzlrj5-landing-<n>), asks whether the slow jobs of this workflow already passed
+  # for this tree (.github/scripts/staged.sh). They are skipped when they did, and the notice of
+  # this job gives the run that passed.
+  staged:
+    name: Staging check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read # to list the markers that earlier runs uploaded
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+      mark: ${{ steps.check.outputs.mark }}
+      key: ${{ steps.check.outputs.key }}
+    steps:
+      - name: Checkout the scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Did the slow jobs already pass for this tree
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+          WORKFLOW: CI
+        run: .github/scripts/staged.sh check
+
   test:
     name: "${{ matrix.platform }} with Java ${{ matrix.java-distribution }} version ${{ matrix.java-version }}"
+    needs: staged
+    if: ${{ needs.staged.outputs.skip != 'true' }}
     strategy:
       fail-fast: false
       # Which cells run (MOD-D55; the one-leg topic push is MOD-D30, prototype only). The build uses
@@ -107,6 +140,43 @@ jobs:
         if: ${{ !success() }}
         run: echo "GRADLE_CACHE_JOB_FAILED=true" >> "$GITHUB_ENV"
         shell: bash
+
+  # Prototype only: a full run on the integration branch or a staging branch records that the slow
+  # jobs passed for this tree. The marker is an artifact that staged.sh looks for. This job runs
+  # only when every job it needs passed.
+  staged-mark:
+    name: Record the pass for this tree
+    needs: [staged, test]
+    if: ${{ needs.staged.outputs.mark == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Write the marker
+        id: marker
+        env:
+          KEY: ${{ needs.staged.outputs.key }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          mkdir marker
+          {
+            echo "workflow=CI"
+            echo "key=$KEY"
+            echo "repository=$GITHUB_REPOSITORY"
+            echo "branch=$BRANCH"
+            echo "commit=$GITHUB_SHA"
+            echo "run=$GITHUB_RUN_ID"
+          } > marker/staged.txt
+          cat marker/staged.txt
+          echo "written=true" >> "$GITHUB_OUTPUT"
+      - name: Upload the marker
+        if: ${{ steps.marker.outputs.written == 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: staged-CI-${{ needs.staged.outputs.key }}
+          path: marker/staged.txt
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
 
   playwright:
     name: "Playwright E2E tests"
