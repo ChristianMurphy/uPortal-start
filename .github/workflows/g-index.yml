@@ -14,7 +14,7 @@ name: G-index
 #             the schedule or a manual run with "nightly"; workstream branches run only the push
 #             job (Prototype only, MOD-D30: CI capacity is shared by the workstreams)
 #
-# Prototype only (MOD-I306): a push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>) runs the
+# Prototype only (MOD-I306): a push to a workstream branch (<type>/<topic>) runs the
 # push job only when it changes persistence, SQL, schema, data files or G-index itself, in
 # uPortal-start or in the uPortal branch of the same name; .github/scripts/gindex-changes.sh lists
 # the paths. The integration branch, a manual run and the schedule always run it.
@@ -26,7 +26,19 @@ on:
   push:
     branches:
       # Prototype only (MOD-I74): run on the modernization branches. Drop before upstreaming.
+      # The names are in .github/scripts/branches.sh, and its table test checks this list.
+      # 'ccr-*' is the scheme from before 2026-11-10. Drop it when those branches are deleted.
       - 'ccr-*'
+      - 'feat/**'
+      - 'fix/**'
+      - 'ci/**'
+      - 'docs/**'
+      - 'test/**'
+      - 'build/**'
+      - 'refactor/**'
+      - 'chore/**'
+      - 'perf/**'
+      - 'staging/landing-*'
   schedule:
     - cron: '17 5 * * *'
   workflow_dispatch:
@@ -45,16 +57,19 @@ on:
         required: false
         default: ''
       uportal-ref:
-        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch ccr-43ba0785-hzlrj5, else master'
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch (feat/uportal-6), else master'
         required: false
         default: ''
 permissions:
   contents: read
 env:
-  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # Prototype only (MOD-D53): a topic branch saves its own Gradle cache. setup-gradle
   # writes the cache only on the default branch by default, and none of our work branches is that
   # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
-  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
+  # A workflow's env can't run branches.sh. So one of our branches is a name with a slash
+  # (fix/<topic>, feat/uportal-6, staging/landing-<n>) or the older ccr-*. The ref name of a
+  # pull request has a slash too (<number>/merge).
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') && (github.event_name == 'pull_request' || !contains(github.ref_name, '/')) }}
   # Prototype only (MOD-D53): the first job of a key to finish saves its Gradle cache, and an entry
   # is never replaced. So one job per runner OS and set of build files saves it, the one whose
   # Gradle work is the broadest, and the other jobs of the key only read (this variable). On the
@@ -64,11 +79,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Prototype only (MOD-D30): a workstream branch runs the one push job, and a newer push cancels
   # the older run; the integration branch keeps every run
-  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') || (contains(github.ref_name, '/') && github.ref_name != 'feat/uportal-6' && github.event_name != 'pull_request') }}
 
 jobs:
   # Prototype only: on the integration branch and on a staging branch
-  # (ccr-43ba0785-hzlrj5-landing-<n>), asks whether the slow jobs of this workflow already passed
+  # (staging/landing-<n>), asks whether the slow jobs of this workflow already passed
   # for this tree and the uPortal commit it builds (.github/scripts/staged.sh). They are skipped
   # when they did, and the notice of this job gives the run that passed.
   staged:
@@ -79,6 +94,7 @@ jobs:
       contents: read
       actions: read # to list the markers that earlier runs uploaded
     outputs:
+      kind: ${{ steps.branch.outputs.kind }}
       skip: ${{ steps.check.outputs.skip }}
       mark: ${{ steps.check.outputs.mark }}
       key: ${{ steps.check.outputs.key }}
@@ -89,11 +105,20 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: .github/scripts
+      # integration, staging, topic or other (.github/scripts/branches.sh), for the jobs below
+      - name: Which kind of branch is this
+        id: branch
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          kind=$(.github/scripts/branches.sh kind "$BRANCH")
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Branch kind::$BRANCH is $kind"
       # The key covers the uPortal commit that such a push builds: the branch of the same name,
       # else the integration branch (choose-uportal.sh).
       - name: Choose the uPortal repository and ref
         id: source
-        if: ${{ github.event_name == 'push' && (github.ref_name == 'ccr-43ba0785-hzlrj5' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-landing-')) }}
+        if: ${{ github.event_name == 'push' && (steps.branch.outputs.kind == 'integration' || steps.branch.outputs.kind == 'staging') }}
         env:
           OWNER: ${{ github.repository_owner }}
           BRANCH: ${{ github.ref_name }}

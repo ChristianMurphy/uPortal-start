@@ -5,7 +5,8 @@
 #   1. the ref given to a manual run (the uportal-ref input), in the repository given (the
 #      uportal-repository input, default <owner>/uPortal);
 #   2. uPortal's branch with the name of this branch;
-#   3. uPortal's integration branch (ccr-43ba0785-hzlrj5);
+#   3. uPortal's integration branch: the first name in branches.sh that uPortal has, so
+#      feat/uportal-6, or ccr-43ba0785-hzlrj5 while uPortal has only that one;
 #   4. master.
 # No prefix of the branch name is tried in between. Dropping one "-suffix" at a time made
 # ccr-x-topic-r3 test the older ccr-x-topic when uPortal had no ccr-x-topic-r3, and the whole run
@@ -20,7 +21,6 @@
 #   OWNER, BRANCH       github.repository_owner and github.ref_name
 #   INPUT_REPOSITORY    the uportal-repository input (empty: <OWNER>/uPortal)
 #   INPUT_REF           the uportal-ref input: a branch, a tag or a commit (empty: the order above)
-#   INTEGRATION         uPortal's integration branch (default ccr-43ba0785-hzlrj5)
 #   GITHUB_URL          where the repositories are (default https://github.com; the table test
 #                       points it at local directories)
 #   RETRY_SECONDS       the wait before the one retry of a failed git call (default 5)
@@ -31,7 +31,9 @@ OWNER=${OWNER:?OWNER is not set}
 BRANCH=${BRANCH:?BRANCH is not set}
 INPUT_REPOSITORY=${INPUT_REPOSITORY:-}
 INPUT_REF=${INPUT_REF:-}
-INTEGRATION=${INTEGRATION:-ccr-43ba0785-hzlrj5}
+# The branch names: INTEGRATION_BRANCHES
+# shellcheck source=.github/scripts/branches.sh
+. "$(dirname "${BASH_SOURCE[0]}")/branches.sh"
 GITHUB_URL=${GITHUB_URL:-https://github.com}
 
 repository=${INPUT_REPOSITORY:-$OWNER/uPortal}
@@ -73,8 +75,10 @@ if [ -n "$INPUT_REF" ]; then
     if [ -z "$sha" ] && [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then sha=$ref; fi
 else
     candidates=("$BRANCH")
-    if [ "$INTEGRATION" != "$BRANCH" ]; then candidates+=("$INTEGRATION"); fi
-    if [ master != "$BRANCH" ] && [ master != "$INTEGRATION" ]; then candidates+=(master); fi
+    for candidate in "${INTEGRATION_BRANCHES[@]}"; do
+        if [ "$candidate" != "$BRANCH" ]; then candidates+=("$candidate"); fi
+    done
+    if [ master != "$BRANCH" ]; then candidates+=(master); fi
     for candidate in "${candidates[@]}"; do
         ls_remote "refs/heads/$candidate"
         found=$(awk -v r="refs/heads/$candidate" '$2 == r { print $1 }' <<< "$LS_OUT")
@@ -83,8 +87,8 @@ else
             sha=$found
             case "$candidate" in
                 "$BRANCH") reason="uPortal has a branch named $BRANCH, like this one" ;;
-                "$INTEGRATION") reason="uPortal has no branch named $BRANCH, so the integration branch" ;;
-                *) reason="uPortal has no branch named $BRANCH and no $INTEGRATION, so master" ;;
+                master) reason="uPortal has no branch named $BRANCH and no integration branch, so master" ;;
+                *) reason="uPortal has no branch named $BRANCH, so the integration branch" ;;
             esac
             break
         fi

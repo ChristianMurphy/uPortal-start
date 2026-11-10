@@ -5,7 +5,19 @@ on:
       - master
       # Prototype only (MOD-I74): run CI on the modernization
       # integration branches. Drop this line before upstreaming.
+      # The names are in .github/scripts/branches.sh, and its table test checks this list.
+      # 'ccr-*' is the scheme from before 2026-11-10. Drop it when those branches are deleted.
       - 'ccr-*'
+      - 'feat/**'
+      - 'fix/**'
+      - 'ci/**'
+      - 'docs/**'
+      - 'test/**'
+      - 'build/**'
+      - 'refactor/**'
+      - 'chore/**'
+      - 'perf/**'
+      - 'staging/landing-*'
   pull_request:
     branches:
       - master
@@ -18,10 +30,13 @@ on:
 permissions:
   contents: read
 env:
-  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # Prototype only (MOD-D53): a topic branch saves its own Gradle cache. setup-gradle
   # writes the cache only on the default branch by default, and none of our work branches is that
   # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
-  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
+  # A workflow's env can't run branches.sh. So one of our branches is a name with a slash
+  # (fix/<topic>, feat/uportal-6, staging/landing-<n>) or the older ccr-*. The ref name of a
+  # pull request has a slash too (<number>/merge).
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') && (github.event_name == 'pull_request' || !contains(github.ref_name, '/')) }}
   # Prototype only (MOD-D53): the first job of a key to finish saves its Gradle cache, and an entry
   # is never replaced. So one job per runner OS and set of build files saves it, the one whose
   # Gradle work is the broadest, and the other jobs of the key only read (this variable). On the
@@ -29,13 +44,13 @@ env:
   GRADLE_CACHE_READ_ONLY_SHARED: ${{ github.event.repository.default_branch != github.ref_name }}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
+  # Prototype only (MOD-D30): a newer push to a workstream branch (<type>/<topic>)
   # cancels the older run.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') || (contains(github.ref_name, '/') && github.ref_name != 'feat/uportal-6') }}
 
 jobs:
   # Prototype only: on the integration branch and on a staging branch
-  # (ccr-43ba0785-hzlrj5-landing-<n>), asks whether the slow jobs of this workflow already passed
+  # (staging/landing-<n>), asks whether the slow jobs of this workflow already passed
   # for this tree (.github/scripts/staged.sh). They are skipped when they did, and the notice of
   # this job gives the run that passed.
   staged:
@@ -46,6 +61,7 @@ jobs:
       contents: read
       actions: read # to list the markers that earlier runs uploaded
     outputs:
+      kind: ${{ steps.branch.outputs.kind }}
       skip: ${{ steps.check.outputs.skip }}
       mark: ${{ steps.check.outputs.mark }}
       key: ${{ steps.check.outputs.key }}
@@ -55,6 +71,15 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: .github/scripts
+      # integration, staging, topic or other (.github/scripts/branches.sh), for the jobs below
+      - name: Which kind of branch is this
+        id: branch
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          kind=$(.github/scripts/branches.sh kind "$BRANCH")
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Branch kind::$BRANCH is $kind"
       - name: Did the slow jobs already pass for this tree
         id: check
         env:
@@ -73,15 +98,15 @@ jobs:
       fail-fast: false
       # Which cells run (MOD-D55; the one-leg topic push is MOD-D30, prototype only). The build uses
       # one JDK for Tomcat and the data tools, 11, so the cells differ in platform and vendor:
-      #   push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>): Linux, Temurin;
+      #   push to a workstream branch (<type>/<topic>): Linux, Temurin;
       #   master, pull requests, the integration branch, a staging branch
-      #   (ccr-43ba0785-hzlrj5-landing-<n>) and a manual run on any branch:
+      #   (staging/landing-<n>) and a manual run on any branch:
       #     Linux, Windows and macOS with Temurin;
       #   a manual run with "nightly" ticked: those, plus Linux with Zulu and Corretto.
       matrix: >-
         ${{ fromJSON(
         inputs.nightly == true && '{"platform":["ubuntu-latest"],"java-distribution":["temurin","zulu","corretto"],"java-version":[11],"include":[{"platform":"windows-latest","java-distribution":"temurin","java-version":11},{"platform":"macos-latest","java-distribution":"temurin","java-version":11}]}'
-        || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && !startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-landing-') && github.event_name != 'workflow_dispatch' && '{"include":[{"platform":"ubuntu-latest","java-distribution":"temurin","java-version":11}]}'
+        || needs.staged.outputs.kind == 'topic' && github.event_name != 'workflow_dispatch' && '{"include":[{"platform":"ubuntu-latest","java-distribution":"temurin","java-version":11}]}'
         || '{"platform":["ubuntu-latest"],"java-distribution":["temurin"],"java-version":[11],"include":[{"platform":"windows-latest","java-distribution":"temurin","java-version":11},{"platform":"macos-latest","java-distribution":"temurin","java-version":11}]}') }}
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 15
@@ -180,11 +205,13 @@ jobs:
 
   playwright:
     name: "Playwright E2E tests"
-    # Prototype only (MOD-D30, MOD-I74): the ccr-* branches carry data and specs that need
+    # Prototype only (MOD-D30, MOD-I74): the modernization branches carry data and specs that need
     # unreleased uPortal (MOD-I135), and the Integration workflow runs Playwright there against
-    # uPortal built from source, so this released-uPortal run is skipped on every ccr-* branch.
-    # It still runs on master and pull requests.
-    if: ${{ !startsWith(github.ref_name, 'ccr-') }}
+    # uPortal built from source. So this released-uPortal run is skipped on the integration branch,
+    # the staging branches and the topic branches (.github/scripts/branches.sh), and on any other
+    # ccr-* branch as before. It still runs on master and pull requests.
+    needs: staged
+    if: ${{ needs.staged.outputs.kind == 'other' && !startsWith(github.ref_name, 'ccr-') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -301,13 +328,14 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: |
           # The commits this push or pull request adds. Prototype only: a new topic or staging
-          # branch (ccr-43ba0785-hzlrj5-<name>) is checked from where it left the integration
-          # branch. Any other new branch is checked from the commit that added each script onwards.
+          # branch is checked from where it left the integration branch, and a new name of the
+          # integration branch from where it left the older name (.github/scripts/branches.sh).
+          # Any other new branch is checked from the commit that added each script onwards.
           if [ -n "$PR_BASE" ]; then
             range="$PR_BASE..HEAD"
           elif [ -n "$EVENT_BEFORE" ] && ! [[ "$EVENT_BEFORE" =~ ^0+$ ]] && git cat-file -e "$EVENT_BEFORE^{commit}" 2>/dev/null; then
             range="$EVENT_BEFORE..HEAD"
-          elif [[ "$BRANCH" == ccr-43ba0785-hzlrj5-* ]] && base=$(git merge-base origin/ccr-43ba0785-hzlrj5 HEAD 2>/dev/null); then
+          elif base=$(.github/scripts/branches.sh base "$BRANCH"); then
             range="$base..HEAD"
           else
             range=HEAD

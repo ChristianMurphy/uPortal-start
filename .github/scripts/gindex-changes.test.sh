@@ -46,6 +46,14 @@ row() {
     mkdir -p "$dir"
     make_repo "$dir/start-origin" README.md
     make_repo "$dir/uportal" README.md
+    if [ -n "${STALE:-}" ]; then
+        # an older integration branch stays behind, and the current one has since changed files
+        # that G-index measures
+        git_in "$dir/start-origin" branch -q "$STALE"
+        git_in "$dir/uportal" branch -q "$STALE"
+        change "$dir/start-origin" tests/db/gindex/later.sh
+        change "$dir/uportal" uPortal-webapp/src/main/resources/properties/db/later.sql
+    fi
     if [ "$branch" != "$INT" ]; then
         git_in "$dir/start-origin" checkout -q -b "$branch"
         if [ "$start_files" != "-" ]; then
@@ -62,7 +70,7 @@ row() {
     fi
     git clone -q "$dir/start-origin" "$dir/start"
     git_in "$dir/start" checkout -q "$branch" 2> /dev/null || true
-    out=$(EVENT_NAME="$event" BRANCH="$branch" INTEGRATION="$INT" START_DIR="$dir/start" \
+    out=$(EVENT_NAME="$event" BRANCH="$branch" START_DIR="$dir/start" \
         UPORTAL_URL="file://$dir/uportal" GITHUB_OUTPUT="" "$SCRIPT" 2>&1)
     answer=$(sed -n 's/^run=//p' <<< "$out")
     if [ "$answer" = "$expected" ]; then
@@ -126,7 +134,7 @@ git clone -q "$dir/start-origin" "$dir/start"
 git_in "$dir/start" checkout -q "$TOPIC"
 git_in "$dir/start" branch -q -D --remotes "origin/$INT" 2> /dev/null || git_in "$dir/start" update-ref -d "refs/remotes/origin/$INT"
 cases=$((cases + 1))
-out=$(EVENT_NAME=push BRANCH="$TOPIC" INTEGRATION="$INT" START_DIR="$dir/start" UPORTAL_URL="" GITHUB_OUTPUT="" "$SCRIPT" 2>&1)
+out=$(EVENT_NAME=push BRANCH="$TOPIC" START_DIR="$dir/start" UPORTAL_URL="" GITHUB_OUTPUT="" "$SCRIPT" 2>&1)
 if [ "$(sed -n 's/^run=//p' <<< "$out")" = true ]; then
     printf 'ok    %-58s run=true\n' "origin/$INT is missing in start (unsure)"
 else
@@ -134,6 +142,36 @@ else
     sed 's/^/        /' <<< "$out"
     failures=$((failures + 1))
 fi
+
+# The names since 2026-11-10 (branches.sh). The rows above use the names from before, which count
+# until those branches are deleted.
+OLD=$INT
+INT=feat/uportal-6
+row "new names: web component only (uPortal)"              false push fix/search - "uPortal-webcomponents/src/search/search.ts"
+must_say "Checked uPortal-start against origin/feat/uportal-6"
+row "new names: uPortal DAO change"                        true  push fix/search - "uPortal-layout/uPortal-layout-core/src/main/java/org/apereo/portal/layout/dao/jpa/JpaFoo.java"
+row "new names: data file (start)"                         true  push ci/semantic-proof "data/base/user/x.user.xml" -
+row "new names: Playwright spec only, no uPortal branch"   false push test/search-spec "tests/ux/search.spec.ts" none
+row "new names: integration branch push, no change"        true  push "$INT" - none
+row "new names: staging branch push, no matching change"   true  push staging/landing-3 "tests/ux/search.spec.ts" "uPortal-webcomponents/src/a.ts"
+must_say "staging/landing-3 is a staging branch"
+row "a topic that starts like the integration branch"      false push feat/uportal-6-x "tests/ux/search.spec.ts" none
+row "staging/other is no branch of ours: it runs"          true  push staging/other "tests/ux/search.spec.ts" none
+must_say "is not a push to a topic branch"
+row "new names: manual run on a topic branch"              true  workflow_dispatch fix/search - "uPortal-webcomponents/src/a.ts"
+row "an old topic name, new integration branch"            false push "$OLD-search" "tests/ux/search.spec.ts" "uPortal-webcomponents/src/a.ts"
+# both integration names exist: the topic is compared with the current one, not with the stale one
+STALE=$OLD
+row "both integration names, docs only in both"            false push fix/search "docs/developer/x.md" "docs/developer/y.md"
+must_say "Checked uPortal-start against origin/feat/uportal-6"
+row "both integration names, uPortal SQL file"             true  push fix/search - "uPortal-portlets/src/main/resources/db/fix.sql"
+must_say "0 matching files in uPortal-start, 1 in uPortal"
+STALE=
+# only the old integration name exists, and the topic has a new name
+INT=$OLD
+row "a new topic name, old integration branch"             false push fix/search "tests/ux/search.spec.ts" "uPortal-webcomponents/src/a.ts"
+must_say "Checked uPortal-start against origin/$OLD"
+row "a new topic name, old integration branch, start data" true  push fix/search "data/base/user/x.user.xml" -
 
 echo "$cases rows, $failures failed"
 [ "$failures" -eq 0 ]

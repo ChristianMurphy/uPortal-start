@@ -21,10 +21,13 @@ on:
 permissions:
   contents: read
 env:
-  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # Prototype only (MOD-D53): a topic branch saves its own Gradle cache. setup-gradle
   # writes the cache only on the default branch by default, and none of our work branches is that
   # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
-  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
+  # A workflow's env can't run branches.sh. So one of our branches is a name with a slash
+  # (fix/<topic>, feat/uportal-6, staging/landing-<n>) or the older ccr-*. The ref name of a
+  # pull request has a slash too (<number>/merge).
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') && (github.event_name == 'pull_request' || !contains(github.ref_name, '/')) }}
   # Prototype only (MOD-D53): the first job of a key to finish saves its Gradle cache, and an entry
   # is never replaced. So one job per runner OS and set of build files saves it, the one whose
   # Gradle work is the broadest, and the other jobs of the key only read (this variable). On the
