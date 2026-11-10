@@ -101,9 +101,10 @@ jobs:
       replay: ${{ steps.mode.outputs.replay }}
     steps:
       # Prototype only (MOD-D30): on a workstream branch (ccr-43ba0785-hzlrj5-<topic>) the replay
-      # runs only when the push changes the replay itself; the integration branch replays on every
-      # push. A new branch (no previous commit to compare with) replays. The checkout also brings
-      # the script that chooses the uPortal to build (MOD-I307), on every kind of run.
+      # runs only when the push changes the replay itself; the integration branch and a staging
+      # branch (ccr-43ba0785-hzlrj5-landing-<n>) replay on every push. A new branch (no previous
+      # commit to compare with) replays. The checkout also brings the script that chooses the
+      # uPortal to build (MOD-I307), on every kind of run.
       - name: Checkout the history to compare
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -116,7 +117,7 @@ jobs:
         id: mode
         env:
           EVENT: ${{ github.event_name }}
-          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && !startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-landing-') }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: |
