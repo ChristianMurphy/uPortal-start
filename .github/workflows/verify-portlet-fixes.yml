@@ -1,0 +1,68 @@
+name: Verify portlet fixes in a portal
+#
+# Checks two portlet fixes in a portal: this branch is uPortal-start's master (2a519ad) plus the
+# files under .github/verify/portlets, so the portal is the one uPortal-start builds from its
+# gradle.properties.example (uPortal 5.17.9, HSQLDB) on JDK 11.
+#
+#   calendar    CalendarPortlet, fix/calendar-labels-json. A user whose language is French opens
+#               the Calendar in its narrow and its wide view. What the element shows and what it
+#               logs is recorded with the released 2.7.4 and then with the branch's war.
+#   newsreader  NewsReaderPortlet, fix/news-set-two-sessions. Two sessions of one user render the
+#               same NewsReader portlet at the same moment, for ten minutes, with the released
+#               5.1.5 and then with the branch's war. The count is the number of "Illegal attempt
+#               to associate a collection with two open sessions" exceptions in the logs.
+#
+# .github/verify/portlets/verify.sh has the steps. A job fails if a check fails with the fix
+# deployed. What the released portlet did is reported, not judged.
+#
+on:
+  push:
+    branches:
+      - test/verify-portlet-fixes
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portal:
+    name: "Verify in a portal: ${{ matrix.portlet }}${{ matrix.shard && format(' ({0} of 3)', matrix.shard) || '' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - portlet: calendar
+          - portlet: newsreader
+            shard: 1
+          - portlet: newsreader
+            shard: 2
+          - portlet: newsreader
+            shard: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Check the fix in a portal, before and after
+        env:
+          PORTLET: ${{ matrix.portlet }}
+          CHECK_SECONDS: 600
+          CHECK_SEED: ${{ matrix.shard || 1 }}
+        run: .github/verify/portlets/verify.sh "$PORTLET" "$PWD" "$RUNNER_TEMP/out"
+      - name: Upload the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-${{ matrix.portlet }}${{ matrix.shard && format('-{0}', matrix.shard) || '' }}
+          path: ${{ runner.temp }}/out
