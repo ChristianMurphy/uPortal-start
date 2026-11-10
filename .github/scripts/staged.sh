@@ -3,7 +3,7 @@
 # uPortal's docs/developer/modernization/notes/ci-prelanding.md.)
 #
 # A landing is tested before it reaches the integration branch. The coordinator pushes it to a
-# staging branch (ccr-43ba0785-hzlrj5-landing-<n>), where every workflow runs the jobs that the
+# staging branch (staging/landing-<n>), where every workflow runs the jobs that the
 # integration branch runs. When the slow jobs of a workflow pass, its last job uploads a marker: an
 # artifact named staged-<workflow>-<key>. The key is a hash of the tree those jobs tested. A later
 # push with the same key, such as the landing itself, finds the marker and skips the slow jobs.
@@ -27,7 +27,8 @@
 #       missing
 #
 # A marker counts only when a push run of the same workflow file uploaded it, in this repository,
-# on the integration branch or a staging branch. When anything is unclear (GitHub does not answer,
+# on the integration branch or a staging branch. branches.sh has the names, the ones from before
+# 2026-11-10 included, so a marker from a run on an old name still counts. When anything is unclear (GitHub does not answer,
 # the tree cannot be listed, no uPortal commit), check says skip=false and the jobs run.
 #
 # Environment:
@@ -38,7 +39,6 @@
 #   UPORTAL_URL, UPORTAL_SHA
 #                 for check: the uPortal that the run builds, when the workflow builds one
 #   OWNER         for landing: the owner of both repositories (default ChristianMurphy)
-#   INTEGRATION   the integration branch (default ccr-43ba0785-hzlrj5)
 #   GH_TOKEN      for gh, with read access to the repository's Actions
 # The table test is .github/scripts/staged.test.sh.
 set -uo pipefail
@@ -49,8 +49,9 @@ NAME=uPortal-start
 OWN_TREE=(CI)
 WITH_UPORTAL=(integration g-index migration-equivalence replay)
 
-INTEGRATION=${INTEGRATION:-ccr-43ba0785-hzlrj5}
-STAGING_PREFIX="$INTEGRATION-landing-"
+# The branch names: branch_kind and integration_on
+# shellcheck source=.github/scripts/branches.sh
+. "$(dirname "${BASH_SOURCE[0]}")/branches.sh"
 # Files that no slow job reads: the Markdown notes, log and guide of the modernization, and the
 # coordinator's Markdown files. A landing adds its log entry here after the staging runs. The
 # Prose job reads them, and it is never skipped. Add a path only when no build, test or lint step
@@ -106,8 +107,8 @@ find_marker() {  # find_marker <workflow> <key>
             echo "Artifact $artifact (run $run) comes from another repository; not used" >&2
             continue
         fi
-        case "$branch" in
-            "$INTEGRATION" | "$STAGING_PREFIX"?*) ;;
+        case "$(branch_kind "$branch")" in
+            integration | staging) ;;
             *)
                 echo "Artifact $artifact (run $run) comes from branch '$branch'; not used" >&2
                 continue
@@ -133,8 +134,8 @@ check() {
     BRANCH=${BRANCH:?BRANCH is not set}
     WORKFLOW=${WORKFLOW:?WORKFLOW is not set}
     REPOSITORY=${REPOSITORY:?REPOSITORY is not set}
-    case "$EVENT_NAME:$BRANCH" in
-        push:"$INTEGRATION" | push:"$STAGING_PREFIX"?*)
+    case "$EVENT_NAME:$(branch_kind "$BRANCH")" in
+        push:integration | push:staging)
             if [ -n "${UPORTAL_URL:-}" ]; then
                 key=$(key "$UPORTAL_URL" "${UPORTAL_SHA:-}")
             else
@@ -177,13 +178,14 @@ check() {
 }
 
 landing() {
-    local owner=${OWNER:-ChristianMurphy} missing=0 workflow key uportal_url uportal_sha found
+    local owner=${OWNER:-ChristianMurphy} missing=0 workflow key uportal_url uportal_branch uportal_sha found
     REPOSITORY="$owner/$NAME"
     for workflow in "${OWN_TREE[@]}" "${WITH_UPORTAL[@]}"; do
         if [[ " ${WITH_UPORTAL[*]} " == *" $workflow "* ]]; then
             if [ -z "${uportal_sha:-}" ]; then
                 uportal_url="https://github.com/$owner/uPortal"
-                uportal_sha=$(git ls-remote "$uportal_url" "refs/heads/$INTEGRATION" | cut -f1)
+                uportal_branch=$(integration_on "$uportal_url")
+                uportal_sha=$(git ls-remote "$uportal_url" "refs/heads/$uportal_branch" | cut -f1)
             fi
             key=$(key "$uportal_url" "$uportal_sha")
         else
@@ -199,7 +201,7 @@ landing() {
             missing=1
         fi
     done
-    if [ -n "${uportal_sha:-}" ]; then echo "uPortal's $INTEGRATION is at $uportal_sha"; fi
+    if [ -n "${uportal_sha:-}" ]; then echo "uPortal's $uportal_branch is at $uportal_sha"; fi
     return "$missing"
 }
 

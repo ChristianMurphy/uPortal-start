@@ -48,7 +48,7 @@ row() {
     head_sha=$(git_in "$dir/owner/uPortal" rev-parse HEAD)
     set -- "${@//SHA_OF_HEAD/$head_sha}"
     expected=${expected//SHA_OF_HEAD/$head_sha}
-    out=$(env OWNER=owner BRANCH="$this_branch" INTEGRATION="$INT" GITHUB_URL="file://$dir" RETRY_SECONDS=0 \
+    out=$(env OWNER=owner BRANCH="$this_branch" GITHUB_URL="file://$dir" RETRY_SECONDS=0 \
         GITHUB_STEP_SUMMARY="" GITHUB_OUTPUT="" "$@" "$SCRIPT" 2>&1)
     status=$?
     answer=$(sed -n 's/^ref=//p' <<< "$out")
@@ -100,6 +100,25 @@ row "a manual run gives a ref with a space"                 FAIL    "master,$INT
 row "a repository with a slash too many"                    FAIL    "master,$INT" "$R3" INPUT_REPOSITORY="a/b/c"
 row "none of the three branches exists"                     FAIL    "-master,$E2E" "$R3"
 row "the repository cannot be reached"                      FAIL    "master,$INT" "$R3" GITHUB_URL="file://$WORK/nowhere"
+
+# The names since 2026-11-10 (branches.sh). The rows above use the names from before, which count
+# until those branches are deleted.
+NEW=feat/uportal-6
+row "new names: a topic branch of the same name exists"     ci/semantic-proof "master,$INT,$NEW,ci/semantic-proof" ci/semantic-proof
+must_say "uPortal has a branch named ci/semantic-proof, like this one"
+row "new names: a staging branch of the same name exists"   staging/landing-13 "master,$INT,$NEW,staging/landing-13" staging/landing-13
+row "new names: no same name, both integration names: the new one" "$NEW" "master,$INT,$NEW" fix/topic
+must_say "uPortal has no branch named fix/topic, so the integration branch"
+row "new names: no same name, only the old integration name" "$INT" "master,$INT,fix/other" fix/topic
+must_say "uPortal has no branch named fix/topic, so the integration branch"
+row "an old topic name, both integration names: the new one" "$NEW" "master,$INT,$NEW" "$R3"
+row "this branch is the new integration branch"             "$NEW"  "master,$INT,$NEW" "$NEW"
+row "the new integration branch before uPortal has it: the old one" "$INT" "master,$INT" "$NEW"
+row "this branch is the old integration branch, both exist" "$INT"  "master,$INT,$NEW" "$INT"
+row "a topic that starts like the integration branch: no prefix is tried" "$INT" "master,$INT,feat/uportal" feat/uportal-6-x
+row "new names: no same name, no integration branch: master" master "master,fix/other" fix/topic
+must_say "and no integration branch, so master"
+row "master, both integration names exist"                  master  "master,$INT,$NEW" master
 
 echo "$cases rows, $failures failed"
 [ "$failures" -eq 0 ]

@@ -3,22 +3,24 @@
 #
 # G-index loads a large database and runs the portal against it for about an hour, and it
 # measures the schema, the queries and the indexes. A push to a topic branch
-# (ccr-43ba0785-hzlrj5-<topic>) that touches none of those has nothing new for it to measure.
+# (<type>/<topic>) that touches none of those has nothing new for it to measure.
+# branches.sh says which branch is a topic, a staging or the integration branch.
 # This script says "run" for every other kind of run, and for a topic push only when the push
 # changes persistence, SQL, schema, data files or G-index itself:
 #
-#   - the integration branch, a staging branch (ccr-43ba0785-hzlrj5-landing-<n>, where a landing
+#   - the integration branch, a staging branch (staging/landing-<n>, where a landing
 #     is tested before it is pushed), a manual run and the nightly run always run G-index;
 #   - on a topic push, two lists of changed files are compared with the paths below. The first is
 #     uPortal-start's own (the topic branch against origin/<integration branch>); the second is
 #     the uPortal branch of the same name, if there is one, against uPortal's integration branch.
+#     The integration branch is the first name in branches.sh that the repository has.
 #   - when the script cannot tell (a branch or a history it cannot fetch), it runs G-index.
 #
 # Environment:
 #   EVENT_NAME   github.event_name
 #   BRANCH       github.ref_name
-#   INTEGRATION  the integration branch (default ccr-43ba0785-hzlrj5)
-#   START_DIR    a checkout of uPortal-start with the history of origin/<INTEGRATION> (default .)
+#   START_DIR    a checkout of uPortal-start with the history of origin/<integration branch>
+#                (default .)
 #   UPORTAL_URL  where to fetch uPortal from; empty skips the uPortal check
 #
 # It writes run=true or run=false and a one-line report to $GITHUB_OUTPUT (to standard output when
@@ -34,7 +36,9 @@ set -uo pipefail
 
 EVENT_NAME=${EVENT_NAME:?EVENT_NAME is not set}
 BRANCH=${BRANCH:?BRANCH is not set}
-INTEGRATION=${INTEGRATION:-ccr-43ba0785-hzlrj5}
+# The branch names: branch_kind, integration_ref and integration_on
+# shellcheck source=.github/scripts/branches.sh
+. "$(dirname "${BASH_SOURCE[0]}")/branches.sh"
 START_DIR=${START_DIR:-.}
 UPORTAL_URL=${UPORTAL_URL:-}
 LIST_LIMIT=40
@@ -75,19 +79,23 @@ bullets() {  # bullets <label> <files>: the first LIST_LIMIT files, one bullet e
     if [ "$total" -gt "$LIST_LIMIT" ]; then echo "- and $((total - LIST_LIMIT)) more"; fi
 }
 
-case "$EVENT_NAME:$BRANCH" in
-    push:"$INTEGRATION"-landing-?*)
+case "$EVENT_NAME:$(branch_kind "$BRANCH")" in
+    push:staging)
         finish true "run" "run: $BRANCH is a staging branch" \
-            "$BRANCH is a staging branch of $INTEGRATION, which always runs G-index." ;;
-    push:"$INTEGRATION"-*) ;;
+            "$BRANCH is a staging branch, which always runs G-index." ;;
+    push:topic) ;;
     *) finish true "run" "run: $EVENT_NAME on $BRANCH is not a push to a topic branch" \
-        "$EVENT_NAME on $BRANCH is not a push to a topic branch of $INTEGRATION, which always runs G-index." ;;
+        "$EVENT_NAME on $BRANCH is not a push to a topic branch, so G-index always runs." ;;
 esac
 
 # uPortal-start's own changes
-if ! start_files=$(git -C "$START_DIR" diff --no-renames --name-only "origin/$INTEGRATION...HEAD" 2>&1); then
-    finish true "run" "run: could not compare this push with origin/$INTEGRATION" \
-        "Could not compare this push with origin/$INTEGRATION, so G-index runs to be safe:" '```' "$start_files" '```'
+if ! integration=$(integration_ref "$START_DIR"); then
+    finish true "run" "run: this checkout has no integration branch to compare with" \
+        "This checkout has none of origin/${INTEGRATION_BRANCHES[*]}, so G-index runs to be safe."
+fi
+if ! start_files=$(git -C "$START_DIR" diff --no-renames --name-only "$integration...HEAD" 2>&1); then
+    finish true "run" "run: could not compare this push with $integration" \
+        "Could not compare this push with $integration, so G-index runs to be safe:" '```' "$start_files" '```'
 fi
 start_matched=$(printf '%s\n' "$start_files" | grep -E -i -- "$START_PATHS" || true)
 
@@ -98,14 +106,18 @@ if [ -n "$UPORTAL_URL" ]; then
     git ls-remote --exit-code --heads "$UPORTAL_URL" "refs/heads/$BRANCH" > /dev/null 2>&1
     case $? in
         0)
+            if ! uportal_integration=$(integration_on "$UPORTAL_URL"); then
+                finish true "run" "run: could not find uPortal's integration branch" \
+                    "Could not find uPortal's integration branch (${INTEGRATION_BRANCHES[*]}), so G-index runs to be safe."
+            fi
             tmp=$(mktemp -d)
             trap 'rm -rf "$tmp"' EXIT
             git -C "$tmp" init -q
             if ! git -C "$tmp" fetch -q --no-tags --filter=blob:none "$UPORTAL_URL" \
-                    "+refs/heads/$INTEGRATION:refs/remotes/u/integration" "+refs/heads/$BRANCH:refs/remotes/u/topic" 2> "$tmp/fetch.err" ||
+                    "+refs/heads/$uportal_integration:refs/remotes/u/integration" "+refs/heads/$BRANCH:refs/remotes/u/topic" 2> "$tmp/fetch.err" ||
                 ! uportal_files=$(git -C "$tmp" diff --no-renames --name-only u/integration...u/topic 2>&1); then
-                finish true "run" "run: could not compare uPortal's $BRANCH with its $INTEGRATION" \
-                    "Could not compare uPortal's $BRANCH with its $INTEGRATION, so G-index runs to be safe:" '```' "$(cat "$tmp/fetch.err" 2> /dev/null)" "${uportal_files:-}" '```'
+                finish true "run" "run: could not compare uPortal's $BRANCH with its $uportal_integration" \
+                    "Could not compare uPortal's $BRANCH with its $uportal_integration, so G-index runs to be safe:" '```' "$(cat "$tmp/fetch.err" 2> /dev/null)" "${uportal_files:-}" '```'
             fi
             uportal_matched=$(printf '%s\n' "$uportal_files" | grep -E -i -- "$UPORTAL_PATHS" || true)
             uportal_note="uPortal branch $BRANCH, $(printf '%s\n' "$uportal_files" | grep -c .) changed files"
@@ -118,7 +130,7 @@ fi
 
 if [ -z "$start_matched" ] && [ -z "$uportal_matched" ]; then
     finish false "skipped" "skipped: no matching changes, G-index skipped" "no matching changes, G-index skipped" "" \
-        "Checked uPortal-start against origin/$INTEGRATION ($(printf '%s\n' "$start_files" | grep -c .) changed files) and uPortal ($uportal_note)."
+        "Checked uPortal-start against $integration ($(printf '%s\n' "$start_files" | grep -c .) changed files) and uPortal ($uportal_note)."
 fi
 
 lines=("This push changes files that G-index measures:" "")

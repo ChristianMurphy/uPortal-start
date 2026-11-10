@@ -4,7 +4,7 @@ name: Migration equivalence
 # wrote? See docs/migration-equivalence.md and tests/db/equivalence.sh.
 #
 #   1. builds uPortal (by default the branch of the same name in <owner>/uPortal, else its integration
-#      branch ccr-43ba0785-hzlrj5, else master),
+#      branch feat/uportal-6, else master),
 #      as integration.yml does, and hands its ~/.m2 to the other jobs;
 #   2. in place: on each database, uPortal 5.17.9 creates the schema, imports the quickstart data
 #      and the fixture (tests/db/equivalence/fixture), starts once and exports everything; that
@@ -18,7 +18,7 @@ name: Migration equivalence
 #
 # The vendors come from tests/db/equivalence/matrix.json: on the integration branch HSQLDB,
 # PostgreSQL 18 and MariaDB 12.3 in place and two cross-vendor copies; on a workstream branch
-# (ccr-43ba0785-hzlrj5-<topic>, MOD-D30) PostgreSQL 18 in place and one copy; nightly every 6.0
+# (<type>/<topic>, MOD-D30) PostgreSQL 18 in place and one copy; nightly every 6.0
 # runtime server in place and a copy from and into every vendor. Differences are shown in the job
 # summary and as annotations.
 #
@@ -27,7 +27,19 @@ on:
     branches:
       # Prototype only (MOD-I74): run on the modernization integration branches. Drop this
       # trigger before upstreaming.
+      # The names are in .github/scripts/branches.sh, and its table test checks this list.
+      # 'ccr-*' is the scheme from before 2026-11-10. Drop it when those branches are deleted.
       - 'ccr-*'
+      - 'feat/**'
+      - 'fix/**'
+      - 'ci/**'
+      - 'docs/**'
+      - 'test/**'
+      - 'build/**'
+      - 'refactor/**'
+      - 'chore/**'
+      - 'perf/**'
+      - 'staging/landing-*'
   schedule:
     - cron: '23 5 * * *'
   workflow_dispatch:
@@ -42,16 +54,19 @@ on:
         required: false
         default: ''
       uportal-ref:
-        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch ccr-43ba0785-hzlrj5, else master'
+        description: 'Branch, tag or commit of uPortal to build; empty means the branch of the same name, else the integration branch (feat/uportal-6), else master'
         required: false
         default: ''
 permissions:
   contents: read
 env:
-  # Prototype only (MOD-D53): a topic branch (ccr-*) saves its own Gradle cache. setup-gradle
+  # Prototype only (MOD-D53): a topic branch saves its own Gradle cache. setup-gradle
   # writes the cache only on the default branch by default, and none of our work branches is that
   # one, so no job ever saved or restored a cache. Pull requests keep the action's default.
-  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') }}
+  # A workflow's env can't run branches.sh. So one of our branches is a name with a slash
+  # (fix/<topic>, feat/uportal-6, staging/landing-<n>) or the older ccr-*. The ref name of a
+  # pull request has a slash too (<number>/merge).
+  GRADLE_CACHE_READ_ONLY: ${{ github.event.repository.default_branch != github.ref_name && !startsWith(github.ref_name, 'ccr-') && (github.event_name == 'pull_request' || !contains(github.ref_name, '/')) }}
   # Prototype only (MOD-D53): the first job of a key to finish saves its Gradle cache, and an entry
   # is never replaced. So one job per runner OS and set of build files saves it, the one whose
   # Gradle work is the broadest, and the other jobs of the key only read (this variable). On the
@@ -63,13 +78,13 @@ concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.ref }}-${{
     (github.event_name == 'schedule' || inputs.nightly) && 'nightly' || 'push' }}
-  # Prototype only (MOD-D30): a newer push to a workstream branch (ccr-43ba0785-hzlrj5-<topic>)
+  # Prototype only (MOD-D30): a newer push to a workstream branch (<type>/<topic>)
   # cancels the older run.
-  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+  cancel-in-progress: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') || (contains(github.ref_name, '/') && github.ref_name != 'feat/uportal-6' && github.event_name != 'pull_request') }}
 
 jobs:
   # Prototype only: on the integration branch and on a staging branch
-  # (ccr-43ba0785-hzlrj5-landing-<n>), asks whether the slow jobs of this workflow already passed
+  # (staging/landing-<n>), asks whether the slow jobs of this workflow already passed
   # for this tree and the uPortal commit it builds (.github/scripts/staged.sh). They are skipped
   # when they did, and the notice of this job gives the run that passed.
   staged:
@@ -80,6 +95,7 @@ jobs:
       contents: read
       actions: read # to list the markers that earlier runs uploaded
     outputs:
+      kind: ${{ steps.branch.outputs.kind }}
       skip: ${{ steps.check.outputs.skip }}
       mark: ${{ steps.check.outputs.mark }}
       key: ${{ steps.check.outputs.key }}
@@ -90,11 +106,20 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: .github/scripts
+      # integration, staging, topic or other (.github/scripts/branches.sh), for the jobs below
+      - name: Which kind of branch is this
+        id: branch
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          kind=$(.github/scripts/branches.sh kind "$BRANCH")
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Branch kind::$BRANCH is $kind"
       # The key covers the uPortal commit that such a push builds: the branch of the same name,
       # else the integration branch (choose-uportal.sh).
       - name: Choose the uPortal repository and ref
         id: source
-        if: ${{ github.event_name == 'push' && (github.ref_name == 'ccr-43ba0785-hzlrj5' || startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-landing-')) }}
+        if: ${{ github.event_name == 'push' && (steps.branch.outputs.kind == 'integration' || steps.branch.outputs.kind == 'staging') }}
         env:
           OWNER: ${{ github.repository_owner }}
           BRANCH: ${{ github.ref_name }}
@@ -144,13 +169,13 @@ jobs:
         working-directory: plan
         run: python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'
       # Prototype only (MOD-D30): a workstream branch runs the light set. A staging branch
-      # (ccr-43ba0785-hzlrj5-landing-<n>) runs the set of the integration branch.
+      # (staging/landing-<n>) runs the set of the integration branch.
       - name: Choose the push, workstream or nightly set
         id: matrix
         working-directory: plan
         env:
           NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
-          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && !startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-landing-') }}
+          WORKSTREAM: ${{ needs.staged.outputs.kind == 'topic' }}
         run: |
           set_name=push
           if [ "$NIGHTLY" = true ]; then

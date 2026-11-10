@@ -169,6 +169,27 @@ row "the artifacts can't be listed"                          false true  push "$
 row "the repository can't be read"                           false true  push "$INTEGRATION" "11 101 42 $STAGING" "101=$PUSH" "fail-repository"
 row "the run can't be read"                                  false true  push "$INTEGRATION" "11 101 42 $STAGING" "101=$PUSH" "fail-run-101"
 
+# The names since 2026-11-10 (branches.sh). The rows above use the names from before, which count
+# until those branches are deleted, and a marker under either name counts for a push to either.
+NEW=feat/uportal-6
+NEW_STAGING=staging/landing-7
+row "new names: integration branch, no marker"               false true  push "$NEW" "" ""
+row "new names: staging branch, no marker"                   false true  push "$NEW_STAGING" "" ""
+row "new integration branch, marker from a new staging one"  true  false push "$NEW" "11 101 42 $NEW_STAGING" "101=$PUSH"
+row "new integration branch, marker from an old staging one" true  false push "$NEW" "11 101 42 $STAGING" "101=$PUSH"
+row "new integration branch, marker from the old one"        true  false push "$NEW" "11 101 42 $INTEGRATION" "101=$PUSH"
+row "old integration branch, marker from a new staging one"  true  false push "$INTEGRATION" "11 101 42 $NEW_STAGING" "101=$PUSH"
+row "new staging branch, marker from the new integration"    true  false push "staging/landing-8" "11 101 42 $NEW" "101=$PUSH"
+row "new names: topic branch, nothing is asked"              false false push fix/topic "11 101 42 $NEW_STAGING" "101=$PUSH"
+row "a topic that starts like the integration branch"        false false push feat/uportal-6-x "11 101 42 $NEW_STAGING" "101=$PUSH"
+row "a branch that only starts like a new staging branch"    false false push staging/other "11 101 42 $NEW_STAGING" "101=$PUSH"
+row "staging/landing- without a number"                      false false push staging/landing- "11 101 42 $NEW_STAGING" "101=$PUSH"
+row "marker from a new topic branch"                         false true  push "$NEW" "11 101 42 fix/topic" "101=$PUSH"
+row "marker from a topic that starts like the integration"   false true  push "$NEW" "11 101 42 feat/uportal-6-x" "101=$PUSH"
+row "marker from staging/other"                              false true  push "$NEW" "11 101 42 staging/other" "101=$PUSH"
+row "a topic's marker first, then a staging branch's"        true  false push "$NEW" "12 102 42 fix/topic;11 101 42 $NEW_STAGING" "101=$PUSH,102=$PUSH"
+row "manual run on the new integration branch"               false false workflow_dispatch "$NEW" "11 101 42 $NEW_STAGING" "101=$PUSH"
+
 # Outside a repository there is no key: the jobs run, and no marker is promised
 cases=$((cases + 1))
 mkdir -p "$WORK/empty" "$WORK/none"
