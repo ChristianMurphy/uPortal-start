@@ -7,7 +7,8 @@
 # This script says "run" for every other kind of run, and for a topic push only when the push
 # changes persistence, SQL, schema, data files or G-index itself:
 #
-#   - the integration branch, a manual run and the nightly run always run G-index;
+#   - the integration branch, a staging branch (ccr-43ba0785-hzlrj5-landing-<n>, where a landing
+#     is tested before it is pushed), a manual run and the nightly run always run G-index;
 #   - on a topic push, two lists of changed files are compared with the paths below. The first is
 #     uPortal-start's own (the topic branch against origin/<integration branch>); the second is
 #     the uPortal branch of the same name, if there is one, against uPortal's integration branch.
@@ -75,6 +76,9 @@ bullets() {  # bullets <label> <files>: the first LIST_LIMIT files, one bullet e
 }
 
 case "$EVENT_NAME:$BRANCH" in
+    push:"$INTEGRATION"-landing-?*)
+        finish true "run" "run: $BRANCH is a staging branch" \
+            "$BRANCH is a staging branch of $INTEGRATION, which always runs G-index." ;;
     push:"$INTEGRATION"-*) ;;
     *) finish true "run" "run: $EVENT_NAME on $BRANCH is not a push to a topic branch" \
         "$EVENT_NAME on $BRANCH is not a push to a topic branch of $INTEGRATION, which always runs G-index." ;;

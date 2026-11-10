@@ -111,6 +111,8 @@ row "the filter script itself (start)"                     true  push "$TOPIC" "
 row "Gradle task the script runs (start)"                  true  push "$TOPIC" "gradle/tasks/db.gradle" none
 row "web component only in uPortal, DAO in start data"     true  push "$TOPIC" "data/base/user/x.user.xml" "uPortal-webcomponents/src/a.ts"
 row "integration branch push, no change"                   true  push "$INT"   -  none
+row "staging branch push, no matching change"              true  push "$INT-landing-3" "tests/ux/search.spec.ts" "uPortal-webcomponents/src/a.ts"
+row "topic branch whose name only starts like staging"     false push "$INT-landing" "tests/ux/search.spec.ts" none
 row "manual run on a topic branch, no matching change"     true  workflow_dispatch "$TOPIC" - "uPortal-webcomponents/src/a.ts"
 row "nightly run"                                          true  schedule "master" - none
 

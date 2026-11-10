@@ -96,13 +96,14 @@ jobs:
       - name: Test the code page conversion of the fixture (MOD-I196)
         working-directory: plan
         run: python3 -B -m unittest discover -s tests/db/equivalence -p 'test_*.py'
-      # Prototype only (MOD-D30): a workstream branch runs the light set
+      # Prototype only (MOD-D30): a workstream branch runs the light set. A staging branch
+      # (ccr-43ba0785-hzlrj5-landing-<n>) runs the set of the integration branch.
       - name: Choose the push, workstream or nightly set
         id: matrix
         working-directory: plan
         env:
           NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly == true }}
-          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') }}
+          WORKSTREAM: ${{ startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-') && !startsWith(github.ref_name, 'ccr-43ba0785-hzlrj5-landing-') }}
         run: |
           set_name=push
           if [ "$NIGHTLY" = true ]; then
