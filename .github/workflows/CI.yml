@@ -298,13 +298,17 @@ jobs:
         env:
           EVENT_BEFORE: ${{ github.event.before }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BRANCH: ${{ github.ref_name }}
         run: |
-          # The commits this push or pull request adds; a new branch is checked from the
-          # commit that added each script onwards.
+          # The commits this push or pull request adds. Prototype only: a new topic or staging
+          # branch (ccr-43ba0785-hzlrj5-<name>) is checked from where it left the integration
+          # branch. Any other new branch is checked from the commit that added each script onwards.
           if [ -n "$PR_BASE" ]; then
             range="$PR_BASE..HEAD"
           elif [ -n "$EVENT_BEFORE" ] && ! [[ "$EVENT_BEFORE" =~ ^0+$ ]] && git cat-file -e "$EVENT_BEFORE^{commit}" 2>/dev/null; then
             range="$EVENT_BEFORE..HEAD"
+          elif [[ "$BRANCH" == ccr-43ba0785-hzlrj5-* ]] && base=$(git merge-base origin/ccr-43ba0785-hzlrj5 HEAD 2>/dev/null); then
+            range="$base..HEAD"
           else
             range=HEAD
           fi
