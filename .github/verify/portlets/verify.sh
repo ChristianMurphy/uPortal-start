@@ -4,9 +4,11 @@
 #
 #   verify.sh <calendar|newsreader> <uPortal-start clone> <out directory>
 #
-# It builds the portlet's war from the fix branch, runs portalInit with the released portlets,
-# runs the check, deploys the fix branch's war in place of the released one, and runs the check
-# again. The database stays the same throughout. Needs JDK 11 as the default java, Maven and Node.
+# It runs portalInit with the released portlets and runs the check. Then it builds the portlet's
+# war from the fix branch, deploys it in place of the released one, and runs the check again.
+# For newsreader it also deploys a war built from the portlet's master in between, and records
+# whether the portlets render with it. The database stays the same throughout. Needs JDK 11 as
+# the default java, and Node.
 #
 # Optional environment: CHECK_SECONDS (how long the newsreader load runs in each phase) and
 # CHECK_SEED.
@@ -24,7 +26,8 @@ case "$which" in
     ;;
   newsreader)
     name=NewsReaderPortlet branch=fix/news-set-two-sessions
-    head=986b3c9509ff998a3abaa7b737873778aa310fa0
+    head=27757f259bf638981f5b987c4ed6f93643fb6320
+    master=728f19a736518549ab1ee7acc88d4f9e85d38ffa
     property=newsReaderPortletVersion
     # The class that the fix changes
     marker=WEB-INF/classes/org/jasig/portlet/newsreader/service/SharedNewsSetServiceImpl.class
@@ -36,6 +39,7 @@ out=$(cd "$out" && pwd)
 webapp=$start/.gradle/tomcat/webapps/$name
 logs=$start/.gradle/tomcat/logs
 failed=0
+master=${master:-}
 
 step() { echo; echo "##### $*"; }
 
@@ -80,19 +84,30 @@ checks() { # <label>
   gw tomcatClearLogs > /dev/null 2>&1
 }
 
-step "Build $name from $branch ($head)"
-git clone --quiet "https://github.com/ChristianMurphy/$name.git" "$out/$name" &&
-  git -C "$out/$name" checkout --quiet --detach "$head" || { echo "clone failed"; exit 1; }
 # Maven 3.9, which the portlets' poms are written for. The runner's newer Maven refuses
 # NewsReaderPortlet's pom, on master too, because it declares maven-antrun-plugin twice.
 maven=apache-maven-3.9.11
 curl -sSfL "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/$maven-bin.tar.gz" |
   tar -xz -C "$out" || { echo "Maven download failed"; exit 1; }
-(cd "$out/$name" && "$out/$maven/bin/mvn" -B -DskipTests install) > "$out/build-fix.log" 2>&1 ||
-  { tail -40 "$out/build-fix.log"; echo "the build of the fix branch failed"; exit 1; }
+git clone --quiet "https://github.com/ChristianMurphy/$name.git" "$out/$name" || { echo "clone failed"; exit 1; }
 snapshot=$(sed -n 's|.*<version>\(.*-SNAPSHOT\)</version>.*|\1|p' "$out/$name/pom.xml" | head -1)
-echo "Built $name $snapshot: $(cd "$out/$name/target" && ls ./*.war)"
-rm -rf "$out/$name" "$out/$maven"
+
+# Builds the war of a commit, installs it to the local Maven repository as $snapshot, and
+# deploys it in place of the portlet that is deployed now
+build_and_deploy() { # <commit> <label>
+  step "Build $name $snapshot from $2 ($1)"
+  (cd "$out/$name" && git checkout --quiet --detach "$1" && git clean -xfdq &&
+    "$out/$maven/bin/mvn" -B -DskipTests install) > "$out/build-$2.log" 2>&1 ||
+    { tail -40 "$out/build-$2.log"; echo "the build of $2 failed"; exit 1; }
+  echo "Built $(cd "$out/$name/target" && ls ./*.war)"
+  step "Deploy $name $snapshot, the war of $2"
+  sed -i "s/^$property=.*/$property=$snapshot/" "$start/gradle.properties"
+  grep "^$property=" "$start/gradle.properties"
+  gw ":overlays:$name:tomcatDeploy" > "$out/deploy-$2.log" 2>&1 || { tail -60 "$out/deploy-$2.log"; echo "deploy failed"; exit 1; }
+  # So that Tomcat compiles the JSPs of the new war
+  rm -rf "$start/.gradle/tomcat/work/Catalina/localhost/$name"
+  deployed "$2"
+}
 
 step "uPortal-start $(git -C "$start" rev-parse --short HEAD): portalInit with the released portlets"
 cp "$start/gradle.properties.example" "$start/gradle.properties"
@@ -109,13 +124,12 @@ fi
 
 checks before
 
-step "Deploy $name $snapshot, the fix branch's war"
-sed -i "s/^$property=.*/$property=$snapshot/" "$start/gradle.properties"
-grep "^$property=" "$start/gradle.properties"
-gw ":overlays:$name:tomcatDeploy" > "$out/deploy-fix.log" 2>&1 || { tail -60 "$out/deploy-fix.log"; echo "deploy failed"; exit 1; }
-# So that Tomcat compiles the JSPs of the new war
-rm -rf "$start/.gradle/tomcat/work/Catalina/localhost/$name"
-deployed fix
+if [ -n "$master" ]; then
+  build_and_deploy "$master" master
+  CHECK_SECONDS=0 checks master
+fi
+
+build_and_deploy "$head" fix
 if [ "$(marker_sum)" = "$released_sum" ] || [ "$(marker_sum)" = absent ]; then
   echo "The deployed portlet isn't the fix branch's"
   exit 1
@@ -125,6 +139,7 @@ checks after
 
 step "Stop the database"
 gw hsqlStop > "$out/hsqlStop.log" 2>&1
+rm -rf "$out/$name" "$out/$maven"
 
 python3 - "$out" "$which" <<'PY' || failed=1
 import json, sys

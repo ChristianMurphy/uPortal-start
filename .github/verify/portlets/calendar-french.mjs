@@ -4,7 +4,7 @@
 //   node calendar-french.mjs <label> <out directory>     (from the uPortal-start clone)
 //
 // The user is student. The script chooses French in the User Locales Selector portlet, as a
-// user would, opens the Calendar in its narrow view (window state normal) and its wide view
+// user would, opens the Calendar in its narrow view (on the Welcome tab) and its wide view
 // (maximized), and chooses English again. With the label "after" it exits 1 unless both views
 // show the French labels and the element logs no error.
 import { chromium } from "@playwright/test";
@@ -13,14 +13,25 @@ import { writeFileSync } from "node:fs";
 const [label, out] = process.argv.slice(2);
 const portal = "http://localhost:8080/uPortal/";
 const views = {
-  narrow: `${portal}p/calendar/normal/render.uP`,
+  narrow: `${portal}f/welcome/normal/render.uP`,
   wide: `${portal}p/calendar/max/render.uP`,
 };
 const french = { buttons: ["Jour", "Semaine", "Mois"], more: "Voir plus d'évènements" };
 
 async function chooseLanguage(page, code) {
-  await page.goto(`${portal}p/user-locales-selector/max/render.uP`);
-  await page.locator(`input[type=radio][value=${code}]`).check();
+  const radio = page.locator(`input[type=radio][value=${code}]`);
+  // The portlet's first render on a portal that has just started can take long
+  for (let attempt = 1; ; attempt++) {
+    await page.goto(`${portal}p/user-locales-selector/max/render.uP`);
+    try {
+      await radio.waitFor({ timeout: 60000 });
+      break;
+    } catch (error) {
+      await page.screenshot({ path: `${out}/selector-${label}-${code}-${attempt}.png` });
+      if (attempt === 3) throw error;
+    }
+  }
+  await radio.check();
   await Promise.all([
     page.waitForNavigation(),
     page.locator("input[name=_eventId_updateLocale]").click(),

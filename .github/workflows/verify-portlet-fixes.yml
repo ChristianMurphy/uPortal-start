@@ -11,7 +11,8 @@ name: Verify portlet fixes in a portal
 #               same NewsReader portlet in edit mode at the same moment, for ten minutes, with
 #               the released 5.1.5 and then with the branch's war. The count is the number of
 #               "Illegal attempt to associate a collection with two open sessions" exceptions
-#               in the logs.
+#               in the logs. In between, a war built from the portlet's master is deployed, to
+#               record whether the portlets render with it.
 #
 # .github/verify/portlets/verify.sh has the steps. A job fails if a check fails with the fix
 # deployed. What the released portlet did is reported, not judged.
