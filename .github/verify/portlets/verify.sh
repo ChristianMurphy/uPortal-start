@@ -83,11 +83,16 @@ checks() { # <label>
 step "Build $name from $branch ($head)"
 git clone --quiet "https://github.com/ChristianMurphy/$name.git" "$out/$name" &&
   git -C "$out/$name" checkout --quiet --detach "$head" || { echo "clone failed"; exit 1; }
-(cd "$out/$name" && mvn -B -DskipTests install) > "$out/build-fix.log" 2>&1 ||
+# Maven 3.9, which the portlets' poms are written for. The runner's newer Maven refuses
+# NewsReaderPortlet's pom, on master too, because it declares maven-antrun-plugin twice.
+maven=apache-maven-3.9.11
+curl -sSfL "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.11/$maven-bin.tar.gz" |
+  tar -xz -C "$out" || { echo "Maven download failed"; exit 1; }
+(cd "$out/$name" && "$out/$maven/bin/mvn" -B -DskipTests install) > "$out/build-fix.log" 2>&1 ||
   { tail -40 "$out/build-fix.log"; echo "the build of the fix branch failed"; exit 1; }
 snapshot=$(sed -n 's|.*<version>\(.*-SNAPSHOT\)</version>.*|\1|p' "$out/$name/pom.xml" | head -1)
 echo "Built $name $snapshot: $(cd "$out/$name/target" && ls ./*.war)"
-rm -rf "$out/$name"
+rm -rf "$out/$name" "$out/$maven"
 
 step "uPortal-start $(git -C "$start" rev-parse --short HEAD): portalInit with the released portlets"
 cp "$start/gradle.properties.example" "$start/gradle.properties"
