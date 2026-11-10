@@ -4,6 +4,8 @@ version=5.0.0-SNAPSHOT
 announcementsPortletVersion=2.5.3
 basicltiPortletVersion=1.5.1
 bookmarksPortletVersion=1.3.1
+# overlays/CalendarPortlet/src/main/webapp/WEB-INF/jsp holds two JSPs copied from 2.7.4 with a
+# fix (MOD-I400).  When this version changes, delete or renew them as their first comment says.
 calendarPortletVersion=2.7.4
 casProxyTestPortletVersion=1.0.2
 esupFilemanagerPortletVersion=4.0.0

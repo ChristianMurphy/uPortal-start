@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { loginViaUrl } from "../utils/ux-general-utils";
+import { loginViaUrl, logout } from "../utils/ux-general-utils";
+import { ownUser } from "../utils/own-users";
+import { setUserLocale } from "../utils/user-locale";
 import { config } from "../../general-config";
 
 const CALENDAR_URL = `${config.url}p/calendar/max/render.uP`;
@@ -72,5 +74,49 @@ test.describe("Calendar Portlet", () => {
     // more day rows. Either way, no Underscore sigils should appear.
     await expect(eventList).not.toContainText("<%");
     await expect(eventList).not.toContainText("<%=");
+  });
+});
+
+/*
+ * The Calendar's labels in French (MOD-I400). The JSP writes them as JSON,
+ * and CalendarPortlet 2.7.4 escapes them for JavaScript, which turns the
+ * apostrophe of "Voir plus d'évènements" into \' and breaks the JSON. The
+ * element then logs an error and shows its English labels. The JSPs in
+ * overlays/CalendarPortlet repair the JSON until a release does. The test
+ * changes the user's saved language, so it signs in as a user of its own
+ * (own-users.ts), whose Welcome tab has the Calendar.
+ */
+test.describe("Calendar in French", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginViaUrl(page, ownUser("calendar"));
+  });
+
+  test.afterEach(async ({ page }) => {
+    await setUserLocale(page, "en_US");
+    await logout(page);
+  });
+
+  test("shows its labels in French", async ({ page }) => {
+    const calendarErrors: string[] = [];
+    page.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        message.text().includes("calendar-portlet")
+      ) {
+        calendarErrors.push(message.text());
+      }
+    });
+
+    await setUserLocale(page, "fr_FR");
+    await page.goto(config.url);
+
+    const calendar = page.locator("calendar-portlet").first();
+    await expect(
+      calendar.getByRole("button", { name: "Semaine", exact: true }),
+    ).toBeVisible();
+    await expect(calendar.locator(".upcal-view-more-events")).toHaveText(
+      /Voir plus d'évènements/,
+    );
+    expect(calendarErrors).toEqual([]);
   });
 });

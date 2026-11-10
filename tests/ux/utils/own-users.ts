@@ -31,6 +31,7 @@ const OWN_USERS = {
   bystander: "Bea",
   background: "Nina",
   news: "Ned",
+  calendar: "Cal",
 } as const;
 
 export type OwnUser = keyof typeof OWN_USERS;
